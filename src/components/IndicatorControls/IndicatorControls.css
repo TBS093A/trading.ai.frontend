@@ -1,0 +1,84 @@
+/* Indicator Controls Styles */
+.indicator-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.controls-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.controls-buttons {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+}
+
+.indicator-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.indicator-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+}
+
+.indicator-btn.active {
+  background: var(--accent-cyan);
+  color: var(--bg-primary);
+}
+
+.indicator-btn.active .indicator-icon {
+  color: var(--bg-primary);
+}
+
+.indicator-icon {
+  font-size: 0.875rem;
+  color: var(--accent-cyan);
+  transition: color var(--transition-fast);
+}
+
+.indicator-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .indicator-controls {
+    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
+  
+  .controls-label {
+    display: none;
+  }
+  
+  .indicator-btn {
+    padding: 4px 8px;
+  }
+  
+  .indicator-label {
+    display: none;
+  }
+}
+

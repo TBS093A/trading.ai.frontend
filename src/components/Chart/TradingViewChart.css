@@ -1,0 +1,148 @@
+/* TradingView Chart Styles */
+.trading-chart-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-primary);
+}
+
+.trading-chart {
+  flex: 1;
+  min-height: 400px;
+}
+
+/* Indicator Charts */
+.indicator-chart {
+  position: relative;
+  border-top: 1px solid var(--border-primary);
+  background: var(--bg-primary);
+}
+
+.indicator-label {
+  position: absolute;
+  top: 8px;
+  left: 12px;
+  z-index: 10;
+  padding: 2px 8px;
+  background: rgba(15, 20, 25, 0.9);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-sm);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Pattern Markers on Chart */
+.pattern-marker {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform var(--transition-fast);
+}
+
+.pattern-marker:hover {
+  transform: scale(1.2);
+}
+
+.pattern-marker.bullish {
+  background: rgba(0, 255, 136, 0.2);
+  border: 2px solid var(--accent-green);
+  color: var(--accent-green);
+}
+
+.pattern-marker.bearish {
+  background: rgba(255, 51, 102, 0.2);
+  border: 2px solid var(--accent-red);
+  color: var(--accent-red);
+}
+
+/* Pattern Lines */
+.pattern-line {
+  position: absolute;
+  pointer-events: none;
+}
+
+.pattern-line.bullish {
+  stroke: var(--accent-green);
+}
+
+.pattern-line.bearish {
+  stroke: var(--accent-red);
+}
+
+/* Fibonacci Levels */
+.fib-level {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  pointer-events: none;
+}
+
+.fib-level-label {
+  position: absolute;
+  right: 8px;
+  transform: translateY(-50%);
+  padding: 2px 6px;
+  background: rgba(15, 20, 25, 0.9);
+  border: 1px solid currentColor;
+  border-radius: var(--radius-sm);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  font-weight: 500;
+}
+
+.fib-level.retracement {
+  background: rgba(255, 204, 0, 0.3);
+}
+
+.fib-level.extension {
+  background: rgba(153, 69, 255, 0.3);
+}
+
+.fib-level.fe {
+  background: rgba(0, 240, 255, 0.3);
+}
+
+.fib-level.target {
+  background: rgba(0, 255, 136, 0.3);
+}
+
+/* Chart Loading State */
+.chart-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(6, 8, 16, 0.9);
+  z-index: 100;
+}
+
+/* Crosshair Custom Styling */
+.tv-lightweight-charts .tv-crosshair-label {
+  font-family: 'JetBrains Mono', monospace !important;
+}
+
+/* Responsiveness */
+@media (max-width: 768px) {
+  .trading-chart {
+    min-height: 300px;
+  }
+  
+  .indicator-chart > div {
+    height: 80px !important;
+  }
+}
+
