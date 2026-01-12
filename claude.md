@@ -21,7 +21,8 @@ src/
 │   ├── IndicatorControls/  # Toggle buttons for VOL, RSI, MACD, OBV
 │   ├── PatternTooltip/  # Hover popup for harmonic patterns
 │   ├── RightPanel/      # Fibonacci levels side panel
-│   └── Sidebar/         # Exchange/asset selection
+│   ├── Sidebar/         # Exchange/asset selection
+│   └── SyncPanel/       # Sync operations panel (exchanges, technical analysis)
 ├── services/
 │   └── api.js           # Axios-based API client
 ├── store/
@@ -31,6 +32,7 @@ src/
 │       ├── assetsSlice.js     # Assets list and selection
 │       ├── chartSlice.js      # Klines data and interval
 │       ├── exchangesSlice.js  # Exchanges list and selection
+│       ├── syncSlice.js       # Sync operations state (tasks, loading)
 │       └── uiSlice.js         # UI state (panels, tooltips)
 ├── styles/
 │   └── global.css       # Theme variables and base styles
@@ -51,6 +53,7 @@ src/
 | `chart` | Chart data | `klines`, `interval`, `asset`, `quote` |
 | `analysis` | Technical analysis | `harmonicPatterns`, `selectedPattern`, `panelOptions`, `indicators` |
 | `ui` | UI state | `sidebarOpen`, `rightPanelOpen`, `tooltipPosition`, `tooltipContent` |
+| `sync` | Sync operations | `isPanelOpen`, `activeSection`, `exchanges/technical/bulk` states, `activeTasks` |
 
 ### Data Flow
 
@@ -59,6 +62,14 @@ src/
 3. User selects asset → updates `assets.selectedAsset`
 4. Asset selected → `fetchKlines` → populates `chart.klines`
 5. Klines loaded → `fetchTechnicalAnalysis` → populates `analysis.harmonicPatterns`
+
+### Sync Operations Flow
+
+1. User opens SyncPanel → `toggleSyncPanel` action
+2. User expands section → `setActiveSection` action
+3. User configures params and clicks sync → dispatches async thunk (`syncExchanges`/`syncTechnicalAnalysis`/`syncBulkAssets`)
+4. Backend returns task_id → stored in `activeTasks` with status tracking
+5. Task status updates reflected in UI with status icons (✓/✗/⟳)
 
 ## Backend API Integration
 
@@ -77,7 +88,21 @@ GET /assets/search/asset/{name}              // Search assets
 
 // Technical Analysis
 GET /analysis/technical/asset/{asset_id}/interval/{interval}  // Harmonic patterns
+
+// Sync Operations
+POST /exchanges/sync                         // Sync exchanges from APIs
+POST /analysis/technical/sync                // Sync technical analysis
+POST /analysis/technical/sync/assets         // Bulk sync for specific asset IDs
+GET  /sync/status/{task_id}                  // Get Celery task status
 ```
+
+### Sync Endpoints Parameters
+
+| Endpoint | Parameters |
+|----------|------------|
+| `POST /exchanges/sync` | `test_mode` (bool), `custom_dependencies` (array) |
+| `POST /analysis/technical/sync` | `limit` (1-1000), `offset` (≥0), `test_mode`, `custom_dependencies` |
+| `POST /analysis/technical/sync/assets` | `asset_ids` (array, required), `test_mode`, `custom_dependencies` |
 
 ## Component Patterns
 
@@ -93,6 +118,22 @@ GET /analysis/technical/asset/{asset_id}/interval/{interval}  // Harmonic patter
 - Controlled by Redux UI slice
 - Toggle visibility with `togglePanelOption` action
 - Fibonacci sections conditionally rendered based on `panelOptions`
+
+### SyncPanel Component
+
+Floating panel for triggering backend sync operations:
+
+- **Toggle button** - Fixed position with refresh icon (⟳), shows pulse badge when tasks are running
+- **Expandable sections** - Each sync type collapsable with parameters
+- **Active tasks list** - Shows running/completed tasks with status indicators
+- **Quick select** - For bulk assets, shows chips from loaded assets list
+
+```javascript
+// SyncPanel actions (syncSlice.js)
+dispatch(syncExchanges({ testMode: false }));
+dispatch(syncTechnicalAnalysis({ limit: 50, offset: 0, testMode: false }));
+dispatch(syncBulkAssets({ assetIds: [1, 2, 3], testMode: false }));
+```
 
 ## Styling Conventions
 
@@ -214,4 +255,6 @@ const handleChartClick = useCallback((param) => {
 - Chart uses timestamp in seconds (API returns milliseconds, divide by 1000)
 - Pattern markers sorted by time before setting on chart
 - Right panel opens automatically when pattern is clicked
+- Sync operations run as Celery tasks on backend - frontend triggers and tracks status
+- SyncPanel is fixed positioned in top-right corner for easy access
 

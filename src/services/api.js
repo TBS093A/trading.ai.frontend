@@ -111,6 +111,38 @@ const api = {
   getExchangeStats: () => axiosInstance.get('/exchanges/stats'),
   getAssetStats: () => axiosInstance.get('/assets/stats'),
   getTechnicalAnalysisStats: () => axiosInstance.get('/analysis/technical/stats'),
+
+  // ==================
+  // SYNC OPERATIONS
+  // ==================
+  
+  // Sync Exchanges
+  syncExchanges: (testMode = false, customDependencies = null) =>
+    axiosInstance.post('/exchanges/sync', {
+      test_mode: testMode,
+      custom_dependencies: customDependencies,
+    }),
+
+  // Sync Technical Analysis
+  syncTechnicalAnalysis: (limit = 50, offset = 0, testMode = false, customDependencies = null) =>
+    axiosInstance.post('/analysis/technical/sync', {
+      limit,
+      offset,
+      test_mode: testMode,
+      custom_dependencies: customDependencies,
+    }),
+
+  // Sync Bulk Assets Technical Analysis
+  syncBulkAssetsTechnicalAnalysis: (assetIds, testMode = false, customDependencies = null) =>
+    axiosInstance.post('/analysis/technical/sync/assets', {
+      asset_ids: assetIds,
+      test_mode: testMode,
+      custom_dependencies: customDependencies,
+    }),
+
+  // Get Sync Task Status
+  getSyncTaskStatus: (taskId) =>
+    axiosInstance.get(`/sync/status/${taskId}`),
 };
 
 export default api;
