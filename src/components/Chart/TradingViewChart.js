@@ -404,7 +404,7 @@ const TradingViewChart = forwardRef((props, ref) => {
     };
   }, [harmonicPatterns, klines, selectedPattern, expandedPatternId, unselectedAlpha, globalPatternDisplay.showPointLevelLines]);
 
-  // Draw pattern shapes (triangles XAB, BCD) and main lines
+  // Draw pattern shapes - main legs (X-A, A-B, B-C, C-D) and closing lines (X-B, B-D)
   useEffect(() => {
     if (!chartRef.current || harmonicPatterns.length === 0) return;
 
@@ -427,27 +427,22 @@ const TradingViewChart = forwardRef((props, ref) => {
       const isBullish = taData.is_bullish;
       const baseColor = isBullish ? '#00ff88' : '#ff3366';
       const isSelected = selectedPattern?.id === pattern.id || expandedPatternId === pattern.id;
-      const alpha = isSelected ? 0.5 : unselectedAlpha * 0.5;
       const lineAlpha = isSelected ? 1 : unselectedAlpha;
-      const lineWidth = isSelected ? 3 : 2;
+      const mainLineWidth = isSelected ? 2 : 1;
+      const closingLineWidth = 1;
 
-      const patternType = taData.pattern_type || '';
       const hasX = points.X && x_point_timestamp;
       const hasA = points.A && a_point_timestamp;
       const hasB = points.B && b_point_timestamp;
       const hasC = points.C && c_point_timestamp;
       const hasD = points.D && d_point_timestamp;
 
-      // For XABCD patterns: Draw triangles XAB and BCD
-      // For ABCD patterns: Draw triangles ABC and BCD
-      // For ABC patterns: Draw lines AB and BC
-
-      // Draw main legs (thick lines): X-A, A-B, B-C, C-D
+      // Draw main legs (solid lines): X-A, A-B, B-C, C-D
       if (hasX && hasA) {
         try {
           const series = chartRef.current.addLineSeries({
             color: hexToRgba(baseColor, lineAlpha),
-            lineWidth: lineWidth,
+            lineWidth: mainLineWidth,
             crosshairMarkerVisible: false,
             lastValueVisible: false,
             priceLineVisible: false,
@@ -464,7 +459,7 @@ const TradingViewChart = forwardRef((props, ref) => {
         try {
           const series = chartRef.current.addLineSeries({
             color: hexToRgba(baseColor, lineAlpha),
-            lineWidth: lineWidth,
+            lineWidth: mainLineWidth,
             crosshairMarkerVisible: false,
             lastValueVisible: false,
             priceLineVisible: false,
@@ -481,7 +476,7 @@ const TradingViewChart = forwardRef((props, ref) => {
         try {
           const series = chartRef.current.addLineSeries({
             color: hexToRgba(baseColor, lineAlpha),
-            lineWidth: lineWidth,
+            lineWidth: mainLineWidth,
             crosshairMarkerVisible: false,
             lastValueVisible: false,
             priceLineVisible: false,
@@ -498,7 +493,7 @@ const TradingViewChart = forwardRef((props, ref) => {
         try {
           const series = chartRef.current.addLineSeries({
             color: hexToRgba(baseColor, lineAlpha),
-            lineWidth: lineWidth,
+            lineWidth: mainLineWidth,
             crosshairMarkerVisible: false,
             lastValueVisible: false,
             priceLineVisible: false,
@@ -511,55 +506,44 @@ const TradingViewChart = forwardRef((props, ref) => {
         } catch (e) {}
       }
 
-      // Draw triangle closing lines (XB for XAB triangle, BD for BCD triangle)
-      // These are drawn with area fill for visual effect
+      // Draw closing lines to complete triangles: X-B (closes XAB), B-D (closes BCD)
       if (hasX && hasB) {
         try {
-          const series = chartRef.current.addAreaSeries({
-            topColor: hexToRgba(baseColor, alpha),
-            bottomColor: hexToRgba(baseColor, 0),
-            lineColor: hexToRgba(baseColor, lineAlpha * 0.3),
-            lineWidth: 1,
+          const series = chartRef.current.addLineSeries({
+            color: hexToRgba(baseColor, lineAlpha * 0.6),
+            lineWidth: closingLineWidth,
             crosshairMarkerVisible: false,
             lastValueVisible: false,
             priceLineVisible: false,
           });
-          // Create triangle XAB by drawing X-A-B-X path
-          const xabData = [
+          series.setData([
             { time: x_point_timestamp / 1000, value: points.X.price },
-            { time: a_point_timestamp / 1000, value: points.A.price },
             { time: b_point_timestamp / 1000, value: points.B.price },
-          ].sort((a, b) => a.time - b.time);
-          series.setData(xabData);
+          ]);
           patternShapesRef.current.push(series);
         } catch (e) {}
       }
 
       if (hasB && hasD) {
         try {
-          const series = chartRef.current.addAreaSeries({
-            topColor: hexToRgba(baseColor, alpha),
-            bottomColor: hexToRgba(baseColor, 0),
-            lineColor: hexToRgba(baseColor, lineAlpha * 0.3),
-            lineWidth: 1,
+          const series = chartRef.current.addLineSeries({
+            color: hexToRgba(baseColor, lineAlpha * 0.6),
+            lineWidth: closingLineWidth,
             crosshairMarkerVisible: false,
             lastValueVisible: false,
             priceLineVisible: false,
           });
-          // Create triangle BCD by drawing B-C-D path
-          const bcdData = [
+          series.setData([
             { time: b_point_timestamp / 1000, value: points.B.price },
-            { time: c_point_timestamp / 1000, value: points.C.price },
             { time: d_point_timestamp / 1000, value: points.D.price },
-          ].sort((a, b) => a.time - b.time);
-          series.setData(bcdData);
+          ]);
           patternShapesRef.current.push(series);
         } catch (e) {}
       }
     });
   }, [harmonicPatterns, selectedPattern, expandedPatternId, unselectedAlpha, globalPatternDisplay.showPatternShapes]);
 
-  // Draw retrace lines (dashed lines with labels: XB, AC, BD, XD)
+  // Draw retrace lines with ratio labels (thin lines: X-B, A-C, B-D, X-D with values)
   useEffect(() => {
     if (!chartRef.current || harmonicPatterns.length === 0) return;
 
@@ -581,17 +565,23 @@ const TradingViewChart = forwardRef((props, ref) => {
       const points = taData.points;
       const retraces = taData.retraces;
       const isBullish = taData.is_bullish;
+      const baseColor = isBullish ? '#00ff88' : '#ff3366';
       const isSelected = selectedPattern?.id === pattern.id || expandedPatternId === pattern.id;
-      const alpha = isSelected ? 0.8 : unselectedAlpha * 0.8;
-      const retraceColor = '#ffcc00'; // Yellow for retrace lines
+      const alpha = isSelected ? 0.7 : unselectedAlpha * 0.7;
 
-      // XB retrace (connects X to B)
-      if (points.X && points.B && x_point_timestamp && b_point_timestamp && retraces.XB) {
+      // Helper to format ratio value
+      const formatRatio = (value) => {
+        if (typeof value !== 'number') return '';
+        return value.toFixed(3);
+      };
+
+      // XB retrace - ratio of AB to XA (connects X to B diagonally)
+      if (points.X && points.B && x_point_timestamp && b_point_timestamp && retraces.XB !== undefined) {
         try {
           const series = chartRef.current.addLineSeries({
-            color: hexToRgba(retraceColor, alpha),
+            color: hexToRgba(baseColor, alpha),
             lineWidth: 1,
-            lineStyle: 2, // Dashed
+            lineStyle: 0, // Solid thin line
             crosshairMarkerVisible: false,
             lastValueVisible: false,
             priceLineVisible: false,
@@ -601,16 +591,29 @@ const TradingViewChart = forwardRef((props, ref) => {
             { time: b_point_timestamp / 1000, value: points.B.price },
           ]);
           retraceLinesRef.current.push(series);
+          
+          // Add marker with ratio label at midpoint
+          const midTime = (x_point_timestamp + b_point_timestamp) / 2 / 1000;
+          const midPrice = (points.X.price + points.B.price) / 2;
+          if (isSelected) {
+            series.setMarkers([{
+              time: midTime,
+              position: 'inBar',
+              color: hexToRgba(baseColor, 1),
+              shape: 'text',
+              text: formatRatio(retraces.XB),
+            }]);
+          }
         } catch (e) {}
       }
 
       // AC retrace (connects A to C)
-      if (points.A && points.C && a_point_timestamp && c_point_timestamp && retraces.AC) {
+      if (points.A && points.C && a_point_timestamp && c_point_timestamp && retraces.AC !== undefined) {
         try {
           const series = chartRef.current.addLineSeries({
-            color: hexToRgba(retraceColor, alpha),
+            color: hexToRgba(baseColor, alpha),
             lineWidth: 1,
-            lineStyle: 2,
+            lineStyle: 0,
             crosshairMarkerVisible: false,
             lastValueVisible: false,
             priceLineVisible: false,
@@ -620,16 +623,27 @@ const TradingViewChart = forwardRef((props, ref) => {
             { time: c_point_timestamp / 1000, value: points.C.price },
           ]);
           retraceLinesRef.current.push(series);
+          
+          if (isSelected) {
+            const midTime = (a_point_timestamp + c_point_timestamp) / 2 / 1000;
+            series.setMarkers([{
+              time: midTime,
+              position: 'inBar',
+              color: hexToRgba(baseColor, 1),
+              shape: 'text',
+              text: formatRatio(retraces.AC),
+            }]);
+          }
         } catch (e) {}
       }
 
       // BD retrace (connects B to D)
-      if (points.B && points.D && b_point_timestamp && d_point_timestamp && retraces.BD) {
+      if (points.B && points.D && b_point_timestamp && d_point_timestamp && retraces.BD !== undefined) {
         try {
           const series = chartRef.current.addLineSeries({
-            color: hexToRgba(retraceColor, alpha),
+            color: hexToRgba(baseColor, alpha),
             lineWidth: 1,
-            lineStyle: 2,
+            lineStyle: 0,
             crosshairMarkerVisible: false,
             lastValueVisible: false,
             priceLineVisible: false,
@@ -639,16 +653,27 @@ const TradingViewChart = forwardRef((props, ref) => {
             { time: d_point_timestamp / 1000, value: points.D.price },
           ]);
           retraceLinesRef.current.push(series);
+          
+          if (isSelected) {
+            const midTime = (b_point_timestamp + d_point_timestamp) / 2 / 1000;
+            series.setMarkers([{
+              time: midTime,
+              position: 'inBar',
+              color: hexToRgba(baseColor, 1),
+              shape: 'text',
+              text: formatRatio(retraces.BD),
+            }]);
+          }
         } catch (e) {}
       }
 
-      // XD retrace (connects X to D) - for XABCD patterns
-      if (points.X && points.D && x_point_timestamp && d_point_timestamp && retraces.XD) {
+      // XD retrace (connects X to D) - for full XABCD pattern
+      if (points.X && points.D && x_point_timestamp && d_point_timestamp && retraces.XD !== undefined) {
         try {
           const series = chartRef.current.addLineSeries({
-            color: hexToRgba('#9945ff', alpha), // Purple for XD
+            color: hexToRgba(baseColor, alpha * 0.8),
             lineWidth: 1,
-            lineStyle: 2,
+            lineStyle: 2, // Dashed for XD
             crosshairMarkerVisible: false,
             lastValueVisible: false,
             priceLineVisible: false,
@@ -658,6 +683,17 @@ const TradingViewChart = forwardRef((props, ref) => {
             { time: d_point_timestamp / 1000, value: points.D.price },
           ]);
           retraceLinesRef.current.push(series);
+          
+          if (isSelected) {
+            const midTime = (x_point_timestamp + d_point_timestamp) / 2 / 1000;
+            series.setMarkers([{
+              time: midTime,
+              position: 'inBar',
+              color: hexToRgba(baseColor, 1),
+              shape: 'text',
+              text: formatRatio(retraces.XD),
+            }]);
+          }
         } catch (e) {}
       }
     });
