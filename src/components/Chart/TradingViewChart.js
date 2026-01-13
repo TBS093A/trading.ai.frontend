@@ -150,11 +150,11 @@ const TradingViewChart = forwardRef((props, ref) => {
     return klines.map((k) => ({
       time: k.open_time / 1000,
       value: parseFloat(k.volume),
-      color: parseFloat(k.close) >= parseFloat(k.open) 
-        ? 'rgba(0, 255, 136, 0.5)' 
-        : 'rgba(255, 51, 102, 0.5)',
+      color: globalPatternDisplay.monochromaticMode
+        ? (parseFloat(k.close) >= parseFloat(k.open) ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.25)')
+        : (parseFloat(k.close) >= parseFloat(k.open) ? 'rgba(0, 255, 136, 0.5)' : 'rgba(255, 51, 102, 0.5)'),
     }));
-  }, []);
+  }, [globalPatternDisplay.monochromaticMode]);
 
   // Create timestamp to index map for pattern drawing
   const createTimestampMap = useCallback((klines) => {
@@ -215,14 +215,14 @@ const TradingViewChart = forwardRef((props, ref) => {
     });
     chartRef.current = chart;
 
-    // Add candlestick series
+    // Add candlestick series with monochromatic colors (default mode)
     const candlestickSeries = chart.addCandlestickSeries({
-      upColor: '#00ff88',
-      downColor: '#ff3366',
-      borderUpColor: '#00ff88',
-      borderDownColor: '#ff3366',
-      wickUpColor: '#00ff88',
-      wickDownColor: '#ff3366',
+      upColor: '#ffffff',
+      downColor: 'transparent',
+      borderUpColor: '#ffffff',
+      borderDownColor: '#ffffff',
+      wickUpColor: '#ffffff',
+      wickDownColor: '#ffffff',
     });
     candlestickSeriesRef.current = candlestickSeries;
 
@@ -251,6 +251,45 @@ const TradingViewChart = forwardRef((props, ref) => {
       chart.remove();
     };
   }, []);
+
+  // Update candlestick and volume colors based on monochromatic mode
+  useEffect(() => {
+    if (!candlestickSeriesRef.current) return;
+
+    if (globalPatternDisplay.monochromaticMode) {
+      // Monochromatic mode: white candles (filled up, hollow down)
+      candlestickSeriesRef.current.applyOptions({
+        upColor: '#ffffff',
+        downColor: 'transparent',
+        borderUpColor: '#ffffff',
+        borderDownColor: '#ffffff',
+        wickUpColor: '#ffffff',
+        wickDownColor: '#ffffff',
+      });
+    } else {
+      // Normal mode: bright green up, bright red down
+      candlestickSeriesRef.current.applyOptions({
+        upColor: '#00ff88',
+        downColor: '#ff3366',
+        borderUpColor: '#00ff88',
+        borderDownColor: '#ff3366',
+        wickUpColor: '#00ff88',
+        wickDownColor: '#ff3366',
+      });
+    }
+
+    // Update volume colors if volume data is available
+    if (volumeSeriesRef.current && klines.length > 0) {
+      const volumeData = klines.map((k) => ({
+        time: k.open_time / 1000,
+        value: parseFloat(k.volume),
+        color: globalPatternDisplay.monochromaticMode
+          ? (parseFloat(k.close) >= parseFloat(k.open) ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.25)')
+          : (parseFloat(k.close) >= parseFloat(k.open) ? 'rgba(0, 255, 136, 0.5)' : 'rgba(255, 51, 102, 0.5)'),
+      }));
+      volumeSeriesRef.current.setData(volumeData);
+    }
+  }, [globalPatternDisplay.monochromaticMode, klines]);
 
   // Update chart data and reset scale when asset changes
   useEffect(() => {
@@ -301,7 +340,10 @@ const TradingViewChart = forwardRef((props, ref) => {
 
       const points = taData.points;
       const isBullish = taData.is_bullish;
-      const baseColor = isBullish ? '#00ff88' : '#ff3366';
+      // Use gray in monochromatic mode, otherwise dark green/dark red
+      const baseColor = globalPatternDisplay.monochromaticMode 
+        ? '#666666' 
+        : (isBullish ? '#1a6b1a' : '#8b1a1a');
       
       // Apply alpha for unselected patterns (selected or expanded pattern gets full opacity)
       const isSelected = selectedPattern?.id === pattern.id || expandedPatternId === pattern.id;
@@ -402,7 +444,7 @@ const TradingViewChart = forwardRef((props, ref) => {
     return () => {
       patternMarkersRef.current = [];
     };
-  }, [harmonicPatterns, klines, selectedPattern, expandedPatternId, unselectedAlpha, globalPatternDisplay.showPointLevelLines]);
+  }, [harmonicPatterns, klines, selectedPattern, expandedPatternId, unselectedAlpha, globalPatternDisplay.showPointLevelLines, globalPatternDisplay.monochromaticMode]);
 
   // Draw pattern shapes - main legs (X-A, A-B, B-C, C-D) and closing lines (X-B, B-D)
   useEffect(() => {
@@ -425,7 +467,10 @@ const TradingViewChart = forwardRef((props, ref) => {
 
       const points = taData.points;
       const isBullish = taData.is_bullish;
-      const baseColor = isBullish ? '#00ff88' : '#ff3366';
+      // Use gray in monochromatic mode, otherwise dark green/dark red
+      const baseColor = globalPatternDisplay.monochromaticMode 
+        ? '#666666' 
+        : (isBullish ? '#1a6b1a' : '#8b1a1a');
       const isSelected = selectedPattern?.id === pattern.id || expandedPatternId === pattern.id;
       const lineAlpha = isSelected ? 1 : unselectedAlpha;
       const mainLineWidth = isSelected ? 2 : 1;
@@ -506,7 +551,7 @@ const TradingViewChart = forwardRef((props, ref) => {
       }
 
     });
-  }, [harmonicPatterns, selectedPattern, expandedPatternId, unselectedAlpha, globalPatternDisplay.showPatternShapes]);
+  }, [harmonicPatterns, selectedPattern, expandedPatternId, unselectedAlpha, globalPatternDisplay.showPatternShapes, globalPatternDisplay.monochromaticMode]);
 
   // Draw retrace lines with ratio labels
   // Pyharmonics provides: XAB (AB/XA), ABC (BC/AB), BCD (CD/BC), XAD (AD/XA)
@@ -531,7 +576,10 @@ const TradingViewChart = forwardRef((props, ref) => {
       const points = taData.points;
       const retraces = taData.retraces;
       const isBullish = taData.is_bullish;
-      const baseColor = isBullish ? '#00ff88' : '#ff3366';
+      // Use gray in monochromatic mode, otherwise dark green/dark red
+      const baseColor = globalPatternDisplay.monochromaticMode 
+        ? '#666666' 
+        : (isBullish ? '#1a6b1a' : '#8b1a1a');
       const isSelected = selectedPattern?.id === pattern.id || expandedPatternId === pattern.id;
       const alpha = isSelected ? 0.8 : unselectedAlpha * 0.6;
       const labelAlpha = isSelected ? 1 : unselectedAlpha;
@@ -617,7 +665,7 @@ const TradingViewChart = forwardRef((props, ref) => {
         );
       }
     });
-  }, [harmonicPatterns, selectedPattern, expandedPatternId, unselectedAlpha, globalPatternDisplay.showRetraceLines]);
+  }, [harmonicPatterns, selectedPattern, expandedPatternId, unselectedAlpha, globalPatternDisplay.showRetraceLines, globalPatternDisplay.monochromaticMode]);
 
   // Ref for fibonacci lines (separate from pattern lines)
   const fibLinesRef = useRef([]);

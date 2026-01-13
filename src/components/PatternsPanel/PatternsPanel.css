@@ -211,6 +211,30 @@
   color: var(--text-secondary);
 }
 
+/* Monochromatic mode checkbox - special styling */
+.settings-checkbox-label.monochromatic {
+  margin-top: var(--spacing-sm);
+  padding-top: var(--spacing-sm);
+  border-top: 1px dashed var(--border-primary);
+}
+
+.settings-checkbox-label.monochromatic .checkbox-custom {
+  border-color: var(--text-muted);
+}
+
+.settings-checkbox-label.monochromatic:hover .checkbox-custom {
+  border-color: #888888;
+}
+
+.settings-checkbox-label.monochromatic .settings-checkbox:checked + .checkbox-custom {
+  border-color: #888888;
+  background: rgba(136, 136, 136, 0.2);
+}
+
+.settings-checkbox-label.monochromatic .settings-checkbox:checked + .checkbox-custom::after {
+  color: #cccccc;
+}
+
 /* Sub-options (radio buttons) */
 .settings-sub-options {
   margin-left: 24px;
@@ -763,6 +787,27 @@
 
 .completion-item span:first-child {
   color: var(--text-muted);
+}
+
+/* Monochromatic mode - pattern list styling */
+.patterns-list.monochromatic .pattern-direction.bullish {
+  background: transparent;
+  border: 1px solid #ffffff;
+  color: #ffffff;
+}
+
+.patterns-list.monochromatic .pattern-direction.bearish {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.patterns-list.monochromatic .completion-item.max span:last-child {
+  color: #ffffff;
+}
+
+.patterns-list.monochromatic .completion-item.min span:last-child {
+  color: rgba(255, 255, 255, 0.5);
 }
 
 /* Responsive */

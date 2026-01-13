@@ -10,6 +10,7 @@ import {
   setPointLevelLineStyle,
   toggleShowPatternShapes,
   toggleShowRetraceLines,
+  toggleMonochromaticMode,
 } from '../../store/slices/analysisSlice';
 import { togglePatternsPanel } from '../../store/slices/uiSlice';
 import './PatternsPanel.css';
@@ -246,10 +247,22 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
             </label>
           </div>
         )}
+
+        {/* Monochromatic Mode checkbox */}
+        <label className="settings-checkbox-label monochromatic">
+          <input
+            type="checkbox"
+            checked={globalPatternDisplay.monochromaticMode}
+            onChange={() => dispatch(toggleMonochromaticMode())}
+            className="settings-checkbox"
+          />
+          <span className="checkbox-custom"></span>
+          <span className="checkbox-text">Monochromatic mode</span>
+        </label>
       </div>
 
       {/* Patterns List */}
-      <div className="patterns-list">
+      <div className={`patterns-list ${globalPatternDisplay.monochromaticMode ? 'monochromatic' : ''}`}>
         {Object.keys(groupedPatterns).length === 0 ? (
           <div className="no-patterns">
             <span className="no-patterns-icon">◇</span>

@@ -35,7 +35,9 @@ const analysisSlice = createSlice({
       // Pattern shapes (triangles XAB, BCD for XABCD; ABC, BCD for ABCD; lines AB, BC for ABC)
       showPatternShapes: true,
       // Retrace lines between points (dashed lines with labels like XB, BD, etc.)
-      showRetraceLines: false,
+      showRetraceLines: true,
+      // Monochromatic mode: white candles (filled up, hollow down), gray patterns
+      monochromaticMode: true,
     },
     // Indicator visibility
     indicators: {
@@ -128,6 +130,9 @@ const analysisSlice = createSlice({
     toggleShowRetraceLines: (state) => {
       state.globalPatternDisplay.showRetraceLines = !state.globalPatternDisplay.showRetraceLines;
     },
+    toggleMonochromaticMode: (state) => {
+      state.globalPatternDisplay.monochromaticMode = !state.globalPatternDisplay.monochromaticMode;
+    },
     toggleIndicator: (state, action) => {
       const indicator = action.payload;
       if (state.indicators.hasOwnProperty(indicator)) {
@@ -183,6 +188,7 @@ export const {
   setPointLevelLineStyle,
   toggleShowPatternShapes,
   toggleShowRetraceLines,
+  toggleMonochromaticMode,
   toggleIndicator,
   setIndicator,
   clearAnalysis,
