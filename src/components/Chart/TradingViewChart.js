@@ -666,7 +666,15 @@ const RSIIndicator = ({ klines, onChartReady, onChartDestroy, syncTimeRange }) =
     };
     chart.timeScale().subscribeVisibleTimeRangeChange(handleTimeRangeChange);
 
+    // Resize observer for responsive width
+    const resizeObserver = new ResizeObserver((entries) => {
+      const { width } = entries[0].contentRect;
+      chart.applyOptions({ width });
+    });
+    resizeObserver.observe(containerRef.current);
+
     return () => {
+      resizeObserver.disconnect();
       chart.timeScale().unsubscribeVisibleTimeRangeChange(handleTimeRangeChange);
       onChartDestroy?.(chart);
       chart.remove();
@@ -729,7 +737,15 @@ const MACDIndicator = ({ klines, onChartReady, onChartDestroy, syncTimeRange }) 
     };
     chart.timeScale().subscribeVisibleTimeRangeChange(handleTimeRangeChange);
 
+    // Resize observer for responsive width
+    const resizeObserver = new ResizeObserver((entries) => {
+      const { width } = entries[0].contentRect;
+      chart.applyOptions({ width });
+    });
+    resizeObserver.observe(containerRef.current);
+
     return () => {
+      resizeObserver.disconnect();
       chart.timeScale().unsubscribeVisibleTimeRangeChange(handleTimeRangeChange);
       onChartDestroy?.(chart);
       chart.remove();
@@ -777,7 +793,15 @@ const OBVIndicator = ({ klines, onChartReady, onChartDestroy, syncTimeRange }) =
     };
     chart.timeScale().subscribeVisibleTimeRangeChange(handleTimeRangeChange);
 
+    // Resize observer for responsive width
+    const resizeObserver = new ResizeObserver((entries) => {
+      const { width } = entries[0].contentRect;
+      chart.applyOptions({ width });
+    });
+    resizeObserver.observe(containerRef.current);
+
     return () => {
+      resizeObserver.disconnect();
       chart.timeScale().unsubscribeVisibleTimeRangeChange(handleTimeRangeChange);
       onChartDestroy?.(chart);
       chart.remove();

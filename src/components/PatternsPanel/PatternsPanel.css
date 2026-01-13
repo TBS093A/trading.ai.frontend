@@ -4,23 +4,26 @@
    ============================================ */
 
 .patterns-panel {
-  position: fixed;
-  top: 0;
-  right: 0;
+  position: relative;
   height: 100vh;
-  width: var(--patterns-panel-width, 320px);
+  width: 0;
+  min-width: 0;
+  max-width: 0;
   background: var(--bg-secondary);
-  border-left: 1px solid var(--border-primary);
-  transform: translateX(100%);
-  transition: transform var(--transition-normal);
+  border-left: none;
+  transition: width var(--transition-normal), min-width var(--transition-normal), max-width var(--transition-normal);
   z-index: 90;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .patterns-panel.open {
-  transform: translateX(0);
+  width: var(--patterns-panel-width, 320px);
+  min-width: var(--patterns-panel-width, 320px);
+  max-width: var(--patterns-panel-width, 320px);
+  border-left: 1px solid var(--border-primary);
 }
 
 /* Header */
@@ -691,14 +694,10 @@
 
 /* Responsive */
 @media (max-width: 1400px) {
-  .patterns-panel {
+  .patterns-panel.open {
     width: 280px;
-  }
-}
-
-@media (max-width: 768px) {
-  .patterns-panel {
-    width: 100%;
+    min-width: 280px;
+    max-width: 280px;
   }
 }
 

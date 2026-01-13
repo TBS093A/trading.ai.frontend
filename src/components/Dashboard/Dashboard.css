@@ -3,7 +3,10 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
+  width: 100%;
+  min-width: 0; /* Allow flex item to shrink below content size */
   background: var(--bg-primary);
+  overflow: hidden;
 }
 
 /* Welcome Screen */
@@ -164,6 +167,8 @@
   flex: 1;
   position: relative;
   overflow: hidden;
+  width: 100%;
+  min-width: 0; /* Allow flex item to shrink below content size */
 }
 
 .chart-loader {

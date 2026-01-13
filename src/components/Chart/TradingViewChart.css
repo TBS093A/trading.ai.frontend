@@ -3,12 +3,16 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  width: 100%;
   background: var(--bg-primary);
+  overflow: hidden;
 }
 
 .trading-chart {
   flex: 1;
   min-height: 400px;
+  width: 100%;
+  overflow: hidden;
 }
 
 /* Indicator Charts */
@@ -16,6 +20,12 @@
   position: relative;
   border-top: 1px solid var(--border-primary);
   background: var(--bg-primary);
+  width: 100%;
+  overflow: hidden;
+}
+
+.indicator-chart > div {
+  width: 100% !important;
 }
 
 .indicator-label {

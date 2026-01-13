@@ -12,10 +12,19 @@ const uiSlice = createSlice({
   },
   reducers: {
     toggleSidebar: (state) => {
-      state.sidebarOpen = !state.sidebarOpen;
+      const newState = !state.sidebarOpen;
+      state.sidebarOpen = newState;
+      // Close patterns panel when opening sidebar
+      if (newState) {
+        state.patternsPanelOpen = false;
+      }
     },
     setSidebarOpen: (state, action) => {
       state.sidebarOpen = action.payload;
+      // Close patterns panel when opening sidebar
+      if (action.payload) {
+        state.patternsPanelOpen = false;
+      }
     },
     toggleRightPanel: (state) => {
       state.rightPanelOpen = !state.rightPanelOpen;
@@ -24,10 +33,19 @@ const uiSlice = createSlice({
       state.rightPanelOpen = action.payload;
     },
     togglePatternsPanel: (state) => {
-      state.patternsPanelOpen = !state.patternsPanelOpen;
+      const newState = !state.patternsPanelOpen;
+      state.patternsPanelOpen = newState;
+      // Close sidebar when opening patterns panel
+      if (newState) {
+        state.sidebarOpen = false;
+      }
     },
     setPatternsPanelOpen: (state, action) => {
       state.patternsPanelOpen = action.payload;
+      // Close sidebar when opening patterns panel
+      if (action.payload) {
+        state.sidebarOpen = false;
+      }
     },
     setTheme: (state, action) => {
       state.theme = action.payload;
