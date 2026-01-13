@@ -78,20 +78,19 @@ const Sidebar = ({ isOpen }) => {
   }, [dispatch]);
 
   return (
-    <aside className={`sidebar ${isOpen ? 'open' : 'collapsed'}`}>
-      {/* Header */}
-      <div className="sidebar-header">
-        <div className="logo">
-          <span className="logo-icon">◈</span>
-          <span className="logo-text">TRADING AI</span>
-        </div>
-        <button className="sidebar-toggle" onClick={() => dispatch(toggleSidebar())}>
-          {isOpen ? '◀' : '▶'}
-        </button>
-      </div>
-
+    <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
       {isOpen && (
         <>
+          {/* Header */}
+          <div className="sidebar-header">
+            <div className="logo">
+              <span className="logo-icon">◈</span>
+              <span className="logo-text">TRADING AI</span>
+            </div>
+            <button className="sidebar-toggle" onClick={() => dispatch(toggleSidebar())}>
+              ◀
+            </button>
+          </div>
           {/* Sync Section - Collapsible */}
           <SyncSection />
 

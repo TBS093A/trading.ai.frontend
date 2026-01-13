@@ -22,12 +22,6 @@
   border-right: 1px solid var(--border-primary);
 }
 
-.sidebar.collapsed {
-  width: var(--sidebar-collapsed);
-  min-width: var(--sidebar-collapsed);
-  max-width: var(--sidebar-collapsed);
-}
-
 /* Header */
 .sidebar-header {
   display: flex;
