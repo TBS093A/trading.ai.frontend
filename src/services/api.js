@@ -65,6 +65,15 @@ const api = {
   searchAssetsByQuote: (quoteName) =>
     axiosInstance.get(`/assets/search/quote/${quoteName}`),
 
+  getAssetsWithPatterns: (exchangeId = null, limit = 1000, offset = 0) =>
+    axiosInstance.get('/assets/with-harmonic-patterns', {
+      params: {
+        ...(exchangeId && { exchange_id: exchangeId }),
+        limit,
+        offset,
+      },
+    }),
+
   // ==================
   // KLINES
   // ==================
