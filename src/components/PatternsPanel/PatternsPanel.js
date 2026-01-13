@@ -4,6 +4,7 @@ import {
   setSelectedPattern, 
   toggleExpandedPattern,
   setUnselectedAlpha,
+  toggleAutoCenterOnSelect,
   togglePanelOption 
 } from '../../store/slices/analysisSlice';
 import { togglePatternsPanel } from '../../store/slices/uiSlice';
@@ -16,6 +17,7 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
     selectedPattern, 
     expandedPatternId,
     unselectedAlpha,
+    autoCenterOnSelect,
     panelOptions 
   } = useSelector((state) => state.analysis);
 
@@ -66,18 +68,29 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
     return harmonicPatterns?.length || 0;
   }, [harmonicPatterns]);
 
+  // Handle clicking on pattern item (expands and optionally centers)
   const handlePatternClick = useCallback((pattern) => {
     dispatch(setSelectedPattern(pattern));
     dispatch(toggleExpandedPattern(pattern.id));
     
-    // Center chart on pattern
-    if (onCenterPattern) {
+    // Center chart on pattern only if autoCenterOnSelect is enabled
+    if (autoCenterOnSelect && onCenterPattern) {
       onCenterPattern(pattern);
     }
-  }, [dispatch, onCenterPattern]);
+  }, [dispatch, onCenterPattern, autoCenterOnSelect]);
+
+  // Handle clicking only the expand arrow (just toggles expand)
+  const handleExpandClick = useCallback((e, patternId) => {
+    e.stopPropagation();
+    dispatch(toggleExpandedPattern(patternId));
+  }, [dispatch]);
 
   const handleAlphaChange = useCallback((e) => {
     dispatch(setUnselectedAlpha(parseFloat(e.target.value)));
+  }, [dispatch]);
+
+  const handleAutoCenterToggle = useCallback(() => {
+    dispatch(toggleAutoCenterOnSelect());
   }, [dispatch]);
 
   const formatTimestamp = (timestamp) => {
@@ -134,6 +147,18 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
           onChange={handleAlphaChange}
           className="alpha-slider"
         />
+        
+        {/* Auto-center checkbox */}
+        <label className="auto-center-label">
+          <input
+            type="checkbox"
+            checked={autoCenterOnSelect}
+            onChange={handleAutoCenterToggle}
+            className="auto-center-checkbox"
+          />
+          <span className="checkbox-custom"></span>
+          <span className="auto-center-text">Center chart on click</span>
+        </label>
       </div>
 
       {/* Patterns List */}
@@ -166,24 +191,30 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
                       className={`pattern-item ${isExpanded ? 'expanded' : ''} ${isSelected ? 'selected' : ''}`}
                     >
                       {/* Pattern Header (clickable) */}
-                      <button 
-                        className="pattern-header"
-                        onClick={() => handlePatternClick(pattern)}
-                      >
-                        <div className="pattern-main">
-                          <span className={`pattern-direction ${taData.is_bullish ? 'bullish' : 'bearish'}`}>
-                            {taData.is_bullish ? '▲' : '▼'}
-                          </span>
-                          <span className="pattern-name">{taData.pattern_type || 'Unknown'}</span>
-                          <span className={`pattern-status ${taData.is_formed ? 'formed' : 'forming'}`}>
-                            {taData.is_formed ? '●' : '○'}
-                          </span>
-                        </div>
-                        <div className="pattern-meta">
+                      <div className="pattern-header">
+                        <button 
+                          className="pattern-header-main"
+                          onClick={() => handlePatternClick(pattern)}
+                        >
+                          <div className="pattern-main">
+                            <span className={`pattern-direction ${taData.is_bullish ? 'bullish' : 'bearish'}`}>
+                              {taData.is_bullish ? '▲' : '▼'}
+                            </span>
+                            <span className="pattern-name">{taData.pattern_type || 'Unknown'}</span>
+                            <span className={`pattern-status ${taData.is_formed ? 'formed' : 'forming'}`}>
+                              {taData.is_formed ? '●' : '○'}
+                            </span>
+                          </div>
                           <span className="pattern-date">{formatTimestamp(dTimestamp)}</span>
-                          <span className={`expand-icon ${isExpanded ? 'expanded' : ''}`}>▾</span>
-                        </div>
-                      </button>
+                        </button>
+                        <button 
+                          className={`expand-btn ${isExpanded ? 'expanded' : ''}`}
+                          onClick={(e) => handleExpandClick(e, pattern.id)}
+                          title={isExpanded ? 'Collapse' : 'Expand'}
+                        >
+                          <span className="expand-icon">▾</span>
+                        </button>
+                      </div>
 
                       {/* Expanded Details */}
                       {isExpanded && (

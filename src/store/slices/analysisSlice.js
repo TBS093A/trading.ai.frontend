@@ -20,7 +20,8 @@ const analysisSlice = createSlice({
     selectedPattern: null,
     hoveredPattern: null,
     expandedPatternId: null, // ID of pattern with expanded dropdown in list
-    unselectedAlpha: 0.5, // Alpha (opacity) for unselected patterns (0-1)
+    unselectedAlpha: 0.15, // Alpha (opacity) for unselected patterns (0-1), default 15%
+    autoCenterOnSelect: true, // Auto-center chart when clicking pattern in list
     loading: false,
     error: null,
     // Panel visibility options for selected pattern
@@ -68,6 +69,12 @@ const analysisSlice = createSlice({
     },
     setUnselectedAlpha: (state, action) => {
       state.unselectedAlpha = Math.max(0, Math.min(1, action.payload));
+    },
+    toggleAutoCenterOnSelect: (state) => {
+      state.autoCenterOnSelect = !state.autoCenterOnSelect;
+    },
+    setAutoCenterOnSelect: (state, action) => {
+      state.autoCenterOnSelect = action.payload;
     },
     togglePanelOption: (state, action) => {
       const option = action.payload;
@@ -127,6 +134,8 @@ export const {
   setExpandedPatternId,
   toggleExpandedPattern,
   setUnselectedAlpha,
+  toggleAutoCenterOnSelect,
+  setAutoCenterOnSelect,
   togglePanelOption,
   setPanelOption,
   toggleIndicator,
