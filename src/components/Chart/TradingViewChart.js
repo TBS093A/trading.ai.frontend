@@ -429,7 +429,6 @@ const TradingViewChart = forwardRef((props, ref) => {
       const isSelected = selectedPattern?.id === pattern.id || expandedPatternId === pattern.id;
       const lineAlpha = isSelected ? 1 : unselectedAlpha;
       const mainLineWidth = isSelected ? 2 : 1;
-      const closingLineWidth = 1;
 
       const hasX = points.X && x_point_timestamp;
       const hasA = points.A && a_point_timestamp;
@@ -506,44 +505,11 @@ const TradingViewChart = forwardRef((props, ref) => {
         } catch (e) {}
       }
 
-      // Draw closing lines to complete triangles: X-B (closes XAB), B-D (closes BCD)
-      if (hasX && hasB) {
-        try {
-          const series = chartRef.current.addLineSeries({
-            color: hexToRgba(baseColor, lineAlpha * 0.6),
-            lineWidth: closingLineWidth,
-            crosshairMarkerVisible: false,
-            lastValueVisible: false,
-            priceLineVisible: false,
-          });
-          series.setData([
-            { time: x_point_timestamp / 1000, value: points.X.price },
-            { time: b_point_timestamp / 1000, value: points.B.price },
-          ]);
-          patternShapesRef.current.push(series);
-        } catch (e) {}
-      }
-
-      if (hasB && hasD) {
-        try {
-          const series = chartRef.current.addLineSeries({
-            color: hexToRgba(baseColor, lineAlpha * 0.6),
-            lineWidth: closingLineWidth,
-            crosshairMarkerVisible: false,
-            lastValueVisible: false,
-            priceLineVisible: false,
-          });
-          series.setData([
-            { time: b_point_timestamp / 1000, value: points.B.price },
-            { time: d_point_timestamp / 1000, value: points.D.price },
-          ]);
-          patternShapesRef.current.push(series);
-        } catch (e) {}
-      }
     });
   }, [harmonicPatterns, selectedPattern, expandedPatternId, unselectedAlpha, globalPatternDisplay.showPatternShapes]);
 
-  // Draw retrace lines with ratio labels (thin lines: X-B, A-C, B-D, X-D with values)
+  // Draw retrace lines with ratio labels
+  // Pyharmonics provides: XAB (AB/XA), ABC (BC/AB), BCD (CD/BC), XAD (AD/XA)
   useEffect(() => {
     if (!chartRef.current || harmonicPatterns.length === 0) return;
 
@@ -567,7 +533,8 @@ const TradingViewChart = forwardRef((props, ref) => {
       const isBullish = taData.is_bullish;
       const baseColor = isBullish ? '#00ff88' : '#ff3366';
       const isSelected = selectedPattern?.id === pattern.id || expandedPatternId === pattern.id;
-      const alpha = isSelected ? 0.7 : unselectedAlpha * 0.7;
+      const alpha = isSelected ? 0.8 : unselectedAlpha * 0.6;
+      const labelAlpha = isSelected ? 1 : unselectedAlpha;
 
       // Helper to format ratio value
       const formatRatio = (value) => {
@@ -575,126 +542,79 @@ const TradingViewChart = forwardRef((props, ref) => {
         return value.toFixed(3);
       };
 
-      // XB retrace - ratio of AB to XA (connects X to B diagonally)
-      if (points.X && points.B && x_point_timestamp && b_point_timestamp && retraces.XB !== undefined) {
+      // Helper to create retrace line with label at center
+      const createRetraceLine = (startTime, startPrice, endTime, endPrice, label, isDashed = true) => {
         try {
+          // Calculate midpoint time and price for label placement
+          const midTime = (startTime + endTime) / 2 / 1000;
+          const midPrice = (startPrice + endPrice) / 2;
+          
+          // Create main dashed line
           const series = chartRef.current.addLineSeries({
             color: hexToRgba(baseColor, alpha),
             lineWidth: 1,
-            lineStyle: 0, // Solid thin line
+            lineStyle: isDashed ? 2 : 0, // 2 = dashed
             crosshairMarkerVisible: false,
             lastValueVisible: false,
             priceLineVisible: false,
           });
-          series.setData([
-            { time: x_point_timestamp / 1000, value: points.X.price },
-            { time: b_point_timestamp / 1000, value: points.B.price },
-          ]);
-          retraceLinesRef.current.push(series);
           
-          // Add marker with ratio label at midpoint
-          const midTime = (x_point_timestamp + b_point_timestamp) / 2 / 1000;
-          const midPrice = (points.X.price + points.B.price) / 2;
-          if (isSelected) {
-            series.setMarkers([{
-              time: midTime,
-              position: 'inBar',
-              color: hexToRgba(baseColor, 1),
-              shape: 'text',
-              text: formatRatio(retraces.XB),
-            }]);
-          }
+          // Set line data with midpoint for marker
+          series.setData([
+            { time: startTime / 1000, value: startPrice },
+            { time: midTime, value: midPrice },
+            { time: endTime / 1000, value: endPrice },
+          ]);
+          
+          // Add label marker at midpoint
+          series.setMarkers([{
+            time: midTime,
+            position: 'inBar',
+            color: hexToRgba(baseColor, labelAlpha),
+            shape: 'text',
+            text: label,
+          }]);
+          
+          retraceLinesRef.current.push(series);
         } catch (e) {}
+      };
+
+      // XAB retrace - line from X to B with XAB ratio label
+      if (points.X && points.B && x_point_timestamp && b_point_timestamp && retraces.XAB !== undefined) {
+        createRetraceLine(
+          x_point_timestamp, points.X.price,
+          b_point_timestamp, points.B.price,
+          formatRatio(retraces.XAB)
+        );
       }
 
-      // AC retrace (connects A to C)
-      if (points.A && points.C && a_point_timestamp && c_point_timestamp && retraces.AC !== undefined) {
-        try {
-          const series = chartRef.current.addLineSeries({
-            color: hexToRgba(baseColor, alpha),
-            lineWidth: 1,
-            lineStyle: 0,
-            crosshairMarkerVisible: false,
-            lastValueVisible: false,
-            priceLineVisible: false,
-          });
-          series.setData([
-            { time: a_point_timestamp / 1000, value: points.A.price },
-            { time: c_point_timestamp / 1000, value: points.C.price },
-          ]);
-          retraceLinesRef.current.push(series);
-          
-          if (isSelected) {
-            const midTime = (a_point_timestamp + c_point_timestamp) / 2 / 1000;
-            series.setMarkers([{
-              time: midTime,
-              position: 'inBar',
-              color: hexToRgba(baseColor, 1),
-              shape: 'text',
-              text: formatRatio(retraces.AC),
-            }]);
-          }
-        } catch (e) {}
+      // ABC retrace - line from A to C with ABC ratio label
+      if (points.A && points.C && a_point_timestamp && c_point_timestamp && retraces.ABC !== undefined) {
+        createRetraceLine(
+          a_point_timestamp, points.A.price,
+          c_point_timestamp, points.C.price,
+          formatRatio(retraces.ABC)
+        );
       }
 
-      // BD retrace (connects B to D)
-      if (points.B && points.D && b_point_timestamp && d_point_timestamp && retraces.BD !== undefined) {
-        try {
-          const series = chartRef.current.addLineSeries({
-            color: hexToRgba(baseColor, alpha),
-            lineWidth: 1,
-            lineStyle: 0,
-            crosshairMarkerVisible: false,
-            lastValueVisible: false,
-            priceLineVisible: false,
-          });
-          series.setData([
-            { time: b_point_timestamp / 1000, value: points.B.price },
-            { time: d_point_timestamp / 1000, value: points.D.price },
-          ]);
-          retraceLinesRef.current.push(series);
-          
-          if (isSelected) {
-            const midTime = (b_point_timestamp + d_point_timestamp) / 2 / 1000;
-            series.setMarkers([{
-              time: midTime,
-              position: 'inBar',
-              color: hexToRgba(baseColor, 1),
-              shape: 'text',
-              text: formatRatio(retraces.BD),
-            }]);
-          }
-        } catch (e) {}
+      // BCD retrace - line from B to D with BCD ratio label
+      if (points.B && points.D && b_point_timestamp && d_point_timestamp && retraces.BCD !== undefined) {
+        createRetraceLine(
+          b_point_timestamp, points.B.price,
+          d_point_timestamp, points.D.price,
+          formatRatio(retraces.BCD)
+        );
       }
 
-      // XD retrace (connects X to D) - for full XABCD pattern
-      if (points.X && points.D && x_point_timestamp && d_point_timestamp && retraces.XD !== undefined) {
-        try {
-          const series = chartRef.current.addLineSeries({
-            color: hexToRgba(baseColor, alpha * 0.8),
-            lineWidth: 1,
-            lineStyle: 2, // Dashed for XD
-            crosshairMarkerVisible: false,
-            lastValueVisible: false,
-            priceLineVisible: false,
-          });
-          series.setData([
-            { time: x_point_timestamp / 1000, value: points.X.price },
-            { time: d_point_timestamp / 1000, value: points.D.price },
-          ]);
-          retraceLinesRef.current.push(series);
-          
-          if (isSelected) {
-            const midTime = (x_point_timestamp + d_point_timestamp) / 2 / 1000;
-            series.setMarkers([{
-              time: midTime,
-              position: 'inBar',
-              color: hexToRgba(baseColor, 1),
-              shape: 'text',
-              text: formatRatio(retraces.XD),
-            }]);
-          }
-        } catch (e) {}
+      // XAD/XABCD retrace - line from X to D with ratio label
+      // Use XABCD if available, fallback to XAD
+      const xdRatio = retraces.XABCD ?? retraces.XAD;
+      if (points.X && points.D && x_point_timestamp && d_point_timestamp && xdRatio !== undefined) {
+        createRetraceLine(
+          x_point_timestamp, points.X.price,
+          d_point_timestamp, points.D.price,
+          formatRatio(xdRatio)
+        );
       }
     });
   }, [harmonicPatterns, selectedPattern, expandedPatternId, unselectedAlpha, globalPatternDisplay.showRetraceLines]);

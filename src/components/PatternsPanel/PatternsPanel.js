@@ -332,17 +332,21 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
                             </div>
                           </div>
 
-                          {/* Retraces */}
+                          {/* Retraces (Fibonacci ratios) */}
                           {taData.retraces && (
                             <div className="details-section">
                               <div className="details-title">Retraces</div>
                               <div className="retraces-row">
-                                {Object.entries(taData.retraces).map(([key, value]) => (
-                                  <div key={key} className="retrace-mini">
-                                    <span className="retrace-key">{key}</span>
-                                    <span className="retrace-val">{(value * 100).toFixed(1)}%</span>
-                                  </div>
-                                ))}
+                                {['XAB', 'ABC', 'BCD', 'XABCD'].map((key) => {
+                                  const value = taData.retraces[key];
+                                  if (value === undefined) return null;
+                                  return (
+                                    <div key={key} className="retrace-mini">
+                                      <span className="retrace-key">{key}</span>
+                                      <span className="retrace-val">{value.toFixed(3)}</span>
+                                    </div>
+                                  );
+                                })}
                               </div>
                             </div>
                           )}
