@@ -12,19 +12,77 @@ const TradingViewChart = () => {
   const chartRef = useRef(null);
   const candlestickSeriesRef = useRef(null);
   const volumeSeriesRef = useRef(null);
-  const rsiChartRef = useRef(null);
-  const rsiSeriesRef = useRef(null);
-  const macdChartRef = useRef(null);
-  const macdLineRef = useRef(null);
-  const macdSignalRef = useRef(null);
-  const macdHistRef = useRef(null);
-  const obvChartRef = useRef(null);
-  const obvSeriesRef = useRef(null);
   const patternLinesRef = useRef([]);
   const patternMarkersRef = useRef([]);
+  
+  // Refs for indicator charts (for synchronization)
+  const indicatorChartsRef = useRef([]);
+  const isSyncingRef = useRef(false); // Prevent infinite sync loops
 
   const { klines } = useSelector((state) => state.chart);
   const { harmonicPatterns, selectedPattern, panelOptions, indicators } = useSelector((state) => state.analysis);
+
+  // Register indicator chart for synchronization
+  const registerIndicatorChart = useCallback((chart) => {
+    if (chart && !indicatorChartsRef.current.includes(chart)) {
+      indicatorChartsRef.current.push(chart);
+    }
+  }, []);
+
+  // Unregister indicator chart
+  const unregisterIndicatorChart = useCallback((chart) => {
+    indicatorChartsRef.current = indicatorChartsRef.current.filter(c => c !== chart);
+  }, []);
+
+  // Sync time range from source to all other charts
+  const syncTimeRange = useCallback((sourceChart, range) => {
+    if (isSyncingRef.current) return;
+    isSyncingRef.current = true;
+
+    try {
+      // Sync main chart if source is not main
+      if (sourceChart !== chartRef.current && chartRef.current) {
+        chartRef.current.timeScale().setVisibleRange(range);
+      }
+
+      // Sync all indicator charts
+      indicatorChartsRef.current.forEach((chart) => {
+        if (chart !== sourceChart && chart) {
+          try {
+            chart.timeScale().setVisibleRange(range);
+          } catch (e) {}
+        }
+      });
+    } finally {
+      // Use requestAnimationFrame to reset sync flag after all updates
+      requestAnimationFrame(() => {
+        isSyncingRef.current = false;
+      });
+    }
+  }, []);
+
+  // Sync crosshair position across all charts
+  const syncCrosshair = useCallback((sourceChart, time, point) => {
+    if (!time) return;
+
+    // Sync to main chart
+    if (sourceChart !== chartRef.current && chartRef.current) {
+      chartRef.current.setCrosshairPosition(0, time, chartRef.current.series?.[0]);
+    }
+
+    // Sync to indicator charts
+    indicatorChartsRef.current.forEach((chart) => {
+      if (chart !== sourceChart && chart) {
+        try {
+          // Get the first series of the chart
+          const series = chart.series?.[0];
+          if (series) {
+            chart.setCrosshairPosition(0, time, series);
+          }
+        } catch (e) {}
+      }
+    });
+  }, []);
 
   // Convert klines to chart data format
   const convertKlinesToCandlestickData = useCallback((klines) => {
@@ -428,30 +486,62 @@ const TradingViewChart = () => {
     };
   }, [handleChartClick, handleCrosshairMove]);
 
+  // Set up time scale synchronization for main chart
+  useEffect(() => {
+    if (!chartRef.current) return;
+
+    const handleVisibleTimeRangeChange = (range) => {
+      if (range) {
+        syncTimeRange(chartRef.current, range);
+      }
+    };
+
+    chartRef.current.timeScale().subscribeVisibleTimeRangeChange(handleVisibleTimeRangeChange);
+
+    return () => {
+      chartRef.current?.timeScale().unsubscribeVisibleTimeRangeChange(handleVisibleTimeRangeChange);
+    };
+  }, [syncTimeRange]);
+
   return (
     <div className="trading-chart-wrapper">
       <div ref={chartContainerRef} className="trading-chart" />
       
       {/* RSI Chart */}
       {indicators.rsi && klines.length > 0 && (
-        <RSIIndicator klines={klines} />
+        <RSIIndicator 
+          klines={klines} 
+          onChartReady={registerIndicatorChart}
+          onChartDestroy={unregisterIndicatorChart}
+          syncTimeRange={syncTimeRange}
+        />
       )}
       
       {/* MACD Chart */}
       {indicators.macd && klines.length > 0 && (
-        <MACDIndicator klines={klines} />
+        <MACDIndicator 
+          klines={klines}
+          onChartReady={registerIndicatorChart}
+          onChartDestroy={unregisterIndicatorChart}
+          syncTimeRange={syncTimeRange}
+        />
       )}
       
       {/* OBV Chart */}
       {indicators.obv && klines.length > 0 && (
-        <OBVIndicator klines={klines} />
+        <OBVIndicator 
+          klines={klines}
+          onChartReady={registerIndicatorChart}
+          onChartDestroy={unregisterIndicatorChart}
+          syncTimeRange={syncTimeRange}
+        />
       )}
     </div>
   );
 };
 
 // RSI Indicator Component
-const RSIIndicator = ({ klines }) => {
+const RSIIndicator = ({ klines, onChartReady, onChartDestroy, syncTimeRange }) => {
   const containerRef = useRef(null);
   const chartRef = useRef(null);
 
@@ -463,7 +553,8 @@ const RSIIndicator = ({ klines }) => {
       layout: { background: { type: 'solid', color: '#060810' }, textColor: '#8b949e' },
       grid: { vertLines: { color: 'rgba(255,255,255,0.03)' }, horzLines: { color: 'rgba(255,255,255,0.03)' } },
       rightPriceScale: { borderColor: '#21262d' },
-      timeScale: { visible: false },
+      timeScale: { visible: false, borderColor: '#21262d' },
+      handleScroll: { vertTouchDrag: false },
     });
     chartRef.current = chart;
 
@@ -478,8 +569,23 @@ const RSIIndicator = ({ klines }) => {
     series.createPriceLine({ price: 70, color: '#ff3366', lineWidth: 1, lineStyle: 2 });
     series.createPriceLine({ price: 30, color: '#00ff88', lineWidth: 1, lineStyle: 2 });
 
-    return () => chart.remove();
-  }, [klines]);
+    // Register for sync
+    onChartReady?.(chart);
+
+    // Subscribe to time range changes for sync
+    const handleTimeRangeChange = (range) => {
+      if (range) {
+        syncTimeRange?.(chart, range);
+      }
+    };
+    chart.timeScale().subscribeVisibleTimeRangeChange(handleTimeRangeChange);
+
+    return () => {
+      chart.timeScale().unsubscribeVisibleTimeRangeChange(handleTimeRangeChange);
+      onChartDestroy?.(chart);
+      chart.remove();
+    };
+  }, [klines, onChartReady, onChartDestroy, syncTimeRange]);
 
   return (
     <div className="indicator-chart">
@@ -490,8 +596,9 @@ const RSIIndicator = ({ klines }) => {
 };
 
 // MACD Indicator Component
-const MACDIndicator = ({ klines }) => {
+const MACDIndicator = ({ klines, onChartReady, onChartDestroy, syncTimeRange }) => {
   const containerRef = useRef(null);
+  const chartRef = useRef(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -501,8 +608,10 @@ const MACDIndicator = ({ klines }) => {
       layout: { background: { type: 'solid', color: '#060810' }, textColor: '#8b949e' },
       grid: { vertLines: { color: 'rgba(255,255,255,0.03)' }, horzLines: { color: 'rgba(255,255,255,0.03)' } },
       rightPriceScale: { borderColor: '#21262d' },
-      timeScale: { visible: false },
+      timeScale: { visible: false, borderColor: '#21262d' },
+      handleScroll: { vertTouchDrag: false },
     });
+    chartRef.current = chart;
 
     const { macdLine, signalLine, histogram } = calculateMACD(klines);
 
@@ -523,8 +632,23 @@ const MACDIndicator = ({ klines }) => {
       color: h.value >= 0 ? '#00ff88' : '#ff3366'
     })));
 
-    return () => chart.remove();
-  }, [klines]);
+    // Register for sync
+    onChartReady?.(chart);
+
+    // Subscribe to time range changes for sync
+    const handleTimeRangeChange = (range) => {
+      if (range) {
+        syncTimeRange?.(chart, range);
+      }
+    };
+    chart.timeScale().subscribeVisibleTimeRangeChange(handleTimeRangeChange);
+
+    return () => {
+      chart.timeScale().unsubscribeVisibleTimeRangeChange(handleTimeRangeChange);
+      onChartDestroy?.(chart);
+      chart.remove();
+    };
+  }, [klines, onChartReady, onChartDestroy, syncTimeRange]);
 
   return (
     <div className="indicator-chart">
@@ -535,8 +659,9 @@ const MACDIndicator = ({ klines }) => {
 };
 
 // OBV Indicator Component
-const OBVIndicator = ({ klines }) => {
+const OBVIndicator = ({ klines, onChartReady, onChartDestroy, syncTimeRange }) => {
   const containerRef = useRef(null);
+  const chartRef = useRef(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -546,15 +671,32 @@ const OBVIndicator = ({ klines }) => {
       layout: { background: { type: 'solid', color: '#060810' }, textColor: '#8b949e' },
       grid: { vertLines: { color: 'rgba(255,255,255,0.03)' }, horzLines: { color: 'rgba(255,255,255,0.03)' } },
       rightPriceScale: { borderColor: '#21262d' },
-      timeScale: { visible: false },
+      timeScale: { visible: false, borderColor: '#21262d' },
+      handleScroll: { vertTouchDrag: false },
     });
+    chartRef.current = chart;
 
     const obvData = calculateOBV(klines);
     const series = chart.addLineSeries({ color: '#ffcc00', lineWidth: 2 });
     series.setData(obvData);
 
-    return () => chart.remove();
-  }, [klines]);
+    // Register for sync
+    onChartReady?.(chart);
+
+    // Subscribe to time range changes for sync
+    const handleTimeRangeChange = (range) => {
+      if (range) {
+        syncTimeRange?.(chart, range);
+      }
+    };
+    chart.timeScale().subscribeVisibleTimeRangeChange(handleTimeRangeChange);
+
+    return () => {
+      chart.timeScale().unsubscribeVisibleTimeRangeChange(handleTimeRangeChange);
+      onChartDestroy?.(chart);
+      chart.remove();
+    };
+  }, [klines, onChartReady, onChartDestroy, syncTimeRange]);
 
   return (
     <div className="indicator-chart">
