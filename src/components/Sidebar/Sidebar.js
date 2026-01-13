@@ -5,6 +5,7 @@ import { fetchAssetsByExchange, setSelectedAsset, setSearchTerm, clearAssets } f
 import { clearChart } from '../../store/slices/chartSlice';
 import { clearAnalysis } from '../../store/slices/analysisSlice';
 import { toggleSidebar } from '../../store/slices/uiSlice';
+import SyncSection from './SyncSection';
 import './Sidebar.css';
 
 const Sidebar = ({ isOpen }) => {
@@ -53,6 +54,9 @@ const Sidebar = ({ isOpen }) => {
 
       {isOpen && (
         <>
+          {/* Sync Section - Collapsible */}
+          <SyncSection />
+
           {/* Exchange Selector */}
           <div className="sidebar-section">
             <label className="section-label">

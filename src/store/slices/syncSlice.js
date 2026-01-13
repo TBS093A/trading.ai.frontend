@@ -54,8 +54,7 @@ export const fetchTaskStatus = createAsyncThunk(
 const syncSlice = createSlice({
   name: 'sync',
   initialState: {
-    // Panel state
-    isPanelOpen: false,
+    // Active section in sidebar dropdown
     activeSection: null, // 'exchanges' | 'technical' | 'bulk'
     
     // Sync states
@@ -79,14 +78,8 @@ const syncSlice = createSlice({
     activeTasks: {},
   },
   reducers: {
-    toggleSyncPanel: (state) => {
-      state.isPanelOpen = !state.isPanelOpen;
-    },
-    setSyncPanelOpen: (state, action) => {
-      state.isPanelOpen = action.payload;
-    },
     setActiveSection: (state, action) => {
-      state.activeSection = state.activeSection === action.payload ? null : action.payload;
+      state.activeSection = action.payload;
     },
     clearSyncError: (state, action) => {
       const section = action.payload;
@@ -183,8 +176,6 @@ const syncSlice = createSlice({
 });
 
 export const {
-  toggleSyncPanel,
-  setSyncPanelOpen,
   setActiveSection,
   clearSyncError,
   addActiveTask,

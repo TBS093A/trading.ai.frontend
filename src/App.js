@@ -4,7 +4,6 @@ import Dashboard from './components/Dashboard/Dashboard';
 import Sidebar from './components/Sidebar/Sidebar';
 import RightPanel from './components/RightPanel/RightPanel';
 import PatternTooltip from './components/PatternTooltip/PatternTooltip';
-import SyncPanel from './components/SyncPanel/SyncPanel';
 import { fetchExchanges } from './store/slices/exchangesSlice';
 import './styles/global.css';
 
@@ -25,7 +24,6 @@ function App() {
       </main>
       {selectedPattern && <RightPanel isOpen={rightPanelOpen} />}
       <PatternTooltip />
-      <SyncPanel />
     </div>
   );
 }
