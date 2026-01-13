@@ -30,7 +30,17 @@ const TradingViewChart = forwardRef((props, ref) => {
   const isSyncingRef = useRef(false); // Prevent infinite sync loops
 
   const { klines } = useSelector((state) => state.chart);
-  const { harmonicPatterns, selectedPattern, expandedPatternId, unselectedAlpha, panelOptions, indicators } = useSelector((state) => state.analysis);
+  const { harmonicPatterns, selectedPattern, expandedPatternId, unselectedAlpha, patternDisplayOptions, indicators } = useSelector((state) => state.analysis);
+
+  // Helper to get display options for a pattern
+  const getPatternOptions = useCallback((patternId) => {
+    return patternDisplayOptions[patternId] || {
+      showInternalFibo: false,
+      showExternalFibo: false,
+      showFiboFE: false,
+      showTPPRZSL: false,
+    };
+  }, [patternDisplayOptions]);
 
   // Expose centerOnPattern method via ref
   useImperativeHandle(ref, () => ({
@@ -377,89 +387,108 @@ const TradingViewChart = forwardRef((props, ref) => {
     };
   }, [harmonicPatterns, klines, createTimestampMap, selectedPattern, expandedPatternId, unselectedAlpha]);
 
-  // Draw Fibonacci levels for selected pattern
+  // Ref for fibonacci lines (separate from pattern lines)
+  const fibLinesRef = useRef([]);
+
+  // Draw Fibonacci levels for ALL patterns that have display options enabled
   useEffect(() => {
-    if (!chartRef.current || !candlestickSeriesRef.current || !selectedPattern) return;
+    if (!chartRef.current || !candlestickSeriesRef.current || harmonicPatterns.length === 0) return;
 
-    const { ta_object_json: taData } = selectedPattern;
-    if (!taData || !taData.fibonacci_levels) return;
+    // Clear previous fib lines
+    fibLinesRef.current.forEach((line) => {
+      try {
+        candlestickSeriesRef.current.removePriceLine(line);
+      } catch (e) {}
+    });
+    fibLinesRef.current = [];
 
-    const fibLevels = taData.fibonacci_levels;
-    const isBullish = taData.is_bullish;
+    // Draw fib levels for each pattern that has options enabled
+    harmonicPatterns.forEach((pattern) => {
+      const options = getPatternOptions(pattern.id);
+      const { ta_object_json: taData } = pattern;
+      
+      if (!taData || !taData.fibonacci_levels) return;
+      
+      const fibLevels = taData.fibonacci_levels;
+      const patternType = taData.pattern_type || '';
+      const isBullish = taData.is_bullish;
+      const isCurrentSelected = selectedPattern?.id === pattern.id;
+      const lineAlpha = isCurrentSelected ? 1 : 0.6;
 
-    // Internal Fibonacci Retracements
-    if (panelOptions.showInternalFibo && fibLevels.retracement) {
-      Object.entries(fibLevels.retracement).forEach(([level, price]) => {
-        try {
-          const line = candlestickSeriesRef.current.createPriceLine({
-            price: price,
-            color: '#ffcc00',
-            lineWidth: 1,
-            lineStyle: 1,
-            axisLabelVisible: true,
-            title: `Fib ${(parseFloat(level) * 100).toFixed(1)}%`,
-          });
-          patternLinesRef.current.push(line);
-        } catch (e) {}
-      });
-    }
+      // Internal Fibonacci Retracements
+      if (options.showInternalFibo && fibLevels.retracement) {
+        Object.entries(fibLevels.retracement).forEach(([level, price]) => {
+          try {
+            const line = candlestickSeriesRef.current.createPriceLine({
+              price: price,
+              color: hexToRgba('#ffcc00', lineAlpha),
+              lineWidth: isCurrentSelected ? 2 : 1,
+              lineStyle: 1,
+              axisLabelVisible: isCurrentSelected,
+              title: isCurrentSelected ? `Fib ${(parseFloat(level) * 100).toFixed(1)}%` : '',
+            });
+            fibLinesRef.current.push(line);
+          } catch (e) {}
+        });
+      }
 
-    // External Fibonacci Extensions
-    if (panelOptions.showExternalFibo && fibLevels.extension) {
-      Object.entries(fibLevels.extension).forEach(([level, price]) => {
-        try {
-          const line = candlestickSeriesRef.current.createPriceLine({
-            price: price,
-            color: '#9945ff',
-            lineWidth: 1,
-            lineStyle: 1,
-            axisLabelVisible: true,
-            title: `Ext ${(parseFloat(level) * 100).toFixed(1)}%`,
-          });
-          patternLinesRef.current.push(line);
-        } catch (e) {}
-      });
-    }
+      // External Fibonacci Extensions
+      if (options.showExternalFibo && fibLevels.extension) {
+        Object.entries(fibLevels.extension).forEach(([level, price]) => {
+          try {
+            const line = candlestickSeriesRef.current.createPriceLine({
+              price: price,
+              color: hexToRgba('#9945ff', lineAlpha),
+              lineWidth: isCurrentSelected ? 2 : 1,
+              lineStyle: 1,
+              axisLabelVisible: isCurrentSelected,
+              title: isCurrentSelected ? `Ext ${(parseFloat(level) * 100).toFixed(1)}%` : '',
+            });
+            fibLinesRef.current.push(line);
+          } catch (e) {}
+        });
+      }
 
-    // Fibonacci FE Extensions
-    if (panelOptions.showFiboFE && fibLevels.fe_extensions) {
-      Object.entries(fibLevels.fe_extensions).forEach(([name, data]) => {
-        try {
-          const line = candlestickSeriesRef.current.createPriceLine({
-            price: data.price,
-            color: '#00f0ff',
-            lineWidth: 1,
-            lineStyle: 1,
-            axisLabelVisible: true,
-            title: name,
-          });
-          patternLinesRef.current.push(line);
-        } catch (e) {}
-      });
-    }
+      // Fibonacci FE Extensions
+      if (options.showFiboFE && fibLevels.fe_extensions) {
+        Object.entries(fibLevels.fe_extensions).forEach(([name, data]) => {
+          try {
+            const line = candlestickSeriesRef.current.createPriceLine({
+              price: data.price,
+              color: hexToRgba('#00f0ff', lineAlpha),
+              lineWidth: isCurrentSelected ? 2 : 1,
+              lineStyle: 1,
+              axisLabelVisible: isCurrentSelected,
+              title: isCurrentSelected ? name : '',
+            });
+            fibLinesRef.current.push(line);
+          } catch (e) {}
+        });
+      }
 
-    // TP/PRZ/SL levels
-    if (panelOptions.showTPPRZSL && fibLevels.all_targets) {
-      Object.entries(fibLevels.all_targets).forEach(([name, data]) => {
-        let color = '#00ff88';
-        if (name.includes('SL') || name.includes('stop')) color = '#ff3366';
-        else if (name.includes('PRZ')) color = '#ffcc00';
-        else if (name.includes('TP')) color = '#00f0ff';
+      // TP/PRZ/SL levels
+      if (options.showTPPRZSL && fibLevels.all_targets) {
+        Object.entries(fibLevels.all_targets).forEach(([name, data]) => {
+          let color = '#00ff88';
+          if (name.includes('SL') || name.includes('stop')) color = '#ff3366';
+          else if (name.includes('PRZ')) color = '#ffcc00';
+          else if (name.includes('TP')) color = '#00f0ff';
 
-        try {
-          const line = candlestickSeriesRef.current.createPriceLine({
-            price: data.price,
-            color: color,
-            lineWidth: 2,
-            lineStyle: 0,
-            axisLabelVisible: true,
-            title: name,
-          });
-          patternLinesRef.current.push(line);
-        } catch (e) {}
-      });
-    }
-  }, [selectedPattern, panelOptions]);
+          try {
+            const line = candlestickSeriesRef.current.createPriceLine({
+              price: data.price,
+              color: hexToRgba(color, lineAlpha),
+              lineWidth: isCurrentSelected ? 2 : 1,
+              lineStyle: 0,
+              axisLabelVisible: isCurrentSelected,
+              title: isCurrentSelected ? name : '',
+            });
+            fibLinesRef.current.push(line);
+          } catch (e) {}
+        });
+      }
+    });
+  }, [harmonicPatterns, patternDisplayOptions, selectedPattern, getPatternOptions]);
 
   // Handle pattern click
   const handleChartClick = useCallback((param) => {

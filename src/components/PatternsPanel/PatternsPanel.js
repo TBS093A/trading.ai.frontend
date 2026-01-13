@@ -5,7 +5,7 @@ import {
   toggleExpandedPattern,
   setUnselectedAlpha,
   toggleAutoCenterOnSelect,
-  togglePanelOption 
+  togglePatternDisplayOption 
 } from '../../store/slices/analysisSlice';
 import { togglePatternsPanel } from '../../store/slices/uiSlice';
 import './PatternsPanel.css';
@@ -18,8 +18,24 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
     expandedPatternId,
     unselectedAlpha,
     autoCenterOnSelect,
-    panelOptions 
+    patternDisplayOptions 
   } = useSelector((state) => state.analysis);
+
+  // Helper to get display options for a pattern
+  const getPatternOptions = useCallback((patternId) => {
+    return patternDisplayOptions[patternId] || {
+      showInternalFibo: false,
+      showExternalFibo: false,
+      showFiboFE: false,
+      showTPPRZSL: false,
+    };
+  }, [patternDisplayOptions]);
+
+  // Check if pattern has any display options enabled
+  const hasActiveDisplayOptions = useCallback((patternId) => {
+    const options = getPatternOptions(patternId);
+    return options.showInternalFibo || options.showExternalFibo || options.showFiboFE || options.showTPPRZSL;
+  }, [getPatternOptions]);
 
   // Group patterns by interval and sort by D point timestamp (newest first)
   const groupedPatterns = useMemo(() => {
@@ -184,11 +200,13 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
                   const isExpanded = expandedPatternId === pattern.id;
                   const isSelected = selectedPattern?.id === pattern.id;
                   const dTimestamp = points.D?.timestamp || pattern.d_point_timestamp;
+                  const patternOptions = getPatternOptions(pattern.id);
+                  const hasActiveOptions = hasActiveDisplayOptions(pattern.id);
 
                   return (
                     <div 
                       key={pattern.id} 
-                      className={`pattern-item ${isExpanded ? 'expanded' : ''} ${isSelected ? 'selected' : ''}`}
+                      className={`pattern-item ${isExpanded ? 'expanded' : ''} ${isSelected ? 'selected' : ''} ${hasActiveOptions ? 'has-active-options' : ''}`}
                     >
                       {/* Pattern Header (clickable) */}
                       <div className="pattern-header">
@@ -204,6 +222,13 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
                             <span className={`pattern-status ${taData.is_formed ? 'formed' : 'forming'}`}>
                               {taData.is_formed ? '●' : '○'}
                             </span>
+                          </div>
+                          {/* Active display options icons */}
+                          <div className="pattern-indicators">
+                            {patternOptions.showInternalFibo && <span className="indicator-icon fib-int" title="Internal Fibo">◐</span>}
+                            {patternOptions.showExternalFibo && <span className="indicator-icon fib-ext" title="External Fibo">◑</span>}
+                            {patternOptions.showFiboFE && <span className="indicator-icon fib-fe" title="Fibo FE">◒</span>}
+                            {patternOptions.showTPPRZSL && <span className="indicator-icon fib-tp" title="TP/PRZ/SL">◓</span>}
                           </div>
                           <span className="pattern-date">{formatTimestamp(dTimestamp)}</span>
                         </button>
@@ -253,7 +278,7 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
 
                           {/* Display Options */}
                           <div className="details-section">
-                            <div className="details-title">Display</div>
+                            <div className="details-title">Display on Chart</div>
                             <div className="display-options-row">
                               {displayOptions.map(({ key, label, icon }) => {
                                 const hasData = key === 'showInternalFibo' ? fibLevels.retracement :
@@ -263,10 +288,10 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
                                 return (
                                   <button
                                     key={key}
-                                    className={`display-option ${panelOptions[key] ? 'active' : ''} ${!hasData ? 'disabled' : ''}`}
+                                    className={`display-option ${patternOptions[key] ? 'active' : ''} ${!hasData ? 'disabled' : ''}`}
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      if (hasData) dispatch(togglePanelOption(key));
+                                      if (hasData) dispatch(togglePatternDisplayOption({ patternId: pattern.id, option: key }));
                                     }}
                                     disabled={!hasData}
                                     title={label}
@@ -280,7 +305,7 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
                           </div>
 
                           {/* Fibonacci Levels (when enabled) */}
-                          {panelOptions.showInternalFibo && fibLevels.retracement && (
+                          {patternOptions.showInternalFibo && fibLevels.retracement && (
                             <div className="details-section fib-section">
                               <div className="details-title fib-retracement">Internal Fibo</div>
                               <div className="fib-grid">
@@ -294,7 +319,7 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
                             </div>
                           )}
 
-                          {panelOptions.showExternalFibo && fibLevels.extension && (
+                          {patternOptions.showExternalFibo && fibLevels.extension && (
                             <div className="details-section fib-section">
                               <div className="details-title fib-extension">External Fibo</div>
                               <div className="fib-grid">
@@ -308,7 +333,7 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
                             </div>
                           )}
 
-                          {panelOptions.showFiboFE && fibLevels.fe_extensions && (
+                          {patternOptions.showFiboFE && fibLevels.fe_extensions && (
                             <div className="details-section fib-section">
                               <div className="details-title fib-fe">Fibo FE</div>
                               <div className="fib-grid">
@@ -322,7 +347,7 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
                             </div>
                           )}
 
-                          {panelOptions.showTPPRZSL && fibLevels.all_targets && (
+                          {patternOptions.showTPPRZSL && fibLevels.all_targets && (
                             <div className="details-section fib-section">
                               <div className="details-title fib-targets">TP / PRZ / SL</div>
                               <div className="fib-grid targets">

@@ -372,6 +372,42 @@
   color: var(--text-muted);
 }
 
+/* Pattern Indicator Icons (showing active display options) */
+.pattern-indicators {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: auto;
+  margin-right: var(--spacing-sm);
+}
+
+.indicator-icon {
+  font-size: 0.65rem;
+  line-height: 1;
+  opacity: 0.9;
+}
+
+.indicator-icon.fib-int {
+  color: var(--accent-yellow);
+}
+
+.indicator-icon.fib-ext {
+  color: var(--accent-purple);
+}
+
+.indicator-icon.fib-fe {
+  color: var(--accent-cyan);
+}
+
+.indicator-icon.fib-tp {
+  color: var(--accent-green);
+}
+
+/* Pattern with active options */
+.pattern-item.has-active-options {
+  border-left: 2px solid var(--accent-cyan);
+}
+
 /* Expand Button */
 .expand-btn {
   display: flex;

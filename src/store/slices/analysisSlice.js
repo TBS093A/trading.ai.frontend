@@ -24,13 +24,9 @@ const analysisSlice = createSlice({
     autoCenterOnSelect: true, // Auto-center chart when clicking pattern in list
     loading: false,
     error: null,
-    // Panel visibility options for selected pattern
-    panelOptions: {
-      showInternalFibo: false,
-      showExternalFibo: false,
-      showFiboFE: false,
-      showTPPRZSL: false,
-    },
+    // Display options stored per-pattern (keyed by pattern ID)
+    // Each pattern can have: showInternalFibo, showExternalFibo, showFiboFE, showTPPRZSL
+    patternDisplayOptions: {},
     // Indicator visibility
     indicators: {
       volume: true,
@@ -53,12 +49,7 @@ const analysisSlice = createSlice({
     clearSelectedPattern: (state) => {
       state.selectedPattern = null;
       state.expandedPatternId = null;
-      state.panelOptions = {
-        showInternalFibo: false,
-        showExternalFibo: false,
-        showFiboFE: false,
-        showTPPRZSL: false,
-      };
+      // Note: patternDisplayOptions are NOT cleared - they persist
     },
     setExpandedPatternId: (state, action) => {
       state.expandedPatternId = action.payload;
@@ -76,16 +67,42 @@ const analysisSlice = createSlice({
     setAutoCenterOnSelect: (state, action) => {
       state.autoCenterOnSelect = action.payload;
     },
-    togglePanelOption: (state, action) => {
-      const option = action.payload;
-      if (state.panelOptions.hasOwnProperty(option)) {
-        state.panelOptions[option] = !state.panelOptions[option];
+    // Toggle display option for specific pattern
+    togglePatternDisplayOption: (state, action) => {
+      const { patternId, option } = action.payload;
+      if (!state.patternDisplayOptions[patternId]) {
+        state.patternDisplayOptions[patternId] = {
+          showInternalFibo: false,
+          showExternalFibo: false,
+          showFiboFE: false,
+          showTPPRZSL: false,
+        };
       }
+      state.patternDisplayOptions[patternId][option] = !state.patternDisplayOptions[patternId][option];
     },
-    setPanelOption: (state, action) => {
-      const { option, value } = action.payload;
-      if (state.panelOptions.hasOwnProperty(option)) {
-        state.panelOptions[option] = value;
+    // Set display option for specific pattern
+    setPatternDisplayOption: (state, action) => {
+      const { patternId, option, value } = action.payload;
+      if (!state.patternDisplayOptions[patternId]) {
+        state.patternDisplayOptions[patternId] = {
+          showInternalFibo: false,
+          showExternalFibo: false,
+          showFiboFE: false,
+          showTPPRZSL: false,
+        };
+      }
+      state.patternDisplayOptions[patternId][option] = value;
+    },
+    // Get display options for pattern (helper - creates default if not exists)
+    initPatternDisplayOptions: (state, action) => {
+      const patternId = action.payload;
+      if (!state.patternDisplayOptions[patternId]) {
+        state.patternDisplayOptions[patternId] = {
+          showInternalFibo: false,
+          showExternalFibo: false,
+          showFiboFE: false,
+          showTPPRZSL: false,
+        };
       }
     },
     toggleIndicator: (state, action) => {
@@ -136,8 +153,9 @@ export const {
   setUnselectedAlpha,
   toggleAutoCenterOnSelect,
   setAutoCenterOnSelect,
-  togglePanelOption,
-  setPanelOption,
+  togglePatternDisplayOption,
+  setPatternDisplayOption,
+  initPatternDisplayOptions,
   toggleIndicator,
   setIndicator,
   clearAnalysis,
