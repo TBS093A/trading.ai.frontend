@@ -88,35 +88,43 @@
   box-shadow: var(--glow-cyan);
 }
 
-/* Alpha Control */
-.alpha-control {
+/* Display Settings */
+.display-settings {
   padding: var(--spacing-md) var(--spacing-lg);
   border-bottom: 1px solid var(--border-primary);
   background: var(--bg-tertiary);
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
 }
 
-.alpha-label {
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.settings-label {
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
   font-size: 0.75rem;
   color: var(--text-secondary);
-  margin-bottom: var(--spacing-sm);
 }
 
-.alpha-icon {
+.settings-icon {
   color: var(--accent-purple);
 }
 
-.alpha-value {
+.settings-value {
   margin-left: auto;
   font-family: 'JetBrains Mono', monospace;
   font-weight: 600;
   color: var(--accent-cyan);
 }
 
-.alpha-slider {
+.settings-slider {
   width: 100%;
   height: 6px;
   appearance: none;
@@ -125,7 +133,7 @@
   cursor: pointer;
 }
 
-.alpha-slider::-webkit-slider-thumb {
+.settings-slider::-webkit-slider-thumb {
   appearance: none;
   width: 16px;
   height: 16px;
@@ -136,17 +144,30 @@
   box-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
 }
 
-/* Auto-center Checkbox */
-.auto-center-label {
+.settings-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.settings-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: linear-gradient(135deg, var(--accent-cyan) 0%, var(--accent-purple) 100%);
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+}
+
+/* Checkbox styling */
+.settings-checkbox-label {
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
-  margin-top: var(--spacing-md);
   cursor: pointer;
   user-select: none;
+  padding: 4px 0;
 }
 
-.auto-center-checkbox {
+.settings-checkbox {
   display: none;
 }
 
@@ -172,35 +193,87 @@
   transition: transform var(--transition-fast);
 }
 
-.auto-center-checkbox:checked + .checkbox-custom {
+.settings-checkbox:checked + .checkbox-custom {
   border-color: var(--accent-cyan);
   background: rgba(0, 240, 255, 0.1);
 }
 
-.auto-center-checkbox:checked + .checkbox-custom::after {
+.settings-checkbox:checked + .checkbox-custom::after {
   transform: translate(-50%, -50%) scale(1);
 }
 
-.auto-center-label:hover .checkbox-custom {
+.settings-checkbox-label:hover .checkbox-custom {
   border-color: var(--accent-cyan);
 }
 
-.auto-center-text {
+.checkbox-text {
   font-size: 0.75rem;
   color: var(--text-secondary);
 }
 
-.alpha-slider::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
+/* Sub-options (radio buttons) */
+.settings-sub-options {
+  margin-left: 24px;
+  padding: var(--spacing-xs) 0 var(--spacing-xs) var(--spacing-sm);
+  border-left: 2px solid var(--border-primary);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.alpha-slider::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
-  background: linear-gradient(135deg, var(--accent-cyan) 0%, var(--accent-purple) 100%);
-  border-radius: 50%;
+.settings-radio-label {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
   cursor: pointer;
-  border: none;
+  user-select: none;
+  padding: 2px 0;
+}
+
+.settings-radio {
+  display: none;
+}
+
+.radio-custom {
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--border-secondary);
+  border-radius: 50%;
+  background: var(--bg-card);
+  position: relative;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.radio-custom::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  width: 6px;
+  height: 6px;
+  background: var(--accent-cyan);
+  border-radius: 50%;
+  transition: transform var(--transition-fast);
+}
+
+.settings-radio:checked + .radio-custom {
+  border-color: var(--accent-cyan);
+  background: rgba(0, 240, 255, 0.1);
+}
+
+.settings-radio:checked + .radio-custom::after {
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.settings-radio-label:hover .radio-custom {
+  border-color: var(--accent-cyan);
+}
+
+.radio-text {
+  font-size: 0.7rem;
+  color: var(--text-muted);
 }
 
 /* Patterns List */

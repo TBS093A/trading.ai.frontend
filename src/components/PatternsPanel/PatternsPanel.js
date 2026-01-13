@@ -5,7 +5,11 @@ import {
   toggleExpandedPattern,
   setUnselectedAlpha,
   toggleAutoCenterOnSelect,
-  togglePatternDisplayOption 
+  togglePatternDisplayOption,
+  toggleShowPointLevelLines,
+  setPointLevelLineStyle,
+  toggleShowPatternShapes,
+  toggleShowRetraceLines,
 } from '../../store/slices/analysisSlice';
 import { togglePatternsPanel } from '../../store/slices/uiSlice';
 import './PatternsPanel.css';
@@ -18,7 +22,8 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
     expandedPatternId,
     unselectedAlpha,
     autoCenterOnSelect,
-    patternDisplayOptions 
+    patternDisplayOptions,
+    globalPatternDisplay,
   } = useSelector((state) => state.analysis);
 
   // Helper to get display options for a pattern
@@ -147,34 +152,100 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
         </button>
       </div>
 
-      {/* Alpha Control */}
-      <div className="alpha-control">
-        <label className="alpha-label">
-          <span className="alpha-icon">◔</span>
-          Unselected Opacity
-          <span className="alpha-value">{Math.round(unselectedAlpha * 100)}%</span>
-        </label>
-        <input
-          type="range"
-          min="0"
-          max="1"
-          step="0.05"
-          value={unselectedAlpha}
-          onChange={handleAlphaChange}
-          className="alpha-slider"
-        />
+      {/* Display Settings */}
+      <div className="display-settings">
+        <div className="settings-section">
+          <label className="settings-label">
+            <span className="settings-icon">◔</span>
+            Unselected Opacity
+            <span className="settings-value">{Math.round(unselectedAlpha * 100)}%</span>
+          </label>
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.05"
+            value={unselectedAlpha}
+            onChange={handleAlphaChange}
+            className="settings-slider"
+          />
+        </div>
         
         {/* Auto-center checkbox */}
-        <label className="auto-center-label">
+        <label className="settings-checkbox-label">
           <input
             type="checkbox"
             checked={autoCenterOnSelect}
             onChange={handleAutoCenterToggle}
-            className="auto-center-checkbox"
+            className="settings-checkbox"
           />
           <span className="checkbox-custom"></span>
-          <span className="auto-center-text">Center chart on click</span>
+          <span className="checkbox-text">Center chart on click</span>
         </label>
+
+        {/* Pattern Shapes checkbox */}
+        <label className="settings-checkbox-label">
+          <input
+            type="checkbox"
+            checked={globalPatternDisplay.showPatternShapes}
+            onChange={() => dispatch(toggleShowPatternShapes())}
+            className="settings-checkbox"
+          />
+          <span className="checkbox-custom"></span>
+          <span className="checkbox-text">Show pattern shapes</span>
+        </label>
+
+        {/* Retrace Lines checkbox */}
+        <label className="settings-checkbox-label">
+          <input
+            type="checkbox"
+            checked={globalPatternDisplay.showRetraceLines}
+            onChange={() => dispatch(toggleShowRetraceLines())}
+            className="settings-checkbox"
+          />
+          <span className="checkbox-custom"></span>
+          <span className="checkbox-text">Show retrace lines</span>
+        </label>
+
+        {/* Point Level Lines checkbox with sub-options */}
+        <label className="settings-checkbox-label">
+          <input
+            type="checkbox"
+            checked={globalPatternDisplay.showPointLevelLines}
+            onChange={() => dispatch(toggleShowPointLevelLines())}
+            className="settings-checkbox"
+          />
+          <span className="checkbox-custom"></span>
+          <span className="checkbox-text">Show point level lines</span>
+        </label>
+
+        {/* Sub-radio buttons for point level line style */}
+        {globalPatternDisplay.showPointLevelLines && (
+          <div className="settings-sub-options">
+            <label className="settings-radio-label">
+              <input
+                type="radio"
+                name="pointLevelLineStyle"
+                checked={globalPatternDisplay.pointLevelLineStyle === 'fromPoint'}
+                onChange={() => dispatch(setPointLevelLineStyle('fromPoint'))}
+                className="settings-radio"
+              />
+              <span className="radio-custom"></span>
+              <span className="radio-text">From point to scale</span>
+            </label>
+            <label className="settings-radio-label">
+              <input
+                type="radio"
+                name="pointLevelLineStyle"
+                checked={globalPatternDisplay.pointLevelLineStyle === 'throughPoint'}
+                onChange={() => dispatch(setPointLevelLineStyle('throughPoint'))}
+                className="settings-radio"
+              />
+              <span className="radio-custom"></span>
+              <span className="radio-text">Through point (full width)</span>
+            </label>
+          </div>
+        )}
       </div>
 
       {/* Patterns List */}

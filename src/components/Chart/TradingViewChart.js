@@ -24,6 +24,8 @@ const TradingViewChart = forwardRef((props, ref) => {
   const volumeSeriesRef = useRef(null);
   const patternLinesRef = useRef([]);
   const patternMarkersRef = useRef([]);
+  const patternShapesRef = useRef([]); // Line series for pattern shapes (triangles)
+  const retraceLinesRef = useRef([]); // Line series for retrace lines
   
   // Refs for indicator charts (for synchronization)
   const indicatorChartsRef = useRef([]);
@@ -31,7 +33,7 @@ const TradingViewChart = forwardRef((props, ref) => {
 
   const { klines, asset, quote } = useSelector((state) => state.chart);
   const { selectedAsset } = useSelector((state) => state.assets);
-  const { harmonicPatterns, selectedPattern, expandedPatternId, unselectedAlpha, patternDisplayOptions, indicators } = useSelector((state) => state.analysis);
+  const { harmonicPatterns, selectedPattern, expandedPatternId, unselectedAlpha, patternDisplayOptions, globalPatternDisplay, indicators } = useSelector((state) => state.analysis);
 
   // Track asset ID to reset chart when asset changes
   const prevAssetIdRef = useRef(null);
@@ -279,7 +281,7 @@ const TradingViewChart = forwardRef((props, ref) => {
     }
   }, [klines, selectedAsset, convertKlinesToCandlestickData, convertKlinesToVolumeData, indicators.volume]);
 
-  // Draw harmonic patterns
+  // Draw harmonic patterns - point level lines and markers
   useEffect(() => {
     if (!chartRef.current || !candlestickSeriesRef.current || harmonicPatterns.length === 0) return;
 
@@ -291,11 +293,8 @@ const TradingViewChart = forwardRef((props, ref) => {
     });
     patternLinesRef.current = [];
 
-    // Create timestamp map
-    const timestampMap = createTimestampMap(klines);
-
     // Draw patterns
-    harmonicPatterns.forEach((pattern, patternIndex) => {
+    harmonicPatterns.forEach((pattern) => {
       const { ta_object_json: taData, x_point_timestamp, a_point_timestamp, b_point_timestamp, c_point_timestamp, d_point_timestamp } = pattern;
       
       if (!taData || !taData.points) return;
@@ -309,34 +308,34 @@ const TradingViewChart = forwardRef((props, ref) => {
       const alpha = isSelected ? 1 : unselectedAlpha;
       const patternColor = hexToRgba(baseColor, alpha);
 
-      // Get price levels from points
-      const pricePoints = [];
-      ['X', 'A', 'B', 'C', 'D'].forEach((pointName) => {
-        if (points[pointName]) {
-          pricePoints.push({
-            name: pointName,
-            price: points[pointName].price,
-            time: points[pointName].index,
-          });
-        }
-      });
+      // Draw point level lines only if enabled
+      if (globalPatternDisplay.showPointLevelLines) {
+        const pricePoints = [];
+        ['X', 'A', 'B', 'C', 'D'].forEach((pointName) => {
+          if (points[pointName]) {
+            pricePoints.push({
+              name: pointName,
+              price: points[pointName].price,
+            });
+          }
+        });
 
-      // Add price lines for pattern points
-      pricePoints.forEach((point) => {
-        try {
-          const line = candlestickSeriesRef.current.createPriceLine({
-            price: point.price,
-            color: patternColor,
-            lineWidth: isSelected ? 2 : 1,
-            lineStyle: 2, // Dashed
-            axisLabelVisible: isSelected,
-            title: `${taData.pattern_type} - ${point.name}`,
-          });
-          patternLinesRef.current.push(line);
-        } catch (e) {
-          console.warn('Failed to create price line:', e);
-        }
-      });
+        pricePoints.forEach((point) => {
+          try {
+            const line = candlestickSeriesRef.current.createPriceLine({
+              price: point.price,
+              color: patternColor,
+              lineWidth: isSelected ? 2 : 1,
+              lineStyle: 2, // Dashed
+              axisLabelVisible: isSelected,
+              title: isSelected ? `${point.name}` : '',
+            });
+            patternLinesRef.current.push(line);
+          } catch (e) {
+            console.warn('Failed to create price line:', e);
+          }
+        });
+      }
 
       // Add markers for pattern points
       const markers = [];
@@ -403,7 +402,266 @@ const TradingViewChart = forwardRef((props, ref) => {
     return () => {
       patternMarkersRef.current = [];
     };
-  }, [harmonicPatterns, klines, createTimestampMap, selectedPattern, expandedPatternId, unselectedAlpha]);
+  }, [harmonicPatterns, klines, selectedPattern, expandedPatternId, unselectedAlpha, globalPatternDisplay.showPointLevelLines]);
+
+  // Draw pattern shapes (triangles XAB, BCD) and main lines
+  useEffect(() => {
+    if (!chartRef.current || harmonicPatterns.length === 0) return;
+
+    // Clear previous shape series
+    patternShapesRef.current.forEach((series) => {
+      try {
+        chartRef.current.removeSeries(series);
+      } catch (e) {}
+    });
+    patternShapesRef.current = [];
+
+    if (!globalPatternDisplay.showPatternShapes) return;
+
+    harmonicPatterns.forEach((pattern) => {
+      const { ta_object_json: taData, x_point_timestamp, a_point_timestamp, b_point_timestamp, c_point_timestamp, d_point_timestamp } = pattern;
+      
+      if (!taData || !taData.points) return;
+
+      const points = taData.points;
+      const isBullish = taData.is_bullish;
+      const baseColor = isBullish ? '#00ff88' : '#ff3366';
+      const isSelected = selectedPattern?.id === pattern.id || expandedPatternId === pattern.id;
+      const alpha = isSelected ? 0.5 : unselectedAlpha * 0.5;
+      const lineAlpha = isSelected ? 1 : unselectedAlpha;
+      const lineWidth = isSelected ? 3 : 2;
+
+      const patternType = taData.pattern_type || '';
+      const hasX = points.X && x_point_timestamp;
+      const hasA = points.A && a_point_timestamp;
+      const hasB = points.B && b_point_timestamp;
+      const hasC = points.C && c_point_timestamp;
+      const hasD = points.D && d_point_timestamp;
+
+      // For XABCD patterns: Draw triangles XAB and BCD
+      // For ABCD patterns: Draw triangles ABC and BCD
+      // For ABC patterns: Draw lines AB and BC
+
+      // Draw main legs (thick lines): X-A, A-B, B-C, C-D
+      if (hasX && hasA) {
+        try {
+          const series = chartRef.current.addLineSeries({
+            color: hexToRgba(baseColor, lineAlpha),
+            lineWidth: lineWidth,
+            crosshairMarkerVisible: false,
+            lastValueVisible: false,
+            priceLineVisible: false,
+          });
+          series.setData([
+            { time: x_point_timestamp / 1000, value: points.X.price },
+            { time: a_point_timestamp / 1000, value: points.A.price },
+          ]);
+          patternShapesRef.current.push(series);
+        } catch (e) {}
+      }
+
+      if (hasA && hasB) {
+        try {
+          const series = chartRef.current.addLineSeries({
+            color: hexToRgba(baseColor, lineAlpha),
+            lineWidth: lineWidth,
+            crosshairMarkerVisible: false,
+            lastValueVisible: false,
+            priceLineVisible: false,
+          });
+          series.setData([
+            { time: a_point_timestamp / 1000, value: points.A.price },
+            { time: b_point_timestamp / 1000, value: points.B.price },
+          ]);
+          patternShapesRef.current.push(series);
+        } catch (e) {}
+      }
+
+      if (hasB && hasC) {
+        try {
+          const series = chartRef.current.addLineSeries({
+            color: hexToRgba(baseColor, lineAlpha),
+            lineWidth: lineWidth,
+            crosshairMarkerVisible: false,
+            lastValueVisible: false,
+            priceLineVisible: false,
+          });
+          series.setData([
+            { time: b_point_timestamp / 1000, value: points.B.price },
+            { time: c_point_timestamp / 1000, value: points.C.price },
+          ]);
+          patternShapesRef.current.push(series);
+        } catch (e) {}
+      }
+
+      if (hasC && hasD) {
+        try {
+          const series = chartRef.current.addLineSeries({
+            color: hexToRgba(baseColor, lineAlpha),
+            lineWidth: lineWidth,
+            crosshairMarkerVisible: false,
+            lastValueVisible: false,
+            priceLineVisible: false,
+          });
+          series.setData([
+            { time: c_point_timestamp / 1000, value: points.C.price },
+            { time: d_point_timestamp / 1000, value: points.D.price },
+          ]);
+          patternShapesRef.current.push(series);
+        } catch (e) {}
+      }
+
+      // Draw triangle closing lines (XB for XAB triangle, BD for BCD triangle)
+      // These are drawn with area fill for visual effect
+      if (hasX && hasB) {
+        try {
+          const series = chartRef.current.addAreaSeries({
+            topColor: hexToRgba(baseColor, alpha),
+            bottomColor: hexToRgba(baseColor, 0),
+            lineColor: hexToRgba(baseColor, lineAlpha * 0.3),
+            lineWidth: 1,
+            crosshairMarkerVisible: false,
+            lastValueVisible: false,
+            priceLineVisible: false,
+          });
+          // Create triangle XAB by drawing X-A-B-X path
+          const xabData = [
+            { time: x_point_timestamp / 1000, value: points.X.price },
+            { time: a_point_timestamp / 1000, value: points.A.price },
+            { time: b_point_timestamp / 1000, value: points.B.price },
+          ].sort((a, b) => a.time - b.time);
+          series.setData(xabData);
+          patternShapesRef.current.push(series);
+        } catch (e) {}
+      }
+
+      if (hasB && hasD) {
+        try {
+          const series = chartRef.current.addAreaSeries({
+            topColor: hexToRgba(baseColor, alpha),
+            bottomColor: hexToRgba(baseColor, 0),
+            lineColor: hexToRgba(baseColor, lineAlpha * 0.3),
+            lineWidth: 1,
+            crosshairMarkerVisible: false,
+            lastValueVisible: false,
+            priceLineVisible: false,
+          });
+          // Create triangle BCD by drawing B-C-D path
+          const bcdData = [
+            { time: b_point_timestamp / 1000, value: points.B.price },
+            { time: c_point_timestamp / 1000, value: points.C.price },
+            { time: d_point_timestamp / 1000, value: points.D.price },
+          ].sort((a, b) => a.time - b.time);
+          series.setData(bcdData);
+          patternShapesRef.current.push(series);
+        } catch (e) {}
+      }
+    });
+  }, [harmonicPatterns, selectedPattern, expandedPatternId, unselectedAlpha, globalPatternDisplay.showPatternShapes]);
+
+  // Draw retrace lines (dashed lines with labels: XB, AC, BD, XD)
+  useEffect(() => {
+    if (!chartRef.current || harmonicPatterns.length === 0) return;
+
+    // Clear previous retrace lines
+    retraceLinesRef.current.forEach((series) => {
+      try {
+        chartRef.current.removeSeries(series);
+      } catch (e) {}
+    });
+    retraceLinesRef.current = [];
+
+    if (!globalPatternDisplay.showRetraceLines) return;
+
+    harmonicPatterns.forEach((pattern) => {
+      const { ta_object_json: taData, x_point_timestamp, a_point_timestamp, b_point_timestamp, c_point_timestamp, d_point_timestamp } = pattern;
+      
+      if (!taData || !taData.points || !taData.retraces) return;
+
+      const points = taData.points;
+      const retraces = taData.retraces;
+      const isBullish = taData.is_bullish;
+      const isSelected = selectedPattern?.id === pattern.id || expandedPatternId === pattern.id;
+      const alpha = isSelected ? 0.8 : unselectedAlpha * 0.8;
+      const retraceColor = '#ffcc00'; // Yellow for retrace lines
+
+      // XB retrace (connects X to B)
+      if (points.X && points.B && x_point_timestamp && b_point_timestamp && retraces.XB) {
+        try {
+          const series = chartRef.current.addLineSeries({
+            color: hexToRgba(retraceColor, alpha),
+            lineWidth: 1,
+            lineStyle: 2, // Dashed
+            crosshairMarkerVisible: false,
+            lastValueVisible: false,
+            priceLineVisible: false,
+          });
+          series.setData([
+            { time: x_point_timestamp / 1000, value: points.X.price },
+            { time: b_point_timestamp / 1000, value: points.B.price },
+          ]);
+          retraceLinesRef.current.push(series);
+        } catch (e) {}
+      }
+
+      // AC retrace (connects A to C)
+      if (points.A && points.C && a_point_timestamp && c_point_timestamp && retraces.AC) {
+        try {
+          const series = chartRef.current.addLineSeries({
+            color: hexToRgba(retraceColor, alpha),
+            lineWidth: 1,
+            lineStyle: 2,
+            crosshairMarkerVisible: false,
+            lastValueVisible: false,
+            priceLineVisible: false,
+          });
+          series.setData([
+            { time: a_point_timestamp / 1000, value: points.A.price },
+            { time: c_point_timestamp / 1000, value: points.C.price },
+          ]);
+          retraceLinesRef.current.push(series);
+        } catch (e) {}
+      }
+
+      // BD retrace (connects B to D)
+      if (points.B && points.D && b_point_timestamp && d_point_timestamp && retraces.BD) {
+        try {
+          const series = chartRef.current.addLineSeries({
+            color: hexToRgba(retraceColor, alpha),
+            lineWidth: 1,
+            lineStyle: 2,
+            crosshairMarkerVisible: false,
+            lastValueVisible: false,
+            priceLineVisible: false,
+          });
+          series.setData([
+            { time: b_point_timestamp / 1000, value: points.B.price },
+            { time: d_point_timestamp / 1000, value: points.D.price },
+          ]);
+          retraceLinesRef.current.push(series);
+        } catch (e) {}
+      }
+
+      // XD retrace (connects X to D) - for XABCD patterns
+      if (points.X && points.D && x_point_timestamp && d_point_timestamp && retraces.XD) {
+        try {
+          const series = chartRef.current.addLineSeries({
+            color: hexToRgba('#9945ff', alpha), // Purple for XD
+            lineWidth: 1,
+            lineStyle: 2,
+            crosshairMarkerVisible: false,
+            lastValueVisible: false,
+            priceLineVisible: false,
+          });
+          series.setData([
+            { time: x_point_timestamp / 1000, value: points.X.price },
+            { time: d_point_timestamp / 1000, value: points.D.price },
+          ]);
+          retraceLinesRef.current.push(series);
+        } catch (e) {}
+      }
+    });
+  }, [harmonicPatterns, selectedPattern, expandedPatternId, unselectedAlpha, globalPatternDisplay.showRetraceLines]);
 
   // Ref for fibonacci lines (separate from pattern lines)
   const fibLinesRef = useRef([]);

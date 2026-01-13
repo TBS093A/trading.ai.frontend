@@ -27,6 +27,16 @@ const analysisSlice = createSlice({
     // Display options stored per-pattern (keyed by pattern ID)
     // Each pattern can have: showInternalFibo, showExternalFibo, showFiboFE, showTPPRZSL
     patternDisplayOptions: {},
+    // Global pattern display settings
+    globalPatternDisplay: {
+      // Point level lines (horizontal lines at X, A, B, C, D price levels)
+      showPointLevelLines: false,
+      pointLevelLineStyle: 'fromPoint', // 'fromPoint' = from point to right scale, 'throughPoint' = from chart start through point to scale
+      // Pattern shapes (triangles XAB, BCD for XABCD; ABC, BCD for ABCD; lines AB, BC for ABC)
+      showPatternShapes: true,
+      // Retrace lines between points (dashed lines with labels like XB, BD, etc.)
+      showRetraceLines: false,
+    },
     // Indicator visibility
     indicators: {
       volume: true,
@@ -105,6 +115,19 @@ const analysisSlice = createSlice({
         };
       }
     },
+    // Global pattern display toggles
+    toggleShowPointLevelLines: (state) => {
+      state.globalPatternDisplay.showPointLevelLines = !state.globalPatternDisplay.showPointLevelLines;
+    },
+    setPointLevelLineStyle: (state, action) => {
+      state.globalPatternDisplay.pointLevelLineStyle = action.payload; // 'fromPoint' or 'throughPoint'
+    },
+    toggleShowPatternShapes: (state) => {
+      state.globalPatternDisplay.showPatternShapes = !state.globalPatternDisplay.showPatternShapes;
+    },
+    toggleShowRetraceLines: (state) => {
+      state.globalPatternDisplay.showRetraceLines = !state.globalPatternDisplay.showRetraceLines;
+    },
     toggleIndicator: (state, action) => {
       const indicator = action.payload;
       if (state.indicators.hasOwnProperty(indicator)) {
@@ -156,6 +179,10 @@ export const {
   togglePatternDisplayOption,
   setPatternDisplayOption,
   initPatternDisplayOptions,
+  toggleShowPointLevelLines,
+  setPointLevelLineStyle,
+  toggleShowPatternShapes,
+  toggleShowRetraceLines,
   toggleIndicator,
   setIndicator,
   clearAnalysis,
