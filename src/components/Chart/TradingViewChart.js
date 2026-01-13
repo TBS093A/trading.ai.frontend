@@ -29,8 +29,12 @@ const TradingViewChart = forwardRef((props, ref) => {
   const indicatorChartsRef = useRef([]);
   const isSyncingRef = useRef(false); // Prevent infinite sync loops
 
-  const { klines } = useSelector((state) => state.chart);
+  const { klines, asset, quote } = useSelector((state) => state.chart);
+  const { selectedAsset } = useSelector((state) => state.assets);
   const { harmonicPatterns, selectedPattern, expandedPatternId, unselectedAlpha, patternDisplayOptions, indicators } = useSelector((state) => state.analysis);
+
+  // Track asset ID to reset chart when asset changes
+  const prevAssetIdRef = useRef(null);
 
   // Helper to get display options for a pattern
   const getPatternOptions = useCallback((patternId) => {
@@ -246,9 +250,13 @@ const TradingViewChart = forwardRef((props, ref) => {
     };
   }, []);
 
-  // Update chart data
+  // Update chart data and reset scale when asset changes
   useEffect(() => {
     if (!candlestickSeriesRef.current || klines.length === 0) return;
+
+    const currentAssetId = selectedAsset?.id;
+    const assetChanged = prevAssetIdRef.current !== null && prevAssetIdRef.current !== currentAssetId;
+    prevAssetIdRef.current = currentAssetId;
 
     const candlestickData = convertKlinesToCandlestickData(klines);
     const volumeData = convertKlinesToVolumeData(klines);
@@ -258,8 +266,18 @@ const TradingViewChart = forwardRef((props, ref) => {
       volumeSeriesRef.current.setData(volumeData);
     }
 
-    chartRef.current?.timeScale().fitContent();
-  }, [klines, convertKlinesToCandlestickData, convertKlinesToVolumeData, indicators.volume]);
+    // Always fit content, but also reset price scale when asset changes
+    if (chartRef.current) {
+      chartRef.current.timeScale().fitContent();
+      
+      // Reset price scale to auto-fit the new data
+      if (assetChanged) {
+        chartRef.current.priceScale('right').applyOptions({
+          autoScale: true,
+        });
+      }
+    }
+  }, [klines, selectedAsset, convertKlinesToCandlestickData, convertKlinesToVolumeData, indicators.volume]);
 
   // Draw harmonic patterns
   useEffect(() => {
