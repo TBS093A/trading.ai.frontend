@@ -66,6 +66,7 @@
   --sidebar-width: 280px;
   --sidebar-collapsed: 60px;
   --right-panel-width: 360px;
+  --patterns-panel-width: 320px;
   --header-height: 56px;
 }
 
@@ -172,6 +173,10 @@ body::after {
 
 .main-content.panel-open {
   margin-right: var(--right-panel-width);
+}
+
+.main-content.patterns-panel-open {
+  margin-right: var(--patterns-panel-width);
 }
 
 /* Typography */
@@ -360,11 +365,53 @@ h1, h2, h3, h4, h5, h6 {
   text-shadow: 0 0 10px currentColor, 0 0 20px currentColor;
 }
 
+/* Patterns Panel Toggle Button */
+.patterns-panel-toggle {
+  position: fixed;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 8px;
+  background: linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%);
+  border: 1px solid var(--accent-cyan);
+  border-right: none;
+  border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+  color: var(--accent-cyan);
+  cursor: pointer;
+  z-index: 100;
+  transition: all var(--transition-fast);
+  box-shadow: -4px 0 20px rgba(0, 240, 255, 0.2);
+}
+
+.patterns-panel-toggle:hover {
+  padding-right: 12px;
+  background: var(--bg-tertiary);
+  box-shadow: -4px 0 30px rgba(0, 240, 255, 0.4);
+}
+
+.patterns-panel-toggle .toggle-icon {
+  font-size: 1.2rem;
+}
+
+.patterns-panel-toggle .toggle-count {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  background: rgba(0, 240, 255, 0.15);
+  border-radius: var(--radius-sm);
+}
+
 /* Responsive */
 @media (max-width: 1200px) {
   :root {
     --sidebar-width: 240px;
     --right-panel-width: 320px;
+    --patterns-panel-width: 280px;
   }
 }
 
@@ -372,6 +419,7 @@ h1, h2, h3, h4, h5, h6 {
   :root {
     --sidebar-width: 100%;
     --right-panel-width: 100%;
+    --patterns-panel-width: 100%;
   }
   
   .main-content.sidebar-open {
@@ -379,6 +427,10 @@ h1, h2, h3, h4, h5, h6 {
   }
   
   .main-content.panel-open {
+    margin-right: 0;
+  }
+  
+  .main-content.patterns-panel-open {
     margin-right: 0;
   }
 }

@@ -20,9 +20,9 @@ src/
 │   ├── Dashboard/       # Main layout with header and chart container
 │   ├── IndicatorControls/  # Toggle buttons for VOL, RSI, MACD, OBV
 │   ├── PatternTooltip/  # Hover popup for harmonic patterns
-│   ├── RightPanel/      # Fibonacci levels side panel
-│   ├── Sidebar/         # Exchange/asset selection
-│   └── SyncPanel/       # Sync operations panel (exchanges, technical analysis)
+│   ├── PatternsPanel/   # Right-side panel listing all harmonic patterns
+│   ├── RightPanel/      # (Legacy) Fibonacci levels side panel for single pattern
+│   ├── Sidebar/         # Exchange/asset selection with embedded sync controls
 ├── services/
 │   └── api.js           # Axios-based API client
 ├── store/
@@ -51,9 +51,9 @@ src/
 | `exchanges` | Exchange data | `list`, `selectedExchange`, `loading` |
 | `assets` | Asset data | `list`, `filteredList`, `selectedAsset`, `searchTerm` |
 | `chart` | Chart data | `klines`, `interval`, `asset`, `quote` |
-| `analysis` | Technical analysis | `harmonicPatterns`, `selectedPattern`, `panelOptions`, `indicators` |
-| `ui` | UI state | `sidebarOpen`, `rightPanelOpen`, `tooltipPosition`, `tooltipContent` |
-| `sync` | Sync operations | `isPanelOpen`, `activeSection`, `exchanges/technical/bulk` states, `activeTasks` |
+| `analysis` | Technical analysis | `harmonicPatterns`, `selectedPattern`, `expandedPatternId`, `unselectedAlpha`, `panelOptions`, `indicators` |
+| `ui` | UI state | `sidebarOpen`, `rightPanelOpen`, `patternsPanelOpen`, `tooltipPosition`, `tooltipContent` |
+| `sync` | Sync operations | `activeSection`, `exchanges/technical/bulk` states, `activeTasks` |
 
 ### Data Flow
 
@@ -119,17 +119,39 @@ GET  /sync/status/{task_id}                  // Get Celery task status
 - Toggle visibility with `togglePanelOption` action
 - Fibonacci sections conditionally rendered based on `panelOptions`
 
-### SyncPanel Component
+### PatternsPanel Component
 
-Floating panel for triggering backend sync operations:
+Right-side panel displaying all harmonic patterns with interactive features:
 
-- **Toggle button** - Fixed position with refresh icon (⟳), shows pulse badge when tasks are running
-- **Expandable sections** - Each sync type collapsable with parameters
-- **Active tasks list** - Shows running/completed tasks with status indicators
-- **Quick select** - For bulk assets, shows chips from loaded assets list
+- **Pattern List** - Grouped by interval, sorted by D-point timestamp (newest first)
+- **Alpha Control** - Slider to adjust opacity of unselected patterns on chart (default 50%)
+- **Expandable Pattern Items** - Click to expand details:
+  - Pattern points (X, A, B, C, D) with prices
+  - Retrace percentages
+  - Display options (Internal Fibo, External Fibo, FE, TP/PRZ/SL)
+  - Fibonacci levels (when display options enabled)
+  - Completion zone (min/max prices)
+- **Center on Pattern** - Clicking a pattern centers the chart view on it
+- **Visual Feedback** - Selected/expanded patterns get full opacity and thicker lines on chart
 
 ```javascript
-// SyncPanel actions (syncSlice.js)
+// PatternsPanel related actions
+dispatch(setUnselectedAlpha(0.5));        // 0-1 range
+dispatch(toggleExpandedPattern(patternId)); // Toggle dropdown
+dispatch(togglePatternsPanel());           // Show/hide panel
+```
+
+### Sync Controls (in Sidebar)
+
+Collapsible section embedded in the sidebar for sync operations:
+
+- **Exchange Sync** - Trigger exchange data synchronization
+- **Technical Analysis Sync** - Sync harmonic patterns with limit/offset
+- **Bulk Sync** - Select specific assets with search and exchange filter
+- **Active tasks list** - Shows running/completed tasks with status indicators
+
+```javascript
+// Sync actions (syncSlice.js)
 dispatch(syncExchanges({ testMode: false }));
 dispatch(syncTechnicalAnalysis({ limit: 50, offset: 0, testMode: false }));
 dispatch(syncBulkAssets({ assetIds: [1, 2, 3], testMode: false }));
@@ -154,6 +176,7 @@ dispatch(syncBulkAssets({ assetIds: [1, 2, 3], testMode: false }));
 /* Layout */
 --sidebar-width: 280px;
 --right-panel-width: 360px;
+--patterns-panel-width: 320px;
 ```
 
 ### Fonts
@@ -254,7 +277,10 @@ const handleChartClick = useCallback((param) => {
 - All harmonic pattern calculations done on backend - frontend only displays
 - Chart uses timestamp in seconds (API returns milliseconds, divide by 1000)
 - Pattern markers sorted by time before setting on chart
-- Right panel opens automatically when pattern is clicked
+- PatternsPanel auto-shows when harmonic patterns are loaded for the asset
+- Clicking pattern in list centers chart and expands dropdown with details
+- Unselected patterns rendered with configurable alpha (default 50%)
+- Selected pattern gets full opacity and thicker lines for visual emphasis
 - Sync operations run as Celery tasks on backend - frontend triggers and tracks status
-- SyncPanel is fixed positioned in top-right corner for easy access
+- Sync controls embedded in sidebar (collapsible section)
 

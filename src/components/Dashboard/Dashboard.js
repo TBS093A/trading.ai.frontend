@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import TradingViewChart from '../Chart/TradingViewChart';
 import IndicatorControls from '../IndicatorControls/IndicatorControls';
@@ -6,7 +6,15 @@ import { fetchKlines, setInterval } from '../../store/slices/chartSlice';
 import { fetchTechnicalAnalysis, clearAnalysis } from '../../store/slices/analysisSlice';
 import './Dashboard.css';
 
-const Dashboard = () => {
+const Dashboard = forwardRef((props, ref) => {
+  const chartRef = useRef(null);
+  
+  // Expose centerOnPattern method to parent
+  useImperativeHandle(ref, () => ({
+    centerOnPattern: (pattern) => {
+      chartRef.current?.centerOnPattern(pattern);
+    }
+  }), []);
   const dispatch = useDispatch();
   const { selectedAsset } = useSelector((state) => state.assets);
   const { selectedExchange } = useSelector((state) => state.exchanges);
@@ -112,11 +120,11 @@ const Dashboard = () => {
           </div>
         )}
         
-        <TradingViewChart />
+        <TradingViewChart ref={chartRef} />
       </div>
     </div>
   );
-};
+});
 
 export default Dashboard;
 

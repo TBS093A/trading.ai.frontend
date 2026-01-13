@@ -1,12 +1,22 @@
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { createChart, CrosshairMode } from 'lightweight-charts';
 import { setSelectedPattern, setHoveredPattern } from '../../store/slices/analysisSlice';
-import { setRightPanelOpen, showTooltip, hideTooltip } from '../../store/slices/uiSlice';
+import { showTooltip, hideTooltip } from '../../store/slices/uiSlice';
 import { calculateRSI, calculateMACD, calculateOBV } from '../../utils/indicators';
 import './TradingViewChart.css';
 
-const TradingViewChart = () => {
+// Helper function to convert hex color to rgba with alpha
+const hexToRgba = (hex, alpha = 1) => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!result) return hex;
+  const r = parseInt(result[1], 16);
+  const g = parseInt(result[2], 16);
+  const b = parseInt(result[3], 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
+const TradingViewChart = forwardRef((props, ref) => {
   const dispatch = useDispatch();
   const chartContainerRef = useRef(null);
   const chartRef = useRef(null);
@@ -20,7 +30,32 @@ const TradingViewChart = () => {
   const isSyncingRef = useRef(false); // Prevent infinite sync loops
 
   const { klines } = useSelector((state) => state.chart);
-  const { harmonicPatterns, selectedPattern, panelOptions, indicators } = useSelector((state) => state.analysis);
+  const { harmonicPatterns, selectedPattern, expandedPatternId, unselectedAlpha, panelOptions, indicators } = useSelector((state) => state.analysis);
+
+  // Expose centerOnPattern method via ref
+  useImperativeHandle(ref, () => ({
+    centerOnPattern: (pattern) => {
+      if (!chartRef.current || !pattern) return;
+      
+      const { x_point_timestamp, d_point_timestamp } = pattern;
+      if (!x_point_timestamp || !d_point_timestamp) return;
+      
+      // Calculate time range with some padding
+      const startTime = x_point_timestamp / 1000;
+      const endTime = d_point_timestamp / 1000;
+      const duration = endTime - startTime;
+      const padding = duration * 0.2; // 20% padding on each side
+      
+      try {
+        chartRef.current.timeScale().setVisibleRange({
+          from: startTime - padding,
+          to: endTime + padding,
+        });
+      } catch (e) {
+        console.warn('Failed to center on pattern:', e);
+      }
+    }
+  }), []);
 
   // Register indicator chart for synchronization
   const registerIndicatorChart = useCallback((chart) => {
@@ -239,7 +274,12 @@ const TradingViewChart = () => {
 
       const points = taData.points;
       const isBullish = taData.is_bullish;
-      const patternColor = isBullish ? '#00ff88' : '#ff3366';
+      const baseColor = isBullish ? '#00ff88' : '#ff3366';
+      
+      // Apply alpha for unselected patterns (selected or expanded pattern gets full opacity)
+      const isSelected = selectedPattern?.id === pattern.id || expandedPatternId === pattern.id;
+      const alpha = isSelected ? 1 : unselectedAlpha;
+      const patternColor = hexToRgba(baseColor, alpha);
 
       // Get price levels from points
       const pricePoints = [];
@@ -259,9 +299,9 @@ const TradingViewChart = () => {
           const line = candlestickSeriesRef.current.createPriceLine({
             price: point.price,
             color: patternColor,
-            lineWidth: 1,
+            lineWidth: isSelected ? 2 : 1,
             lineStyle: 2, // Dashed
-            axisLabelVisible: false,
+            axisLabelVisible: isSelected,
             title: `${taData.pattern_type} - ${point.name}`,
           });
           patternLinesRef.current.push(line);
@@ -278,7 +318,7 @@ const TradingViewChart = () => {
           position: isBullish ? 'belowBar' : 'aboveBar',
           color: patternColor,
           shape: 'circle',
-          text: 'X',
+          text: isSelected ? 'X' : '',
         });
       }
       if (a_point_timestamp && points.A) {
@@ -287,7 +327,7 @@ const TradingViewChart = () => {
           position: isBullish ? 'aboveBar' : 'belowBar',
           color: patternColor,
           shape: 'circle',
-          text: 'A',
+          text: isSelected ? 'A' : '',
         });
       }
       if (b_point_timestamp && points.B) {
@@ -296,7 +336,7 @@ const TradingViewChart = () => {
           position: isBullish ? 'belowBar' : 'aboveBar',
           color: patternColor,
           shape: 'circle',
-          text: 'B',
+          text: isSelected ? 'B' : '',
         });
       }
       if (c_point_timestamp && points.C) {
@@ -305,7 +345,7 @@ const TradingViewChart = () => {
           position: isBullish ? 'aboveBar' : 'belowBar',
           color: patternColor,
           shape: 'circle',
-          text: 'C',
+          text: isSelected ? 'C' : '',
         });
       }
       if (d_point_timestamp && points.D) {
@@ -314,7 +354,7 @@ const TradingViewChart = () => {
           position: isBullish ? 'belowBar' : 'aboveBar',
           color: patternColor,
           shape: 'circle',
-          text: 'D',
+          text: isSelected ? 'D' : '',
         });
       }
 
@@ -335,7 +375,7 @@ const TradingViewChart = () => {
     return () => {
       patternMarkersRef.current = [];
     };
-  }, [harmonicPatterns, klines, createTimestampMap]);
+  }, [harmonicPatterns, klines, createTimestampMap, selectedPattern, expandedPatternId, unselectedAlpha]);
 
   // Draw Fibonacci levels for selected pattern
   useEffect(() => {
@@ -435,7 +475,6 @@ const TradingViewChart = () => {
 
     if (clickedPattern) {
       dispatch(setSelectedPattern(clickedPattern));
-      dispatch(setRightPanelOpen(true));
     }
   }, [dispatch, harmonicPatterns]);
 
@@ -538,7 +577,7 @@ const TradingViewChart = () => {
       )}
     </div>
   );
-};
+});
 
 // RSI Indicator Component
 const RSIIndicator = ({ klines, onChartReady, onChartDestroy, syncTimeRange }) => {

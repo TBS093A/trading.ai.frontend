@@ -19,6 +19,8 @@ const analysisSlice = createSlice({
     harmonicPatterns: [],
     selectedPattern: null,
     hoveredPattern: null,
+    expandedPatternId: null, // ID of pattern with expanded dropdown in list
+    unselectedAlpha: 0.5, // Alpha (opacity) for unselected patterns (0-1)
     loading: false,
     error: null,
     // Panel visibility options for selected pattern
@@ -39,18 +41,33 @@ const analysisSlice = createSlice({
   reducers: {
     setSelectedPattern: (state, action) => {
       state.selectedPattern = action.payload;
+      // When selecting a pattern, also expand it in the list
+      if (action.payload) {
+        state.expandedPatternId = action.payload.id;
+      }
     },
     setHoveredPattern: (state, action) => {
       state.hoveredPattern = action.payload;
     },
     clearSelectedPattern: (state) => {
       state.selectedPattern = null;
+      state.expandedPatternId = null;
       state.panelOptions = {
         showInternalFibo: false,
         showExternalFibo: false,
         showFiboFE: false,
         showTPPRZSL: false,
       };
+    },
+    setExpandedPatternId: (state, action) => {
+      state.expandedPatternId = action.payload;
+    },
+    toggleExpandedPattern: (state, action) => {
+      const patternId = action.payload;
+      state.expandedPatternId = state.expandedPatternId === patternId ? null : patternId;
+    },
+    setUnselectedAlpha: (state, action) => {
+      state.unselectedAlpha = Math.max(0, Math.min(1, action.payload));
     },
     togglePanelOption: (state, action) => {
       const option = action.payload;
@@ -80,6 +97,7 @@ const analysisSlice = createSlice({
       state.harmonicPatterns = [];
       state.selectedPattern = null;
       state.hoveredPattern = null;
+      state.expandedPatternId = null;
     },
     clearAnalysisError: (state) => {
       state.error = null;
@@ -106,6 +124,9 @@ export const {
   setSelectedPattern,
   setHoveredPattern,
   clearSelectedPattern,
+  setExpandedPatternId,
+  toggleExpandedPattern,
+  setUnselectedAlpha,
   togglePanelOption,
   setPanelOption,
   toggleIndicator,

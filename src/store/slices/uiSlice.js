@@ -5,6 +5,7 @@ const uiSlice = createSlice({
   initialState: {
     sidebarOpen: true,
     rightPanelOpen: false,
+    patternsPanelOpen: true, // Patterns list panel (always visible when patterns exist)
     theme: 'dark',
     tooltipPosition: null,
     tooltipContent: null,
@@ -21,6 +22,12 @@ const uiSlice = createSlice({
     },
     setRightPanelOpen: (state, action) => {
       state.rightPanelOpen = action.payload;
+    },
+    togglePatternsPanel: (state) => {
+      state.patternsPanelOpen = !state.patternsPanelOpen;
+    },
+    setPatternsPanelOpen: (state, action) => {
+      state.patternsPanelOpen = action.payload;
     },
     setTheme: (state, action) => {
       state.theme = action.payload;
@@ -41,6 +48,8 @@ export const {
   setSidebarOpen,
   toggleRightPanel,
   setRightPanelOpen,
+  togglePatternsPanel,
+  setPatternsPanelOpen,
   setTheme,
   showTooltip,
   hideTooltip,
