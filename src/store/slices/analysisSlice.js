@@ -26,7 +26,13 @@ const analysisSlice = createSlice({
     error: null,
     // Display options stored per-pattern (keyed by pattern ID)
     // Each pattern can have: showInternalFibo, showExternalFibo, showFiboFE, showTPPRZSL
+    // Also stores sharedIntervals per category - which intervals to share lines to
     patternDisplayOptions: {},
+    // Cached pattern data for patterns with shared lines (keyed by pattern ID)
+    // This allows rendering shared lines even when viewing a different interval
+    sharedPatternData: {},
+    // Track current interval for sharing purposes
+    currentInterval: null,
     // Global pattern display settings
     globalPatternDisplay: {
       // Point level lines (horizontal lines at X, A, B, C, D price levels)
@@ -82,6 +88,10 @@ const analysisSlice = createSlice({
     setAutoCenterOnSelect: (state, action) => {
       state.autoCenterOnSelect = action.payload;
     },
+    // Set current interval (for sharing feature)
+    setCurrentInterval: (state, action) => {
+      state.currentInterval = action.payload;
+    },
     // Toggle display option for specific pattern
     togglePatternDisplayOption: (state, action) => {
       const { patternId, option } = action.payload;
@@ -92,6 +102,7 @@ const analysisSlice = createSlice({
           showFiboFE: false,
           showTPPRZSL: false,
           hiddenLines: { internalFibo: [], externalFibo: [], fiboFE: [], tpPrzSl: [] },
+          sharedIntervals: { internalFibo: [], externalFibo: [], fiboFE: [], tpPrzSl: [] },
         };
       }
       const newValue = !state.patternDisplayOptions[patternId][option];
@@ -120,6 +131,7 @@ const analysisSlice = createSlice({
           showFiboFE: false,
           showTPPRZSL: false,
           hiddenLines: { internalFibo: [], externalFibo: [], fiboFE: [], tpPrzSl: [] },
+          sharedIntervals: { internalFibo: [], externalFibo: [], fiboFE: [], tpPrzSl: [] },
         };
       }
       state.patternDisplayOptions[patternId][option] = value;
@@ -134,6 +146,7 @@ const analysisSlice = createSlice({
           showFiboFE: false,
           showTPPRZSL: false,
           hiddenLines: { internalFibo: [], externalFibo: [], fiboFE: [], tpPrzSl: [] },
+          sharedIntervals: { internalFibo: [], externalFibo: [], fiboFE: [], tpPrzSl: [] },
         };
       }
       if (!state.patternDisplayOptions[patternId].hiddenLines) {
@@ -147,6 +160,54 @@ const analysisSlice = createSlice({
         hiddenLines.splice(index, 1); // Show line
       }
     },
+    // Toggle shared interval for a line category
+    toggleSharedInterval: (state, action) => {
+      const { patternId, category, interval, patternData } = action.payload;
+      if (!state.patternDisplayOptions[patternId]) {
+        state.patternDisplayOptions[patternId] = {
+          showInternalFibo: false,
+          showExternalFibo: false,
+          showFiboFE: false,
+          showTPPRZSL: false,
+          hiddenLines: { internalFibo: [], externalFibo: [], fiboFE: [], tpPrzSl: [] },
+          sharedIntervals: { internalFibo: [], externalFibo: [], fiboFE: [], tpPrzSl: [] },
+        };
+      }
+      if (!state.patternDisplayOptions[patternId].sharedIntervals) {
+        state.patternDisplayOptions[patternId].sharedIntervals = { internalFibo: [], externalFibo: [], fiboFE: [], tpPrzSl: [] };
+      }
+      const sharedIntervals = state.patternDisplayOptions[patternId].sharedIntervals[category];
+      const index = sharedIntervals.indexOf(interval);
+      if (index === -1) {
+        sharedIntervals.push(interval); // Add interval to shared
+        // Store pattern data if provided (for rendering on other intervals)
+        if (patternData && !state.sharedPatternData[patternId]) {
+          state.sharedPatternData[patternId] = patternData;
+        }
+      } else {
+        sharedIntervals.splice(index, 1); // Remove interval from shared
+        // Check if pattern has any remaining shared intervals, if not remove from cache
+        const allSharedEmpty = Object.values(state.patternDisplayOptions[patternId].sharedIntervals)
+          .every(arr => arr.length === 0);
+        if (allSharedEmpty && state.sharedPatternData[patternId]) {
+          delete state.sharedPatternData[patternId];
+        }
+      }
+    },
+    // Store pattern data for shared lines rendering
+    setSharedPatternData: (state, action) => {
+      const { patternId, patternData } = action.payload;
+      if (patternData) {
+        state.sharedPatternData[patternId] = patternData;
+      }
+    },
+    // Remove pattern data from shared cache
+    removeSharedPatternData: (state, action) => {
+      const patternId = action.payload;
+      if (state.sharedPatternData[patternId]) {
+        delete state.sharedPatternData[patternId];
+      }
+    },
     // Get display options for pattern (helper - creates default if not exists)
     initPatternDisplayOptions: (state, action) => {
       const patternId = action.payload;
@@ -157,6 +218,7 @@ const analysisSlice = createSlice({
           showFiboFE: false,
           showTPPRZSL: false,
           hiddenLines: { internalFibo: [], externalFibo: [], fiboFE: [], tpPrzSl: [] },
+          sharedIntervals: { internalFibo: [], externalFibo: [], fiboFE: [], tpPrzSl: [] },
         };
       }
     },
@@ -227,9 +289,13 @@ export const {
   setUnselectedAlpha,
   toggleAutoCenterOnSelect,
   setAutoCenterOnSelect,
+  setCurrentInterval,
   togglePatternDisplayOption,
   setPatternDisplayOption,
   toggleFibLineVisibility,
+  toggleSharedInterval,
+  setSharedPatternData,
+  removeSharedPatternData,
   initPatternDisplayOptions,
   toggleShowPointLevelLines,
   setLineDisplayStyle,

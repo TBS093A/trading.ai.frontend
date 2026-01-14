@@ -7,6 +7,7 @@ import {
   toggleAutoCenterOnSelect,
   togglePatternDisplayOption,
   toggleFibLineVisibility,
+  toggleSharedInterval,
   toggleShowPointLevelLines,
   setLineDisplayStyle,
   toggleShowPatternShapes,
@@ -28,7 +29,49 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
     autoCenterOnSelect,
     patternDisplayOptions,
     globalPatternDisplay,
+    sharedPatternData,
   } = useSelector((state) => state.analysis);
+  const { interval: currentInterval, availableIntervals } = useSelector((state) => state.chart);
+
+  // Compute list of all shared lines for display
+  const sharedLinesList = useMemo(() => {
+    const list = [];
+    
+    Object.entries(patternDisplayOptions).forEach(([patternId, options]) => {
+      if (!options?.sharedIntervals) return;
+      
+      // Get pattern data from harmonicPatterns or sharedPatternData
+      const pattern = harmonicPatterns.find(p => p.id === patternId) || sharedPatternData[patternId];
+      if (!pattern) return;
+      
+      const patternType = pattern.ta_object_json?.pattern_type || 'Unknown';
+      const patternInterval = pattern.interval;
+      const isBullish = pattern.ta_object_json?.is_bullish;
+      
+      const categories = [
+        { key: 'internalFibo', label: 'Internal Fibo', enabled: options.showInternalFibo },
+        { key: 'externalFibo', label: 'External Fibo', enabled: options.showExternalFibo },
+        { key: 'fiboFE', label: 'Fibo FE', enabled: options.showFiboFE },
+        { key: 'tpPrzSl', label: 'TP/PRZ/SL', enabled: options.showTPPRZSL },
+      ];
+      
+      categories.forEach(({ key, label, enabled }) => {
+        const sharedTo = options.sharedIntervals[key] || [];
+        if (enabled && sharedTo.length > 0) {
+          list.push({
+            patternId,
+            patternType,
+            patternInterval,
+            isBullish,
+            category: label,
+            sharedTo,
+          });
+        }
+      });
+    });
+    
+    return list;
+  }, [patternDisplayOptions, harmonicPatterns, sharedPatternData]);
 
   // Helper to get display options for a pattern
   const getPatternOptions = useCallback((patternId) => {
@@ -38,8 +81,28 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
       showFiboFE: false,
       showTPPRZSL: false,
       hiddenLines: { internalFibo: [], externalFibo: [], fiboFE: [], tpPrzSl: [] },
+      sharedIntervals: { internalFibo: [], externalFibo: [], fiboFE: [], tpPrzSl: [] },
     };
   }, [patternDisplayOptions]);
+
+  // Check if an interval is shared for a category
+  const isIntervalShared = useCallback((patternId, category, interval) => {
+    const options = getPatternOptions(patternId);
+    const sharedIntervals = options.sharedIntervals?.[category] || [];
+    return sharedIntervals.includes(interval);
+  }, [getPatternOptions]);
+
+  // Handle clicking on an interval to toggle sharing
+  const handleSharedIntervalClick = useCallback((e, patternId, category, interval, pattern) => {
+    e.stopPropagation();
+    // Pass pattern data so it can be cached for rendering on other intervals
+    dispatch(toggleSharedInterval({ patternId, category, interval, patternData: pattern }));
+  }, [dispatch]);
+
+  // Get intervals to show (excluding current interval of the pattern)
+  const getOtherIntervals = useCallback((patternInterval) => {
+    return availableIntervals.filter(int => int !== patternInterval);
+  }, [availableIntervals]);
 
   // Check if a specific fib line is visible (not hidden)
   const isLineVisible = useCallback((patternId, category, lineKey) => {
@@ -184,96 +247,96 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
         </button>
         
         {isSettingsExpanded && (
-          <div className="display-settings">
-            <div className="settings-section">
-              <label className="settings-label">
-                <span className="settings-icon">◔</span>
-                Unselected Opacity
-                <span className="settings-value">{Math.round(unselectedAlpha * 100)}%</span>
-              </label>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.05"
-                value={unselectedAlpha}
-                onChange={handleAlphaChange}
-                className="settings-slider"
-              />
-            </div>
-            
-            {/* Auto-center checkbox */}
-            <label className="settings-checkbox-label">
-              <input
-                type="checkbox"
-                checked={autoCenterOnSelect}
-                onChange={handleAutoCenterToggle}
-                className="settings-checkbox"
-              />
-              <span className="checkbox-custom"></span>
-              <span className="checkbox-text">Center chart on click</span>
-            </label>
+      <div className="display-settings">
+        <div className="settings-section">
+          <label className="settings-label">
+            <span className="settings-icon">◔</span>
+            Unselected Opacity
+            <span className="settings-value">{Math.round(unselectedAlpha * 100)}%</span>
+          </label>
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.05"
+            value={unselectedAlpha}
+            onChange={handleAlphaChange}
+            className="settings-slider"
+          />
+        </div>
+        
+        {/* Auto-center checkbox */}
+        <label className="settings-checkbox-label">
+          <input
+            type="checkbox"
+            checked={autoCenterOnSelect}
+            onChange={handleAutoCenterToggle}
+            className="settings-checkbox"
+          />
+          <span className="checkbox-custom"></span>
+          <span className="checkbox-text">Center chart on click</span>
+        </label>
 
-            {/* Pattern Shapes checkbox */}
-            <label className="settings-checkbox-label">
-              <input
-                type="checkbox"
-                checked={globalPatternDisplay.showPatternShapes}
-                onChange={() => dispatch(toggleShowPatternShapes())}
-                className="settings-checkbox"
-              />
-              <span className="checkbox-custom"></span>
-              <span className="checkbox-text">Show pattern shapes</span>
-            </label>
+        {/* Pattern Shapes checkbox */}
+        <label className="settings-checkbox-label">
+          <input
+            type="checkbox"
+            checked={globalPatternDisplay.showPatternShapes}
+            onChange={() => dispatch(toggleShowPatternShapes())}
+            className="settings-checkbox"
+          />
+          <span className="checkbox-custom"></span>
+          <span className="checkbox-text">Show pattern shapes</span>
+        </label>
 
-            {/* Retrace Lines checkbox */}
-            <label className="settings-checkbox-label">
-              <input
-                type="checkbox"
-                checked={globalPatternDisplay.showRetraceLines}
-                onChange={() => dispatch(toggleShowRetraceLines())}
-                className="settings-checkbox"
-              />
-              <span className="checkbox-custom"></span>
-              <span className="checkbox-text">Show retrace lines</span>
-            </label>
+        {/* Retrace Lines checkbox */}
+        <label className="settings-checkbox-label">
+          <input
+            type="checkbox"
+            checked={globalPatternDisplay.showRetraceLines}
+            onChange={() => dispatch(toggleShowRetraceLines())}
+            className="settings-checkbox"
+          />
+          <span className="checkbox-custom"></span>
+          <span className="checkbox-text">Show retrace lines</span>
+        </label>
 
             {/* Point Level Lines checkbox */}
-            <label className="settings-checkbox-label">
-              <input
-                type="checkbox"
-                checked={globalPatternDisplay.showPointLevelLines}
-                onChange={() => dispatch(toggleShowPointLevelLines())}
-                className="settings-checkbox"
-              />
-              <span className="checkbox-custom"></span>
-              <span className="checkbox-text">Show point level lines</span>
-            </label>
+        <label className="settings-checkbox-label">
+          <input
+            type="checkbox"
+            checked={globalPatternDisplay.showPointLevelLines}
+            onChange={() => dispatch(toggleShowPointLevelLines())}
+            className="settings-checkbox"
+          />
+          <span className="checkbox-custom"></span>
+          <span className="checkbox-text">Show point level lines</span>
+        </label>
 
             {/* Line display style - applies to all pattern lines */}
             <div className="settings-section line-style-section">
               <div className="settings-section-title">Line Display Style</div>
               <div className="settings-radio-group">
-                <label className="settings-radio-label">
-                  <input
-                    type="radio"
+            <label className="settings-radio-label">
+              <input
+                type="radio"
                     name="lineDisplayStyle"
                     checked={globalPatternDisplay.lineDisplayStyle === 'fromFirstPoint'}
                     onChange={() => dispatch(setLineDisplayStyle('fromFirstPoint'))}
-                    className="settings-radio"
-                  />
-                  <span className="radio-custom"></span>
+                className="settings-radio"
+              />
+              <span className="radio-custom"></span>
                   <span className="radio-text">From first point to scale</span>
-                </label>
-                <label className="settings-radio-label">
-                  <input
-                    type="radio"
+            </label>
+            <label className="settings-radio-label">
+              <input
+                type="radio"
                     name="lineDisplayStyle"
                     checked={globalPatternDisplay.lineDisplayStyle === 'fullWidth'}
                     onChange={() => dispatch(setLineDisplayStyle('fullWidth'))}
-                    className="settings-radio"
-                  />
-                  <span className="radio-custom"></span>
+                className="settings-radio"
+              />
+              <span className="radio-custom"></span>
                   <span className="radio-text">Full width</span>
                 </label>
               </div>
@@ -476,11 +539,26 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
                                       onClick={(e) => handleFibLineClick(e, pattern.id, 'internalFibo', level)}
                                       title={visible ? 'Click to hide' : 'Click to show'}
                                     >
-                                      <span className="fib-lvl">{(parseFloat(level) * 100).toFixed(1)}%</span>
-                                      <span className="fib-prc">{price.toFixed(6)}</span>
+                                    <span className="fib-lvl">{(parseFloat(level) * 100).toFixed(1)}%</span>
+                                    <span className="fib-prc">{price.toFixed(6)}</span>
                                     </button>
                                   );
                                 })}
+                              </div>
+                              <div className="shared-intervals">
+                                <span className="shared-label">Shared on:</span>
+                                <div className="interval-buttons">
+                                  {getOtherIntervals(pattern.interval).map((int) => (
+                                    <button
+                                      key={int}
+                                      className={`interval-btn ${isIntervalShared(pattern.id, 'internalFibo', int) ? 'active' : ''}`}
+                                      onClick={(e) => handleSharedIntervalClick(e, pattern.id, 'internalFibo', int, pattern)}
+                                      title={`Share on ${int} chart`}
+                                    >
+                                      {int}
+                                    </button>
+                                  ))}
+                                </div>
                               </div>
                             </div>
                           )}
@@ -498,11 +576,26 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
                                       onClick={(e) => handleFibLineClick(e, pattern.id, 'externalFibo', level)}
                                       title={visible ? 'Click to hide' : 'Click to show'}
                                     >
-                                      <span className="fib-lvl">{(parseFloat(level) * 100).toFixed(1)}%</span>
-                                      <span className="fib-prc">{price.toFixed(6)}</span>
+                                    <span className="fib-lvl">{(parseFloat(level) * 100).toFixed(1)}%</span>
+                                    <span className="fib-prc">{price.toFixed(6)}</span>
                                     </button>
                                   );
                                 })}
+                              </div>
+                              <div className="shared-intervals">
+                                <span className="shared-label">Shared on:</span>
+                                <div className="interval-buttons">
+                                  {getOtherIntervals(pattern.interval).map((int) => (
+                                    <button
+                                      key={int}
+                                      className={`interval-btn ${isIntervalShared(pattern.id, 'externalFibo', int) ? 'active' : ''}`}
+                                      onClick={(e) => handleSharedIntervalClick(e, pattern.id, 'externalFibo', int, pattern)}
+                                      title={`Share on ${int} chart`}
+                                    >
+                                      {int}
+                                    </button>
+                                  ))}
+                                </div>
                               </div>
                             </div>
                           )}
@@ -520,11 +613,26 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
                                       onClick={(e) => handleFibLineClick(e, pattern.id, 'fiboFE', name)}
                                       title={visible ? 'Click to hide' : 'Click to show'}
                                     >
-                                      <span className="fib-lvl">{name}</span>
-                                      <span className="fib-prc">{data.price?.toFixed(6)}</span>
+                                    <span className="fib-lvl">{name}</span>
+                                    <span className="fib-prc">{data.price?.toFixed(6)}</span>
                                     </button>
                                   );
                                 })}
+                              </div>
+                              <div className="shared-intervals">
+                                <span className="shared-label">Shared on:</span>
+                                <div className="interval-buttons">
+                                  {getOtherIntervals(pattern.interval).map((int) => (
+                                    <button
+                                      key={int}
+                                      className={`interval-btn ${isIntervalShared(pattern.id, 'fiboFE', int) ? 'active' : ''}`}
+                                      onClick={(e) => handleSharedIntervalClick(e, pattern.id, 'fiboFE', int, pattern)}
+                                      title={`Share on ${int} chart`}
+                                    >
+                                      {int}
+                                    </button>
+                                  ))}
+                                </div>
                               </div>
                             </div>
                           )}
@@ -550,6 +658,21 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
                                     </button>
                                   );
                                 })}
+                              </div>
+                              <div className="shared-intervals">
+                                <span className="shared-label">Shared on:</span>
+                                <div className="interval-buttons">
+                                  {getOtherIntervals(pattern.interval).map((int) => (
+                                    <button
+                                      key={int}
+                                      className={`interval-btn ${isIntervalShared(pattern.id, 'tpPrzSl', int) ? 'active' : ''}`}
+                                      onClick={(e) => handleSharedIntervalClick(e, pattern.id, 'tpPrzSl', int, pattern)}
+                                      title={`Share on ${int} chart`}
+                                    >
+                                      {int}
+                                    </button>
+                                  ))}
+                                </div>
                               </div>
                             </div>
                           )}
@@ -578,6 +701,42 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
           ))
         )}
       </div>
+
+      {/* Shared Lines Info Section */}
+      {sharedLinesList.length > 0 && (
+        <div className="shared-lines-section">
+          <div className="shared-lines-header">
+            <span className="shared-lines-icon">⬡</span>
+            <span className="shared-lines-title">Shared Lines</span>
+            <span className="shared-lines-count">{sharedLinesList.length}</span>
+          </div>
+          <div className="shared-lines-list">
+            {sharedLinesList.map((item, index) => (
+              <div key={`${item.patternId}-${item.category}-${index}`} className="shared-line-item">
+                <div className="shared-line-info">
+                  <span className={`shared-line-direction ${item.isBullish ? 'bullish' : 'bearish'}`}>
+                    {item.isBullish ? '▲' : '▼'}
+                  </span>
+                  <span className="shared-line-pattern">{item.patternType}</span>
+                  <span className="shared-line-interval">{item.patternInterval}</span>
+                </div>
+                <div className="shared-line-category">{item.category}</div>
+                <div className="shared-line-targets">
+                  <span className="shared-to-label">→</span>
+                  {item.sharedTo.map((int) => (
+                    <span 
+                      key={int} 
+                      className={`shared-to-interval ${int === currentInterval ? 'current' : ''}`}
+                    >
+                      {int}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </aside>
   );
 };

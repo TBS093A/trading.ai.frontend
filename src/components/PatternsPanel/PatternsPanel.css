@@ -989,6 +989,200 @@
   color: rgba(255, 255, 255, 0.5);
 }
 
+/* Shared Intervals Section */
+.shared-intervals {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: var(--spacing-sm);
+  padding-top: var(--spacing-sm);
+  border-top: 1px dashed var(--border-primary);
+}
+
+.shared-label {
+  font-size: 0.55rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.interval-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.interval-btn {
+  padding: 2px 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.interval-btn:hover {
+  border-color: var(--accent-purple);
+  color: var(--accent-purple);
+}
+
+.interval-btn.active {
+  background: rgba(153, 69, 255, 0.2);
+  border-color: var(--accent-purple);
+  color: var(--accent-purple);
+  box-shadow: 0 0 8px rgba(153, 69, 255, 0.3);
+}
+
+/* Shared Lines Info Section */
+.shared-lines-section {
+  flex-shrink: 0;
+  border-top: 1px solid var(--border-primary);
+  background: linear-gradient(135deg, rgba(153, 69, 255, 0.05) 0%, var(--bg-tertiary) 100%);
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.shared-lines-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-bottom: 1px solid var(--border-primary);
+  position: sticky;
+  top: 0;
+  background: var(--bg-tertiary);
+  z-index: 1;
+}
+
+.shared-lines-icon {
+  color: var(--accent-purple);
+  font-size: 0.9rem;
+}
+
+.shared-lines-title {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent-purple);
+}
+
+.shared-lines-count {
+  padding: 1px 6px;
+  background: rgba(153, 69, 255, 0.2);
+  border: 1px solid var(--accent-purple);
+  border-radius: var(--radius-sm);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: var(--accent-purple);
+}
+
+.shared-lines-list {
+  padding: var(--spacing-xs);
+}
+
+.shared-line-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  margin-bottom: 4px;
+}
+
+.shared-line-item:last-child {
+  margin-bottom: 0;
+}
+
+.shared-line-info {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.shared-line-direction {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  font-size: 0.5rem;
+}
+
+.shared-line-direction.bullish {
+  background: rgba(0, 255, 136, 0.15);
+  border: 1px solid var(--accent-green);
+  color: var(--accent-green);
+}
+
+.shared-line-direction.bearish {
+  background: rgba(255, 51, 102, 0.15);
+  border: 1px solid var(--accent-red);
+  color: var(--accent-red);
+}
+
+.shared-line-pattern {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.shared-line-interval {
+  padding: 1px 4px;
+  background: rgba(0, 240, 255, 0.1);
+  border: 1px solid var(--accent-cyan);
+  border-radius: 3px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  font-weight: 600;
+  color: var(--accent-cyan);
+}
+
+.shared-line-category {
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  padding-left: 20px;
+}
+
+.shared-line-targets {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-left: 20px;
+  flex-wrap: wrap;
+}
+
+.shared-to-label {
+  color: var(--accent-purple);
+  font-size: 0.7rem;
+}
+
+.shared-to-interval {
+  padding: 1px 4px;
+  background: rgba(153, 69, 255, 0.1);
+  border: 1px solid var(--accent-purple);
+  border-radius: 3px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  font-weight: 500;
+  color: var(--accent-purple);
+}
+
+.shared-to-interval.current {
+  background: rgba(153, 69, 255, 0.3);
+  box-shadow: 0 0 6px rgba(153, 69, 255, 0.4);
+}
+
 /* Responsive */
 @media (max-width: 1400px) {
   .patterns-panel.open {

@@ -31,9 +31,9 @@ const TradingViewChart = forwardRef((props, ref) => {
   const indicatorChartsRef = useRef([]);
   const isSyncingRef = useRef(false); // Prevent infinite sync loops
 
-  const { klines, asset, quote } = useSelector((state) => state.chart);
+  const { klines, asset, quote, interval: currentInterval } = useSelector((state) => state.chart);
   const { selectedAsset } = useSelector((state) => state.assets);
-  const { harmonicPatterns, selectedPattern, expandedPatternId, unselectedAlpha, patternDisplayOptions, globalPatternDisplay, indicators } = useSelector((state) => state.analysis);
+  const { harmonicPatterns, selectedPattern, expandedPatternId, unselectedAlpha, patternDisplayOptions, globalPatternDisplay, indicators, sharedPatternData } = useSelector((state) => state.analysis);
 
   // Track asset ID to reset chart when asset changes
   const prevAssetIdRef = useRef(null);
@@ -394,14 +394,14 @@ const TradingViewChart = forwardRef((props, ref) => {
               patternLinesRef.current.push({ type: 'series', series });
             } else {
               // Use price line (full width)
-              const line = candlestickSeriesRef.current.createPriceLine({
-                price: point.price,
-                color: patternColor,
-                lineWidth: isSelected ? 2 : 1,
-                lineStyle: 2, // Dashed
+            const line = candlestickSeriesRef.current.createPriceLine({
+              price: point.price,
+              color: patternColor,
+              lineWidth: isSelected ? 2 : 1,
+              lineStyle: 2, // Dashed
                 axisLabelVisible: showLabel,
                 title: showLabel ? point.name : '',
-              });
+            });
               patternLinesRef.current.push({ type: 'priceLine', line });
             }
           } catch (e) {
@@ -712,8 +712,9 @@ const TradingViewChart = forwardRef((props, ref) => {
   }, []);
 
   // Draw Fibonacci levels for ALL patterns that have display options enabled
+  // Also draws shared lines from patterns of other intervals (from sharedPatternData cache)
   useEffect(() => {
-    if (!chartRef.current || !candlestickSeriesRef.current || harmonicPatterns.length === 0) return;
+    if (!chartRef.current || !candlestickSeriesRef.current) return;
 
     const useFromFirstPoint = globalPatternDisplay.lineDisplayStyle === 'fromFirstPoint';
 
@@ -771,30 +772,64 @@ const TradingViewChart = forwardRef((props, ref) => {
       }
     };
 
-    // Draw fib levels for each pattern that has options enabled
-    harmonicPatterns.forEach((pattern) => {
+    // Helper to process a pattern's fib levels
+    const processPattern = (pattern, isFromCurrentInterval) => {
       const options = getPatternOptions(pattern.id);
       const { ta_object_json: taData } = pattern;
+      const patternInterval = pattern.interval;
+      const patternType = taData?.pattern_type || 'Pattern';
       
       if (!taData || !taData.fibonacci_levels) return;
       
       const fibLevels = taData.fibonacci_levels;
       const isCurrentSelected = selectedPattern?.id === pattern.id;
-      const lineAlpha = isCurrentSelected ? 1 : 0.6;
       const hiddenLines = options.hiddenLines || { internalFibo: [], externalFibo: [], fiboFE: [], tpPrzSl: [] };
+      const sharedIntervals = options.sharedIntervals || { internalFibo: [], externalFibo: [], fiboFE: [], tpPrzSl: [] };
       const firstPointTimestamp = getFirstPointTimestamp(pattern);
+
+      // Check if lines should be shown:
+      // - From current interval: based on display options (showInternalFibo, etc.)
+      // - From other intervals: based on sharedIntervals containing currentInterval
+      const shouldShowInternalFibo = isFromCurrentInterval 
+        ? options.showInternalFibo 
+        : (options.showInternalFibo && sharedIntervals.internalFibo?.includes(currentInterval));
+      
+      const shouldShowExternalFibo = isFromCurrentInterval 
+        ? options.showExternalFibo 
+        : (options.showExternalFibo && sharedIntervals.externalFibo?.includes(currentInterval));
+      
+      const shouldShowFiboFE = isFromCurrentInterval 
+        ? options.showFiboFE 
+        : (options.showFiboFE && sharedIntervals.fiboFE?.includes(currentInterval));
+      
+      const shouldShowTPPRZSL = isFromCurrentInterval 
+        ? options.showTPPRZSL 
+        : (options.showTPPRZSL && sharedIntervals.tpPrzSl?.includes(currentInterval));
+
+      // Shared lines from other intervals are drawn with lower opacity
+      const isShared = !isFromCurrentInterval;
+      const lineAlpha = isCurrentSelected ? 1 : (isShared ? 0.4 : 0.6);
       const showLabel = isCurrentSelected || globalPatternDisplay.showUnselectedLabels;
 
+      // Helper to create label with pattern info for shared lines
+      const makeLabel = (categoryName, levelText) => {
+        if (isShared) {
+          return `${categoryName} • ${patternType} • ${patternInterval} • ${levelText}`;
+        }
+        return levelText;
+      };
+
       // Internal Fibonacci Retracements
-      if (options.showInternalFibo && fibLevels.retracement) {
+      if (shouldShowInternalFibo && fibLevels.retracement) {
         Object.entries(fibLevels.retracement).forEach(([level, price]) => {
           if (hiddenLines.internalFibo?.includes(level)) return;
-          const label = `${(parseFloat(level) * 100).toFixed(1)}%`;
+          const levelText = `${(parseFloat(level) * 100).toFixed(1)}%`;
+          const label = makeLabel('Int', levelText);
           createFibLine(
             price,
             hexToRgba('#ffcc00', lineAlpha),
             isCurrentSelected ? 2 : 1,
-            1,
+            isShared ? 2 : 1, // Dashed for shared lines
             firstPointTimestamp,
             showLabel,
             label
@@ -803,15 +838,16 @@ const TradingViewChart = forwardRef((props, ref) => {
       }
 
       // External Fibonacci Extensions
-      if (options.showExternalFibo && fibLevels.extension) {
+      if (shouldShowExternalFibo && fibLevels.extension) {
         Object.entries(fibLevels.extension).forEach(([level, price]) => {
           if (hiddenLines.externalFibo?.includes(level)) return;
-          const label = `${(parseFloat(level) * 100).toFixed(1)}%`;
+          const levelText = `${(parseFloat(level) * 100).toFixed(1)}%`;
+          const label = makeLabel('Ext', levelText);
           createFibLine(
             price,
             hexToRgba('#9945ff', lineAlpha),
             isCurrentSelected ? 2 : 1,
-            1,
+            isShared ? 2 : 1, // Dashed for shared lines
             firstPointTimestamp,
             showLabel,
             label
@@ -820,23 +856,24 @@ const TradingViewChart = forwardRef((props, ref) => {
       }
 
       // Fibonacci FE Extensions
-      if (options.showFiboFE && fibLevels.fe_extensions) {
+      if (shouldShowFiboFE && fibLevels.fe_extensions) {
         Object.entries(fibLevels.fe_extensions).forEach(([name, data]) => {
           if (hiddenLines.fiboFE?.includes(name)) return;
+          const label = makeLabel('FE', name);
           createFibLine(
             data.price,
             hexToRgba('#00f0ff', lineAlpha),
             isCurrentSelected ? 2 : 1,
-            1,
+            isShared ? 2 : 1, // Dashed for shared lines
             firstPointTimestamp,
             showLabel,
-            name
+            label
           );
         });
       }
 
       // TP/PRZ/SL levels
-      if (options.showTPPRZSL && fibLevels.all_targets) {
+      if (shouldShowTPPRZSL && fibLevels.all_targets) {
         Object.entries(fibLevels.all_targets).forEach(([name, data]) => {
           if (hiddenLines.tpPrzSl?.includes(name)) return;
           
@@ -845,19 +882,47 @@ const TradingViewChart = forwardRef((props, ref) => {
           else if (name.includes('PRZ')) color = '#ffcc00';
           else if (name.includes('TP')) color = '#00f0ff';
 
+          const label = makeLabel('TP/SL', name);
           createFibLine(
             data.price,
             hexToRgba(color, lineAlpha),
             isCurrentSelected ? 2 : 1,
-            0,
+            isShared ? 2 : 0, // Dashed for shared lines
             firstPointTimestamp,
             showLabel,
-            name
+            label
           );
         });
       }
+    };
+
+    // Process patterns from current interval
+    harmonicPatterns.forEach((pattern) => {
+      const isFromCurrentInterval = pattern.interval === currentInterval;
+      processPattern(pattern, isFromCurrentInterval);
     });
-  }, [harmonicPatterns, patternDisplayOptions, selectedPattern, getPatternOptions, globalPatternDisplay.lineDisplayStyle, globalPatternDisplay.showUnselectedLabels, getFirstPointTimestamp]);
+
+    // Process shared patterns from other intervals (from cache)
+    // Only process patterns that are NOT in harmonicPatterns (to avoid duplicates)
+    const harmonicPatternIds = new Set(harmonicPatterns.map(p => p.id));
+    Object.entries(sharedPatternData).forEach(([patternId, pattern]) => {
+      if (harmonicPatternIds.has(patternId)) return; // Skip if already processed
+      
+      // Check if this pattern has any lines shared to the current interval
+      const options = patternDisplayOptions[patternId];
+      if (!options?.sharedIntervals) return;
+      
+      const hasSharedLines = 
+        (options.showInternalFibo && options.sharedIntervals.internalFibo?.includes(currentInterval)) ||
+        (options.showExternalFibo && options.sharedIntervals.externalFibo?.includes(currentInterval)) ||
+        (options.showFiboFE && options.sharedIntervals.fiboFE?.includes(currentInterval)) ||
+        (options.showTPPRZSL && options.sharedIntervals.tpPrzSl?.includes(currentInterval));
+      
+      if (hasSharedLines) {
+        processPattern(pattern, false); // false = not from current interval
+      }
+    });
+  }, [harmonicPatterns, patternDisplayOptions, selectedPattern, getPatternOptions, globalPatternDisplay.lineDisplayStyle, globalPatternDisplay.showUnselectedLabels, getFirstPointTimestamp, currentInterval, sharedPatternData]);
 
   // Handle pattern click
   const handleChartClick = useCallback((param) => {
