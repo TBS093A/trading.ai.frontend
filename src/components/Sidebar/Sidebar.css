@@ -193,10 +193,22 @@
 
 /* Asset List */
 .asset-list-section {
-  flex: 1;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  flex: 0 0 auto;
+  transition: flex var(--transition-fast);
+}
+
+/* Only expand when section is expanded */
+.asset-list-section.section-expanded {
+  flex: 1 1 0;
+}
+
+/* When collapsed, don't take extra space */
+.asset-list-section.section-collapsed {
+  flex: 0 0 auto;
 }
 
 .asset-list {
@@ -204,6 +216,7 @@
   overflow-y: auto;
   margin: 0 calc(-1 * var(--spacing-md));
   padding: 0 var(--spacing-sm);
+  min-height: 0;
 }
 
 .asset-item {

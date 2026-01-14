@@ -163,7 +163,7 @@ const SyncSection = () => {
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <span className="toggle-icon">⟳</span>
-        <span className="toggle-text">Synchronizacja</span>
+        <span className="toggle-text">Synchronization</span>
         {hasActiveTasks && <span className="active-badge pulse" />}
         <span className="expand-arrow">{isExpanded ? '▼' : '▶'}</span>
       </button>
@@ -178,8 +178,8 @@ const SyncSection = () => {
                 <div key={taskId} className={`task-mini-item ${getStatusClass(task.status)}`}>
                   <span className="task-icon">{getStatusIcon(task.status)}</span>
                   <span className="task-name">
-                    {task.type === 'exchanges' && 'Giełdy'}
-                    {task.type === 'technical' && 'Analiza'}
+                    {task.type === 'exchanges' && 'Exchanges'}
+                    {task.type === 'technical' && 'Analysis'}
                     {task.type === 'bulk' && 'Bulk'}
                   </span>
                   <button
@@ -203,7 +203,7 @@ const SyncSection = () => {
               onClick={() => dispatch(setActiveSection(activeSection === 'exchanges' ? null : 'exchanges'))}
             >
               <span className="item-icon">⇋</span>
-              <span className="item-title">Giełdy</span>
+              <span className="item-title">Exchanges</span>
               <span className="item-arrow">{activeSection === 'exchanges' ? '−' : '+'}</span>
             </button>
 
@@ -230,7 +230,7 @@ const SyncSection = () => {
                   onClick={handleSyncExchanges}
                   disabled={exchangesSync.loading}
                 >
-                  {exchangesSync.loading ? '⟳ Synchronizuję...' : '⟳ Synchronizuj'}
+                  {exchangesSync.loading ? '⟳ Syncing...' : '⟳ Sync'}
                 </button>
               </div>
             )}
@@ -243,7 +243,7 @@ const SyncSection = () => {
               onClick={() => dispatch(setActiveSection(activeSection === 'technical' ? null : 'technical'))}
             >
               <span className="item-icon">📊</span>
-              <span className="item-title">Analiza Techniczna</span>
+              <span className="item-title">Technical Analysis</span>
               <span className="item-arrow">{activeSection === 'technical' ? '−' : '+'}</span>
             </button>
 
@@ -304,7 +304,7 @@ const SyncSection = () => {
                   onClick={handleSyncTechnical}
                   disabled={technical.loading}
                 >
-                  {technical.loading ? '⟳ Analizuję...' : '📊 Uruchom Analizę'}
+                  {technical.loading ? '⟳ Analyzing...' : '📊 Run Analysis'}
                 </button>
               </div>
             )}
@@ -327,14 +327,14 @@ const SyncSection = () => {
                 <div className="bulk-filter-group">
                   <label className="filter-label">
                     <span className="filter-icon">⬡</span>
-                    Giełda
+                    Exchange
                   </label>
                   <select
                     className="bulk-exchange-select"
                     value={bulkExchangeId}
                     onChange={(e) => setBulkExchangeId(e.target.value)}
                   >
-                    <option value="">-- Wybierz giełdę --</option>
+                    <option value="">-- Select exchange --</option>
                     {exchangesList.map((ex) => (
                       <option key={ex.id} value={ex.id}>
                         {ex.display_name || ex.name}
@@ -348,13 +348,13 @@ const SyncSection = () => {
                   <div className="bulk-filter-group">
                     <label className="filter-label">
                       <span className="filter-icon">⌕</span>
-                      Szukaj assetu
+                      Search asset
                     </label>
                     <div className="bulk-search-wrapper">
                       <input
                         type="text"
                         className="bulk-search-input"
-                        placeholder="np. BTC, ETH, USDT..."
+                        placeholder="e.g. BTC, ETH, USDT..."
                         value={bulkSearchTerm}
                         onChange={(e) => setBulkSearchTerm(e.target.value)}
                       />
@@ -371,29 +371,29 @@ const SyncSection = () => {
                 )}
 
                 {!bulkExchangeId ? (
-                  <div className="info-msg">Wybierz giełdę aby zobaczyć assety</div>
+                  <div className="info-msg">Select exchange to see assets</div>
                 ) : bulkAssetsLoading ? (
                   <div className="info-msg">
-                    <span className="loading-spinner">⟳</span> Ładowanie assetów...
+                    <span className="loading-spinner">⟳</span> Loading assets...
                   </div>
                 ) : bulkAssets.length === 0 ? (
-                  <div className="info-msg">Brak assetów dla wybranej giełdy</div>
+                  <div className="info-msg">No assets for selected exchange</div>
                 ) : (
                   <>
                     <div className="bulk-header">
                       <span className="selected-count">
-                        Wybrano: {selectedAssetIds.size}
-                        {bulkSearchTerm && ` (widoczne: ${filteredBulkAssets.length}/${bulkAssets.length})`}
+                        Selected: {selectedAssetIds.size}
+                        {bulkSearchTerm && ` (visible: ${filteredBulkAssets.length}/${bulkAssets.length})`}
                         {!bulkSearchTerm && ` / ${bulkAssets.length}`}
                       </span>
                       <button className="select-all-btn" onClick={toggleSelectAll}>
-                        {allFilteredSelected ? 'Odznacz widoczne' : 'Zaznacz widoczne'}
+                        {allFilteredSelected ? 'Deselect visible' : 'Select visible'}
                       </button>
                     </div>
 
                     <div className="asset-checkboxes">
                       {filteredBulkAssets.length === 0 ? (
-                        <div className="no-results">Brak wyników dla "{bulkSearchTerm}"</div>
+                        <div className="no-results">No results for "{bulkSearchTerm}"</div>
                       ) : (
                         filteredBulkAssets.map((asset) => (
                           <label key={asset.id} className="asset-checkbox">
@@ -438,8 +438,8 @@ const SyncSection = () => {
                       disabled={bulk.loading || selectedAssetIds.size === 0}
                     >
                       {bulk.loading
-                        ? '⟳ Przetwarzam...'
-                        : `📦 Synchronizuj (${selectedAssetIds.size})`}
+                        ? '⟳ Processing...'
+                        : `📦 Sync (${selectedAssetIds.size})`}
                     </button>
                   </>
                 )}

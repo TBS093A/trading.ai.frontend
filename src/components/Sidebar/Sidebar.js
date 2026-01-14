@@ -141,7 +141,7 @@ const Sidebar = ({ isOpen }) => {
           </div>
 
           {/* Assets List - Collapsible */}
-          <div className="sidebar-section asset-list-section">
+          <div className={`sidebar-section asset-list-section ${assetsExpanded ? 'section-expanded' : 'section-collapsed'}`}>
             <button
               className={`section-label collapsible ${assetsExpanded ? 'expanded' : ''}`}
               onClick={() => setAssetsExpanded(!assetsExpanded)}
@@ -180,7 +180,7 @@ const Sidebar = ({ isOpen }) => {
           </div>
 
           {/* Harmonic Patterns in Assets - Collapsible */}
-          <div className="sidebar-section asset-list-section patterns-section">
+          <div className={`sidebar-section asset-list-section patterns-section ${patternsExpanded ? 'section-expanded' : 'section-collapsed'}`}>
             <button
               className={`section-label collapsible ${patternsExpanded ? 'expanded' : ''}`}
               onClick={() => setPatternsExpanded(!patternsExpanded)}

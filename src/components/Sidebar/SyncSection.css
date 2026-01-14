@@ -1,6 +1,7 @@
 .sync-section-wrapper {
   padding: 0 12px;
-  margin-bottom: 8px;
+  margin-top: var(--spacing-md, 12px);
+  margin-bottom: var(--spacing-md, 12px);
 }
 
 /* Main toggle button */
