@@ -88,9 +88,24 @@ const analysisSlice = createSlice({
           showExternalFibo: false,
           showFiboFE: false,
           showTPPRZSL: false,
+          hiddenLines: { internalFibo: [], externalFibo: [], fiboFE: [], tpPrzSl: [] },
         };
       }
-      state.patternDisplayOptions[patternId][option] = !state.patternDisplayOptions[patternId][option];
+      const newValue = !state.patternDisplayOptions[patternId][option];
+      state.patternDisplayOptions[patternId][option] = newValue;
+      // When enabling a category, clear hidden lines for that category (show all)
+      if (newValue) {
+        const categoryMap = {
+          showInternalFibo: 'internalFibo',
+          showExternalFibo: 'externalFibo',
+          showFiboFE: 'fiboFE',
+          showTPPRZSL: 'tpPrzSl',
+        };
+        const category = categoryMap[option];
+        if (category && state.patternDisplayOptions[patternId].hiddenLines) {
+          state.patternDisplayOptions[patternId].hiddenLines[category] = [];
+        }
+      }
     },
     // Set display option for specific pattern
     setPatternDisplayOption: (state, action) => {
@@ -101,9 +116,33 @@ const analysisSlice = createSlice({
           showExternalFibo: false,
           showFiboFE: false,
           showTPPRZSL: false,
+          hiddenLines: { internalFibo: [], externalFibo: [], fiboFE: [], tpPrzSl: [] },
         };
       }
       state.patternDisplayOptions[patternId][option] = value;
+    },
+    // Toggle visibility of individual fib line
+    toggleFibLineVisibility: (state, action) => {
+      const { patternId, category, lineKey } = action.payload;
+      if (!state.patternDisplayOptions[patternId]) {
+        state.patternDisplayOptions[patternId] = {
+          showInternalFibo: false,
+          showExternalFibo: false,
+          showFiboFE: false,
+          showTPPRZSL: false,
+          hiddenLines: { internalFibo: [], externalFibo: [], fiboFE: [], tpPrzSl: [] },
+        };
+      }
+      if (!state.patternDisplayOptions[patternId].hiddenLines) {
+        state.patternDisplayOptions[patternId].hiddenLines = { internalFibo: [], externalFibo: [], fiboFE: [], tpPrzSl: [] };
+      }
+      const hiddenLines = state.patternDisplayOptions[patternId].hiddenLines[category];
+      const index = hiddenLines.indexOf(lineKey);
+      if (index === -1) {
+        hiddenLines.push(lineKey); // Hide line
+      } else {
+        hiddenLines.splice(index, 1); // Show line
+      }
     },
     // Get display options for pattern (helper - creates default if not exists)
     initPatternDisplayOptions: (state, action) => {
@@ -114,6 +153,7 @@ const analysisSlice = createSlice({
           showExternalFibo: false,
           showFiboFE: false,
           showTPPRZSL: false,
+          hiddenLines: { internalFibo: [], externalFibo: [], fiboFE: [], tpPrzSl: [] },
         };
       }
     },
@@ -183,6 +223,7 @@ export const {
   setAutoCenterOnSelect,
   togglePatternDisplayOption,
   setPatternDisplayOption,
+  toggleFibLineVisibility,
   initPatternDisplayOptions,
   toggleShowPointLevelLines,
   setPointLevelLineStyle,
@@ -195,4 +236,5 @@ export const {
   clearAnalysisError,
 } = analysisSlice.actions;
 export default analysisSlice.reducer;
+
 

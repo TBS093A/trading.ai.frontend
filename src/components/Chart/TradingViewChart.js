@@ -694,10 +694,13 @@ const TradingViewChart = forwardRef((props, ref) => {
       const isBullish = taData.is_bullish;
       const isCurrentSelected = selectedPattern?.id === pattern.id;
       const lineAlpha = isCurrentSelected ? 1 : 0.6;
+      const hiddenLines = options.hiddenLines || { internalFibo: [], externalFibo: [], fiboFE: [], tpPrzSl: [] };
 
       // Internal Fibonacci Retracements
       if (options.showInternalFibo && fibLevels.retracement) {
         Object.entries(fibLevels.retracement).forEach(([level, price]) => {
+          // Skip if line is hidden
+          if (hiddenLines.internalFibo?.includes(level)) return;
           try {
             const line = candlestickSeriesRef.current.createPriceLine({
               price: price,
@@ -715,6 +718,8 @@ const TradingViewChart = forwardRef((props, ref) => {
       // External Fibonacci Extensions
       if (options.showExternalFibo && fibLevels.extension) {
         Object.entries(fibLevels.extension).forEach(([level, price]) => {
+          // Skip if line is hidden
+          if (hiddenLines.externalFibo?.includes(level)) return;
           try {
             const line = candlestickSeriesRef.current.createPriceLine({
               price: price,
@@ -732,6 +737,8 @@ const TradingViewChart = forwardRef((props, ref) => {
       // Fibonacci FE Extensions
       if (options.showFiboFE && fibLevels.fe_extensions) {
         Object.entries(fibLevels.fe_extensions).forEach(([name, data]) => {
+          // Skip if line is hidden
+          if (hiddenLines.fiboFE?.includes(name)) return;
           try {
             const line = candlestickSeriesRef.current.createPriceLine({
               price: data.price,
@@ -749,6 +756,9 @@ const TradingViewChart = forwardRef((props, ref) => {
       // TP/PRZ/SL levels
       if (options.showTPPRZSL && fibLevels.all_targets) {
         Object.entries(fibLevels.all_targets).forEach(([name, data]) => {
+          // Skip if line is hidden
+          if (hiddenLines.tpPrzSl?.includes(name)) return;
+          
           let color = '#00ff88';
           if (name.includes('SL') || name.includes('stop')) color = '#ff3366';
           else if (name.includes('PRZ')) color = '#ffcc00';

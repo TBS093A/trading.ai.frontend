@@ -6,6 +6,7 @@ import {
   setUnselectedAlpha,
   toggleAutoCenterOnSelect,
   togglePatternDisplayOption,
+  toggleFibLineVisibility,
   toggleShowPointLevelLines,
   setPointLevelLineStyle,
   toggleShowPatternShapes,
@@ -34,8 +35,22 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
       showExternalFibo: false,
       showFiboFE: false,
       showTPPRZSL: false,
+      hiddenLines: { internalFibo: [], externalFibo: [], fiboFE: [], tpPrzSl: [] },
     };
   }, [patternDisplayOptions]);
+
+  // Check if a specific fib line is visible (not hidden)
+  const isLineVisible = useCallback((patternId, category, lineKey) => {
+    const options = getPatternOptions(patternId);
+    const hiddenLines = options.hiddenLines?.[category] || [];
+    return !hiddenLines.includes(lineKey);
+  }, [getPatternOptions]);
+
+  // Handle clicking on a fib line to toggle visibility
+  const handleFibLineClick = useCallback((e, patternId, category, lineKey) => {
+    e.stopPropagation();
+    dispatch(toggleFibLineVisibility({ patternId, category, lineKey }));
+  }, [dispatch]);
 
   // Check if pattern has any display options enabled
   const hasActiveDisplayOptions = useCallback((patternId) => {
@@ -392,17 +407,25 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
                             </div>
                           </div>
 
-                          {/* Fibonacci Levels (when enabled) */}
+                          {/* Fibonacci Levels (when enabled) - clickable to toggle visibility */}
                           {patternOptions.showInternalFibo && fibLevels.retracement && (
                             <div className="details-section fib-section">
                               <div className="details-title fib-retracement">Internal Fibo</div>
                               <div className="fib-grid">
-                                {Object.entries(fibLevels.retracement).slice(0, 6).map(([level, price]) => (
-                                  <div key={level} className="fib-item">
-                                    <span className="fib-lvl">{(parseFloat(level) * 100).toFixed(1)}%</span>
-                                    <span className="fib-prc">{price.toFixed(6)}</span>
-                                  </div>
-                                ))}
+                                {Object.entries(fibLevels.retracement).map(([level, price]) => {
+                                  const visible = isLineVisible(pattern.id, 'internalFibo', level);
+                                  return (
+                                    <button
+                                      key={level}
+                                      className={`fib-item clickable ${visible ? 'visible' : 'hidden'}`}
+                                      onClick={(e) => handleFibLineClick(e, pattern.id, 'internalFibo', level)}
+                                      title={visible ? 'Click to hide' : 'Click to show'}
+                                    >
+                                      <span className="fib-lvl">{(parseFloat(level) * 100).toFixed(1)}%</span>
+                                      <span className="fib-prc">{price.toFixed(6)}</span>
+                                    </button>
+                                  );
+                                })}
                               </div>
                             </div>
                           )}
@@ -411,12 +434,20 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
                             <div className="details-section fib-section">
                               <div className="details-title fib-extension">External Fibo</div>
                               <div className="fib-grid">
-                                {Object.entries(fibLevels.extension).slice(0, 6).map(([level, price]) => (
-                                  <div key={level} className="fib-item">
-                                    <span className="fib-lvl">{(parseFloat(level) * 100).toFixed(1)}%</span>
-                                    <span className="fib-prc">{price.toFixed(6)}</span>
-                                  </div>
-                                ))}
+                                {Object.entries(fibLevels.extension).map(([level, price]) => {
+                                  const visible = isLineVisible(pattern.id, 'externalFibo', level);
+                                  return (
+                                    <button
+                                      key={level}
+                                      className={`fib-item clickable ${visible ? 'visible' : 'hidden'}`}
+                                      onClick={(e) => handleFibLineClick(e, pattern.id, 'externalFibo', level)}
+                                      title={visible ? 'Click to hide' : 'Click to show'}
+                                    >
+                                      <span className="fib-lvl">{(parseFloat(level) * 100).toFixed(1)}%</span>
+                                      <span className="fib-prc">{price.toFixed(6)}</span>
+                                    </button>
+                                  );
+                                })}
                               </div>
                             </div>
                           )}
@@ -425,12 +456,20 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
                             <div className="details-section fib-section">
                               <div className="details-title fib-fe">Fibo FE</div>
                               <div className="fib-grid">
-                                {Object.entries(fibLevels.fe_extensions).slice(0, 6).map(([name, data]) => (
-                                  <div key={name} className="fib-item">
-                                    <span className="fib-lvl">{name}</span>
-                                    <span className="fib-prc">{data.price?.toFixed(6)}</span>
-                                  </div>
-                                ))}
+                                {Object.entries(fibLevels.fe_extensions).map(([name, data]) => {
+                                  const visible = isLineVisible(pattern.id, 'fiboFE', name);
+                                  return (
+                                    <button
+                                      key={name}
+                                      className={`fib-item clickable ${visible ? 'visible' : 'hidden'}`}
+                                      onClick={(e) => handleFibLineClick(e, pattern.id, 'fiboFE', name)}
+                                      title={visible ? 'Click to hide' : 'Click to show'}
+                                    >
+                                      <span className="fib-lvl">{name}</span>
+                                      <span className="fib-prc">{data.price?.toFixed(6)}</span>
+                                    </button>
+                                  );
+                                })}
                               </div>
                             </div>
                           )}
@@ -439,15 +478,21 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
                             <div className="details-section fib-section">
                               <div className="details-title fib-targets">TP / PRZ / SL</div>
                               <div className="fib-grid targets">
-                                {Object.entries(fibLevels.all_targets).slice(0, 8).map(([name, data]) => {
+                                {Object.entries(fibLevels.all_targets).map(([name, data]) => {
                                   let type = 'tp';
                                   if (name.includes('SL') || name.includes('stop')) type = 'sl';
                                   else if (name.includes('PRZ')) type = 'prz';
+                                  const visible = isLineVisible(pattern.id, 'tpPrzSl', name);
                                   return (
-                                    <div key={name} className={`fib-item target-${type}`}>
+                                    <button
+                                      key={name}
+                                      className={`fib-item clickable target-${type} ${visible ? 'visible' : 'hidden'}`}
+                                      onClick={(e) => handleFibLineClick(e, pattern.id, 'tpPrzSl', name)}
+                                      title={visible ? 'Click to hide' : 'Click to show'}
+                                    >
                                       <span className="fib-lvl">{name}</span>
                                       <span className="fib-prc">{data.price?.toFixed(6)}</span>
-                                    </div>
+                                    </button>
                                   );
                                 })}
                               </div>
