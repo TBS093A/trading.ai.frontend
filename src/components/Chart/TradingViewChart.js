@@ -809,7 +809,8 @@ const TradingViewChart = forwardRef((props, ref) => {
       // Shared lines from other intervals are drawn with lower opacity
       const isShared = !isFromCurrentInterval;
       const lineAlpha = isCurrentSelected ? 1 : (isShared ? 0.4 : 0.6);
-      const showLabel = isCurrentSelected || globalPatternDisplay.showUnselectedLabels;
+      // Always show labels for shared lines (they need identification), otherwise follow global setting
+      const showLabel = isCurrentSelected || globalPatternDisplay.showUnselectedLabels || isShared;
 
       // Helper to create label with pattern info for shared lines
       const makeLabel = (categoryName, levelText) => {
