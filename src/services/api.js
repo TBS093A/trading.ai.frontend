@@ -152,6 +152,22 @@ const api = {
   // Get Sync Task Status
   getSyncTaskStatus: (taskId) =>
     axiosInstance.get(`/sync/status/${taskId}`),
+
+  // Get All Sync Tasks
+  getAllSyncTasks: () =>
+    axiosInstance.get('/sync/status'),
+
+  // Cancel Sync Task
+  cancelSyncTask: (taskId) =>
+    axiosInstance.delete(`/sync/status/${taskId}`),
+
+  // Get Sync Health Check
+  getSyncHealth: () =>
+    axiosInstance.get('/sync/health'),
+
+  // Get Sync Workflow Status
+  getSyncWorkflow: () =>
+    axiosInstance.get('/sync/workflow'),
 };
 
 export default api;

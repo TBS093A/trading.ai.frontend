@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   setActiveSection,
@@ -35,6 +35,62 @@ const SyncSection = () => {
   const [bulkAssetsLoading, setBulkAssetsLoading] = useState(false);
   const [bulkSearchTerm, setBulkSearchTerm] = useState('');
 
+  // Tasks & Health states
+  const [serverTasks, setServerTasks] = useState([]);
+  const [tasksLoading, setTasksLoading] = useState(false);
+  const [healthData, setHealthData] = useState(null);
+  const [healthLoading, setHealthLoading] = useState(false);
+  const [expandedTaskId, setExpandedTaskId] = useState(null);
+  const [taskDetails, setTaskDetails] = useState({});
+
+  // Fetch server tasks
+  const fetchServerTasks = useCallback(async () => {
+    setTasksLoading(true);
+    try {
+      const response = await api.getAllSyncTasks();
+      setServerTasks(response.data || []);
+    } catch (error) {
+      console.error('Failed to fetch server tasks:', error);
+      setServerTasks([]);
+    } finally {
+      setTasksLoading(false);
+    }
+  }, []);
+
+  // Fetch task details
+  const fetchTaskDetails = useCallback(async (taskId) => {
+    try {
+      const response = await api.getSyncTaskStatus(taskId);
+      setTaskDetails((prev) => ({ ...prev, [taskId]: response.data }));
+    } catch (error) {
+      console.error('Failed to fetch task details:', error);
+    }
+  }, []);
+
+  // Cancel task
+  const handleCancelTask = useCallback(async (taskId) => {
+    try {
+      await api.cancelSyncTask(taskId);
+      fetchServerTasks(); // Refresh task list
+    } catch (error) {
+      console.error('Failed to cancel task:', error);
+    }
+  }, [fetchServerTasks]);
+
+  // Fetch health check
+  const fetchHealthCheck = useCallback(async () => {
+    setHealthLoading(true);
+    try {
+      const response = await api.getSyncHealth();
+      setHealthData(response.data);
+    } catch (error) {
+      console.error('Failed to fetch health check:', error);
+      setHealthData(null);
+    } finally {
+      setHealthLoading(false);
+    }
+  }, []);
+
   // Fetch assets when bulk exchange changes
   useEffect(() => {
     if (bulkExchangeId) {
@@ -56,6 +112,20 @@ const SyncSection = () => {
       setSelectedAssetIds(new Set());
     }
   }, [bulkExchangeId]);
+
+  // Auto-fetch tasks when tasks section is active
+  useEffect(() => {
+    if (activeSection === 'tasks') {
+      fetchServerTasks();
+    }
+  }, [activeSection, fetchServerTasks]);
+
+  // Auto-fetch health when health section is active
+  useEffect(() => {
+    if (activeSection === 'health') {
+      fetchHealthCheck();
+    }
+  }, [activeSection, fetchHealthCheck]);
 
   // Filter assets based on search term
   const filteredBulkAssets = useMemo(() => {
@@ -442,6 +512,183 @@ const SyncSection = () => {
                         : `📦 Sync (${selectedAssetIds.size})`}
                     </button>
                   </>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Tasks List */}
+          <div className="sync-item">
+            <button
+              className={`sync-item-header ${activeSection === 'tasks' ? 'active' : ''}`}
+              onClick={() => dispatch(setActiveSection(activeSection === 'tasks' ? null : 'tasks'))}
+            >
+              <span className="item-icon">📋</span>
+              <span className="item-title">Tasks</span>
+              {serverTasks.length > 0 && (
+                <span className="task-count-badge">{serverTasks.length}</span>
+              )}
+              <span className="item-arrow">{activeSection === 'tasks' ? '−' : '+'}</span>
+            </button>
+
+            {activeSection === 'tasks' && (
+              <div className="sync-item-content">
+                <div className="tasks-header">
+                  <span className="tasks-title">Server Tasks</span>
+                  <button
+                    className="refresh-btn"
+                    onClick={fetchServerTasks}
+                    disabled={tasksLoading}
+                    title="Refresh tasks"
+                  >
+                    <span className={tasksLoading ? 'loading-spinner' : ''}>⟳</span>
+                  </button>
+                </div>
+
+                {tasksLoading && serverTasks.length === 0 ? (
+                  <div className="info-msg">
+                    <span className="loading-spinner">⟳</span> Loading tasks...
+                  </div>
+                ) : serverTasks.length === 0 ? (
+                  <div className="info-msg">No active tasks</div>
+                ) : (
+                  <div className="tasks-list">
+                    {serverTasks.map((task) => (
+                      <div key={task.task_id} className="task-item">
+                        <div
+                          className="task-item-header"
+                          onClick={() => {
+                            if (expandedTaskId === task.task_id) {
+                              setExpandedTaskId(null);
+                            } else {
+                              setExpandedTaskId(task.task_id);
+                              fetchTaskDetails(task.task_id);
+                            }
+                          }}
+                        >
+                          <span className={`task-status-dot ${getStatusClass(task.status)}`} />
+                          <span className="task-name-label">
+                            {task.task_name?.split('.').pop() || 'Unknown'}
+                          </span>
+                          <span className={`task-status-label ${getStatusClass(task.status)}`}>
+                            {task.status}
+                          </span>
+                          <span className="task-expand-arrow">
+                            {expandedTaskId === task.task_id ? '▼' : '▶'}
+                          </span>
+                        </div>
+
+                        {expandedTaskId === task.task_id && (
+                          <div className="task-item-details">
+                            <div className="task-detail-row">
+                              <span className="detail-label">Task ID:</span>
+                              <span className="detail-value mono">{task.task_id.slice(0, 12)}...</span>
+                            </div>
+                            {task.worker && (
+                              <div className="task-detail-row">
+                                <span className="detail-label">Worker:</span>
+                                <span className="detail-value">{task.worker}</span>
+                              </div>
+                            )}
+                            {taskDetails[task.task_id]?.result && (
+                              <div className="task-detail-row">
+                                <span className="detail-label">Result:</span>
+                                <span className="detail-value">
+                                  {JSON.stringify(taskDetails[task.task_id].result).slice(0, 50)}...
+                                </span>
+                              </div>
+                            )}
+                            {(task.status === 'RUNNING' || task.status === 'PENDING') && (
+                              <button
+                                className="cancel-task-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCancelTask(task.task_id);
+                                }}
+                              >
+                                ✕ Cancel Task
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Health Check */}
+          <div className="sync-item">
+            <button
+              className={`sync-item-header ${activeSection === 'health' ? 'active' : ''}`}
+              onClick={() => dispatch(setActiveSection(activeSection === 'health' ? null : 'health'))}
+            >
+              <span className="item-icon">💓</span>
+              <span className="item-title">Health Check</span>
+              {healthData && (
+                <span className={`health-indicator ${healthData.overall_healthy ? 'healthy' : 'unhealthy'}`}>
+                  {healthData.overall_healthy ? '●' : '○'}
+                </span>
+              )}
+              <span className="item-arrow">{activeSection === 'health' ? '−' : '+'}</span>
+            </button>
+
+            {activeSection === 'health' && (
+              <div className="sync-item-content">
+                <div className="tasks-header">
+                  <span className="tasks-title">System Health</span>
+                  <button
+                    className="refresh-btn"
+                    onClick={fetchHealthCheck}
+                    disabled={healthLoading}
+                    title="Refresh health check"
+                  >
+                    <span className={healthLoading ? 'loading-spinner' : ''}>⟳</span>
+                  </button>
+                </div>
+
+                {healthLoading && !healthData ? (
+                  <div className="info-msg">
+                    <span className="loading-spinner">⟳</span> Checking health...
+                  </div>
+                ) : !healthData ? (
+                  <div className="info-msg">Click refresh to check health</div>
+                ) : (
+                  <div className="health-list">
+                    <div className={`health-overall ${healthData.overall_healthy ? 'healthy' : 'unhealthy'}`}>
+                      <span className="health-overall-icon">
+                        {healthData.overall_healthy ? '✓' : '✗'}
+                      </span>
+                      <span className="health-overall-text">
+                        {healthData.overall_healthy ? 'All Systems Operational' : 'Issues Detected'}
+                      </span>
+                    </div>
+
+                    {healthData.components && Object.entries(healthData.components).map(([name, component]) => (
+                      <div 
+                        key={name} 
+                        className={`health-component ${component.healthy ? 'healthy' : 'unhealthy'}`}
+                      >
+                        <div className="health-component-header">
+                          <span className={`health-dot ${component.healthy ? 'healthy' : 'unhealthy'}`} />
+                          <span className="health-component-name">{name}</span>
+                          <span className={`health-component-status ${component.healthy ? 'healthy' : 'unhealthy'}`}>
+                            {component.healthy ? 'OK' : 'Error'}
+                          </span>
+                        </div>
+                        <div className="health-component-message">
+                          {component.message}
+                        </div>
+                        {component.error && (
+                          <div className="health-component-error">
+                            {component.error}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             )}
