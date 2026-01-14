@@ -8,10 +8,11 @@ import {
   togglePatternDisplayOption,
   toggleFibLineVisibility,
   toggleShowPointLevelLines,
-  setPointLevelLineStyle,
+  setLineDisplayStyle,
   toggleShowPatternShapes,
   toggleShowRetraceLines,
   toggleMonochromaticMode,
+  toggleShowUnselectedLabels,
 } from '../../store/slices/analysisSlice';
 import { togglePatternsPanel } from '../../store/slices/uiSlice';
 import './PatternsPanel.css';
@@ -223,7 +224,7 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
           <span className="checkbox-text">Show retrace lines</span>
         </label>
 
-        {/* Point Level Lines checkbox with sub-options */}
+        {/* Point Level Lines checkbox */}
         <label className="settings-checkbox-label">
           <input
             type="checkbox"
@@ -235,33 +236,46 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
           <span className="checkbox-text">Show point level lines</span>
         </label>
 
-        {/* Sub-radio buttons for point level line style */}
-        {globalPatternDisplay.showPointLevelLines && (
-          <div className="settings-sub-options">
+        {/* Line display style - applies to all pattern lines */}
+        <div className="settings-section line-style-section">
+          <div className="settings-section-title">Line Display Style</div>
+          <div className="settings-radio-group">
             <label className="settings-radio-label">
               <input
                 type="radio"
-                name="pointLevelLineStyle"
-                checked={globalPatternDisplay.pointLevelLineStyle === 'fromPoint'}
-                onChange={() => dispatch(setPointLevelLineStyle('fromPoint'))}
+                name="lineDisplayStyle"
+                checked={globalPatternDisplay.lineDisplayStyle === 'fromFirstPoint'}
+                onChange={() => dispatch(setLineDisplayStyle('fromFirstPoint'))}
                 className="settings-radio"
               />
               <span className="radio-custom"></span>
-              <span className="radio-text">From point to scale</span>
+              <span className="radio-text">From first point to scale</span>
             </label>
             <label className="settings-radio-label">
               <input
                 type="radio"
-                name="pointLevelLineStyle"
-                checked={globalPatternDisplay.pointLevelLineStyle === 'throughPoint'}
-                onChange={() => dispatch(setPointLevelLineStyle('throughPoint'))}
+                name="lineDisplayStyle"
+                checked={globalPatternDisplay.lineDisplayStyle === 'fullWidth'}
+                onChange={() => dispatch(setLineDisplayStyle('fullWidth'))}
                 className="settings-radio"
               />
               <span className="radio-custom"></span>
-              <span className="radio-text">Through point (full width)</span>
+              <span className="radio-text">Full width</span>
             </label>
           </div>
-        )}
+          
+          {/* Show labels for unselected patterns */}
+          <label className="settings-checkbox-label sub-option">
+            <input
+              type="checkbox"
+              checked={globalPatternDisplay.showUnselectedLabels}
+              onChange={() => dispatch(toggleShowUnselectedLabels())}
+              className="settings-checkbox"
+            />
+            <span className="checkbox-custom"></span>
+            <span className="checkbox-text">Show labels for all patterns</span>
+          </label>
+        </div>
 
         {/* Monochromatic Mode checkbox */}
         <label className="settings-checkbox-label monochromatic">

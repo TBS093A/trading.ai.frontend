@@ -324,10 +324,17 @@ const TradingViewChart = forwardRef((props, ref) => {
   useEffect(() => {
     if (!chartRef.current || !candlestickSeriesRef.current || harmonicPatterns.length === 0) return;
 
-    // Clear previous pattern lines
-    patternLinesRef.current.forEach((line) => {
+    // Clear previous pattern lines (can be price lines or series)
+    patternLinesRef.current.forEach((item) => {
       try {
-        candlestickSeriesRef.current.removePriceLine(line);
+        if (item.type === 'series') {
+          chartRef.current.removeSeries(item.series);
+        } else if (item.type === 'priceLine') {
+          candlestickSeriesRef.current.removePriceLine(item.line);
+        } else {
+          // Legacy: direct price line object
+          candlestickSeriesRef.current.removePriceLine(item);
+        }
       } catch (e) {}
     });
     patternLinesRef.current = [];
@@ -362,17 +369,41 @@ const TradingViewChart = forwardRef((props, ref) => {
           }
         });
 
+        const useFromFirstPoint = globalPatternDisplay.lineDisplayStyle === 'fromFirstPoint';
+        const firstPointTimestamp = x_point_timestamp || a_point_timestamp;
+        const showLabel = isSelected || globalPatternDisplay.showUnselectedLabels;
+
         pricePoints.forEach((point) => {
           try {
-            const line = candlestickSeriesRef.current.createPriceLine({
-              price: point.price,
-              color: patternColor,
-              lineWidth: isSelected ? 2 : 1,
-              lineStyle: 2, // Dashed
-              axisLabelVisible: isSelected,
-              title: isSelected ? `${point.name}` : '',
-            });
-            patternLinesRef.current.push(line);
+            if (useFromFirstPoint && firstPointTimestamp) {
+              // Use line series starting from first point
+              const series = chartRef.current.addLineSeries({
+                color: patternColor,
+                lineWidth: isSelected ? 2 : 1,
+                lineStyle: 2, // Dashed
+                crosshairMarkerVisible: false,
+                lastValueVisible: showLabel,
+                priceLineVisible: false,
+                title: showLabel ? point.name : '',
+              });
+              const farFutureTime = 4102444800; // Jan 1, 2100
+              series.setData([
+                { time: firstPointTimestamp / 1000, value: point.price },
+                { time: farFutureTime, value: point.price },
+              ]);
+              patternLinesRef.current.push({ type: 'series', series });
+            } else {
+              // Use price line (full width)
+              const line = candlestickSeriesRef.current.createPriceLine({
+                price: point.price,
+                color: patternColor,
+                lineWidth: isSelected ? 2 : 1,
+                lineStyle: 2, // Dashed
+                axisLabelVisible: showLabel,
+                title: showLabel ? point.name : '',
+              });
+              patternLinesRef.current.push({ type: 'priceLine', line });
+            }
           } catch (e) {
             console.warn('Failed to create price line:', e);
           }
@@ -444,7 +475,7 @@ const TradingViewChart = forwardRef((props, ref) => {
     return () => {
       patternMarkersRef.current = [];
     };
-  }, [harmonicPatterns, klines, selectedPattern, expandedPatternId, unselectedAlpha, globalPatternDisplay.showPointLevelLines, globalPatternDisplay.monochromaticMode]);
+  }, [harmonicPatterns, klines, selectedPattern, expandedPatternId, unselectedAlpha, globalPatternDisplay.showPointLevelLines, globalPatternDisplay.monochromaticMode, globalPatternDisplay.lineDisplayStyle, globalPatternDisplay.showUnselectedLabels]);
 
   // Draw pattern shapes - main legs (X-A, A-B, B-C, C-D) and closing lines (X-B, B-D)
   useEffect(() => {
@@ -667,20 +698,78 @@ const TradingViewChart = forwardRef((props, ref) => {
     });
   }, [harmonicPatterns, selectedPattern, expandedPatternId, unselectedAlpha, globalPatternDisplay.showRetraceLines, globalPatternDisplay.monochromaticMode]);
 
-  // Ref for fibonacci lines (separate from pattern lines)
+  // Refs for fibonacci lines (price lines for full width, series for fromFirstPoint)
   const fibLinesRef = useRef([]);
+  const fibSeriesRef = useRef([]);
+
+  // Helper to get the first point timestamp for a pattern (X for XABCD, A for ABCD/ABC, etc.)
+  const getFirstPointTimestamp = useCallback((pattern) => {
+    // If X point exists, it's the first point
+    if (pattern.x_point_timestamp) return pattern.x_point_timestamp;
+    // Otherwise A is the first point
+    if (pattern.a_point_timestamp) return pattern.a_point_timestamp;
+    return null;
+  }, []);
 
   // Draw Fibonacci levels for ALL patterns that have display options enabled
   useEffect(() => {
     if (!chartRef.current || !candlestickSeriesRef.current || harmonicPatterns.length === 0) return;
 
-    // Clear previous fib lines
+    const useFromFirstPoint = globalPatternDisplay.lineDisplayStyle === 'fromFirstPoint';
+
+    // Clear previous fib price lines
     fibLinesRef.current.forEach((line) => {
       try {
         candlestickSeriesRef.current.removePriceLine(line);
       } catch (e) {}
     });
     fibLinesRef.current = [];
+
+    // Clear previous fib series
+    fibSeriesRef.current.forEach((series) => {
+      try {
+        chartRef.current.removeSeries(series);
+      } catch (e) {}
+    });
+    fibSeriesRef.current = [];
+
+    // Helper to create a fib line (either as price line or series based on mode)
+    const createFibLine = (price, color, lineWidth, lineStyle, firstPointTimestamp, showLabel, title) => {
+      if (useFromFirstPoint && firstPointTimestamp) {
+        // Use line series starting from first point
+        try {
+          const series = chartRef.current.addLineSeries({
+            color: color,
+            lineWidth: lineWidth,
+            lineStyle: lineStyle,
+            crosshairMarkerVisible: false,
+            lastValueVisible: showLabel, // Show label on price scale
+            priceLineVisible: false,
+            title: showLabel ? title : '',
+          });
+          // Line from first point to far future (year 2100)
+          const farFutureTime = 4102444800; // Jan 1, 2100
+          series.setData([
+            { time: firstPointTimestamp / 1000, value: price },
+            { time: farFutureTime, value: price },
+          ]);
+          fibSeriesRef.current.push(series);
+        } catch (e) {}
+      } else {
+        // Use price line (full width)
+        try {
+          const line = candlestickSeriesRef.current.createPriceLine({
+            price: price,
+            color: color,
+            lineWidth: lineWidth,
+            lineStyle: lineStyle,
+            axisLabelVisible: showLabel, // Show label on price scale
+            title: showLabel ? title : '',
+          });
+          fibLinesRef.current.push(line);
+        } catch (e) {}
+      }
+    };
 
     // Draw fib levels for each pattern that has options enabled
     harmonicPatterns.forEach((pattern) => {
@@ -690,73 +779,65 @@ const TradingViewChart = forwardRef((props, ref) => {
       if (!taData || !taData.fibonacci_levels) return;
       
       const fibLevels = taData.fibonacci_levels;
-      const patternType = taData.pattern_type || '';
-      const isBullish = taData.is_bullish;
       const isCurrentSelected = selectedPattern?.id === pattern.id;
       const lineAlpha = isCurrentSelected ? 1 : 0.6;
       const hiddenLines = options.hiddenLines || { internalFibo: [], externalFibo: [], fiboFE: [], tpPrzSl: [] };
+      const firstPointTimestamp = getFirstPointTimestamp(pattern);
+      const showLabel = isCurrentSelected || globalPatternDisplay.showUnselectedLabels;
 
       // Internal Fibonacci Retracements
       if (options.showInternalFibo && fibLevels.retracement) {
         Object.entries(fibLevels.retracement).forEach(([level, price]) => {
-          // Skip if line is hidden
           if (hiddenLines.internalFibo?.includes(level)) return;
-          try {
-            const line = candlestickSeriesRef.current.createPriceLine({
-              price: price,
-              color: hexToRgba('#ffcc00', lineAlpha),
-              lineWidth: isCurrentSelected ? 2 : 1,
-              lineStyle: 1,
-              axisLabelVisible: isCurrentSelected,
-              title: isCurrentSelected ? `Fib ${(parseFloat(level) * 100).toFixed(1)}%` : '',
-            });
-            fibLinesRef.current.push(line);
-          } catch (e) {}
+          const label = `${(parseFloat(level) * 100).toFixed(1)}%`;
+          createFibLine(
+            price,
+            hexToRgba('#ffcc00', lineAlpha),
+            isCurrentSelected ? 2 : 1,
+            1,
+            firstPointTimestamp,
+            showLabel,
+            label
+          );
         });
       }
 
       // External Fibonacci Extensions
       if (options.showExternalFibo && fibLevels.extension) {
         Object.entries(fibLevels.extension).forEach(([level, price]) => {
-          // Skip if line is hidden
           if (hiddenLines.externalFibo?.includes(level)) return;
-          try {
-            const line = candlestickSeriesRef.current.createPriceLine({
-              price: price,
-              color: hexToRgba('#9945ff', lineAlpha),
-              lineWidth: isCurrentSelected ? 2 : 1,
-              lineStyle: 1,
-              axisLabelVisible: isCurrentSelected,
-              title: isCurrentSelected ? `Ext ${(parseFloat(level) * 100).toFixed(1)}%` : '',
-            });
-            fibLinesRef.current.push(line);
-          } catch (e) {}
+          const label = `${(parseFloat(level) * 100).toFixed(1)}%`;
+          createFibLine(
+            price,
+            hexToRgba('#9945ff', lineAlpha),
+            isCurrentSelected ? 2 : 1,
+            1,
+            firstPointTimestamp,
+            showLabel,
+            label
+          );
         });
       }
 
       // Fibonacci FE Extensions
       if (options.showFiboFE && fibLevels.fe_extensions) {
         Object.entries(fibLevels.fe_extensions).forEach(([name, data]) => {
-          // Skip if line is hidden
           if (hiddenLines.fiboFE?.includes(name)) return;
-          try {
-            const line = candlestickSeriesRef.current.createPriceLine({
-              price: data.price,
-              color: hexToRgba('#00f0ff', lineAlpha),
-              lineWidth: isCurrentSelected ? 2 : 1,
-              lineStyle: 1,
-              axisLabelVisible: isCurrentSelected,
-              title: isCurrentSelected ? name : '',
-            });
-            fibLinesRef.current.push(line);
-          } catch (e) {}
+          createFibLine(
+            data.price,
+            hexToRgba('#00f0ff', lineAlpha),
+            isCurrentSelected ? 2 : 1,
+            1,
+            firstPointTimestamp,
+            showLabel,
+            name
+          );
         });
       }
 
       // TP/PRZ/SL levels
       if (options.showTPPRZSL && fibLevels.all_targets) {
         Object.entries(fibLevels.all_targets).forEach(([name, data]) => {
-          // Skip if line is hidden
           if (hiddenLines.tpPrzSl?.includes(name)) return;
           
           let color = '#00ff88';
@@ -764,21 +845,19 @@ const TradingViewChart = forwardRef((props, ref) => {
           else if (name.includes('PRZ')) color = '#ffcc00';
           else if (name.includes('TP')) color = '#00f0ff';
 
-          try {
-            const line = candlestickSeriesRef.current.createPriceLine({
-              price: data.price,
-              color: hexToRgba(color, lineAlpha),
-              lineWidth: isCurrentSelected ? 2 : 1,
-              lineStyle: 0,
-              axisLabelVisible: isCurrentSelected,
-              title: isCurrentSelected ? name : '',
-            });
-            fibLinesRef.current.push(line);
-          } catch (e) {}
+          createFibLine(
+            data.price,
+            hexToRgba(color, lineAlpha),
+            isCurrentSelected ? 2 : 1,
+            0,
+            firstPointTimestamp,
+            showLabel,
+            name
+          );
         });
       }
     });
-  }, [harmonicPatterns, patternDisplayOptions, selectedPattern, getPatternOptions]);
+  }, [harmonicPatterns, patternDisplayOptions, selectedPattern, getPatternOptions, globalPatternDisplay.lineDisplayStyle, globalPatternDisplay.showUnselectedLabels, getFirstPointTimestamp]);
 
   // Handle pattern click
   const handleChartClick = useCallback((param) => {

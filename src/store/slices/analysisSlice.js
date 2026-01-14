@@ -31,13 +31,16 @@ const analysisSlice = createSlice({
     globalPatternDisplay: {
       // Point level lines (horizontal lines at X, A, B, C, D price levels)
       showPointLevelLines: false,
-      pointLevelLineStyle: 'fromPoint', // 'fromPoint' = from point to right scale, 'throughPoint' = from chart start through point to scale
+      // Line display style: 'fromFirstPoint' = lines start from pattern's first point, 'fullWidth' = full chart width
+      lineDisplayStyle: 'fromFirstPoint',
       // Pattern shapes (triangles XAB, BCD for XABCD; ABC, BCD for ABCD; lines AB, BC for ABC)
       showPatternShapes: true,
       // Retrace lines between points (dashed lines with labels like XB, BD, etc.)
       showRetraceLines: true,
       // Monochromatic mode: white candles (filled up, hollow down), gray patterns
       monochromaticMode: true,
+      // Show labels for unselected patterns (fib lines, etc.)
+      showUnselectedLabels: false,
     },
     // Indicator visibility
     indicators: {
@@ -161,8 +164,8 @@ const analysisSlice = createSlice({
     toggleShowPointLevelLines: (state) => {
       state.globalPatternDisplay.showPointLevelLines = !state.globalPatternDisplay.showPointLevelLines;
     },
-    setPointLevelLineStyle: (state, action) => {
-      state.globalPatternDisplay.pointLevelLineStyle = action.payload; // 'fromPoint' or 'throughPoint'
+    setLineDisplayStyle: (state, action) => {
+      state.globalPatternDisplay.lineDisplayStyle = action.payload; // 'fromFirstPoint' or 'fullWidth'
     },
     toggleShowPatternShapes: (state) => {
       state.globalPatternDisplay.showPatternShapes = !state.globalPatternDisplay.showPatternShapes;
@@ -172,6 +175,9 @@ const analysisSlice = createSlice({
     },
     toggleMonochromaticMode: (state) => {
       state.globalPatternDisplay.monochromaticMode = !state.globalPatternDisplay.monochromaticMode;
+    },
+    toggleShowUnselectedLabels: (state) => {
+      state.globalPatternDisplay.showUnselectedLabels = !state.globalPatternDisplay.showUnselectedLabels;
     },
     toggleIndicator: (state, action) => {
       const indicator = action.payload;
@@ -226,10 +232,11 @@ export const {
   toggleFibLineVisibility,
   initPatternDisplayOptions,
   toggleShowPointLevelLines,
-  setPointLevelLineStyle,
+  setLineDisplayStyle,
   toggleShowPatternShapes,
   toggleShowRetraceLines,
   toggleMonochromaticMode,
+  toggleShowUnselectedLabels,
   toggleIndicator,
   setIndicator,
   clearAnalysis,

@@ -300,6 +300,40 @@
   color: var(--text-muted);
 }
 
+/* Line Style Section */
+.line-style-section {
+  margin-top: var(--spacing-sm);
+  padding-top: var(--spacing-sm);
+  border-top: 1px dashed var(--border-primary);
+}
+
+.settings-section-title {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: var(--spacing-xs);
+}
+
+.settings-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-left: var(--spacing-sm);
+}
+
+.settings-checkbox-label.sub-option {
+  margin-top: var(--spacing-xs);
+  padding-left: var(--spacing-sm);
+  font-size: 0.7rem;
+}
+
+.settings-checkbox-label.sub-option .checkbox-text {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+}
+
 /* Patterns List */
 .patterns-list {
   flex: 1;
