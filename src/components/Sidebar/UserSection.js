@@ -14,6 +14,7 @@ import {
   selectAuthLoading,
   selectAuthError,
 } from '../../store/slices/authSlice';
+import SavedAnalysisSection from './SavedAnalysisSection';
 import './UserSection.css';
 
 const UserSection = () => {
@@ -129,6 +130,9 @@ const UserSection = () => {
       {/* Expanded content */}
       {isExpanded && (
         <div className="user-dropdown-content">
+          {/* Saved Analyses Section */}
+          <SavedAnalysisSection onClose={() => setIsExpanded(false)} />
+
           {/* Avatar Section */}
           <div className="user-item">
             <button

@@ -162,6 +162,38 @@
   gap: var(--spacing-md);
 }
 
+/* Save Analysis Button */
+.save-analysis-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-md);
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.1) 0%, rgba(0, 136, 170, 0.15) 100%);
+  border: 1px solid rgba(0, 240, 255, 0.3);
+  border-radius: var(--radius-md);
+  color: var(--accent-cyan);
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.save-analysis-btn:hover {
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.2) 0%, rgba(0, 136, 170, 0.25) 100%);
+  border-color: var(--accent-cyan);
+  box-shadow: 0 2px 12px rgba(0, 240, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.save-analysis-btn .btn-icon {
+  font-size: 0.9rem;
+}
+
+.save-analysis-btn .btn-text {
+  letter-spacing: 0.02em;
+}
+
 /* Chart Container */
 .chart-container {
   flex: 1;

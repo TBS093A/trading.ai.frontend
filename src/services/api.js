@@ -114,6 +114,24 @@ const api = {
     axiosInstance.delete(`/user/${userId}`),
 
   // ==================
+  // SAVED ANALYSES
+  // ==================
+  getSavedAnalyses: (limit = 50, offset = 0) =>
+    axiosInstance.get('/user/saved-analyses', { params: { limit, offset } }),
+
+  getSavedAnalysis: (analysisId) =>
+    axiosInstance.get(`/user/saved-analyses/${analysisId}`),
+
+  createSavedAnalysis: (analysisData) =>
+    axiosInstance.post('/user/saved-analyses', analysisData),
+
+  updateSavedAnalysis: (analysisId, updateData) =>
+    axiosInstance.put(`/user/saved-analyses/${analysisId}`, updateData),
+
+  deleteSavedAnalysis: (analysisId) =>
+    axiosInstance.delete(`/user/saved-analyses/${analysisId}`),
+
+  // ==================
   // EXCHANGES
   // ==================
   getExchanges: (limit = 50, offset = 0, activeOnly = true) =>

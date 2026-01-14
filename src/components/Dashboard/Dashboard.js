@@ -1,13 +1,15 @@
-import React, { useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
+import React, { useState, useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import TradingViewChart from '../Chart/TradingViewChart';
 import IndicatorControls from '../IndicatorControls/IndicatorControls';
+import SaveAnalysisModal from './SaveAnalysisModal';
 import { fetchKlines, setInterval } from '../../store/slices/chartSlice';
 import { fetchTechnicalAnalysis, clearAnalysis } from '../../store/slices/analysisSlice';
 import './Dashboard.css';
 
 const Dashboard = forwardRef((props, ref) => {
   const chartRef = useRef(null);
+  const [showSaveModal, setShowSaveModal] = useState(false);
   
   // Expose centerOnPattern method to parent
   useImperativeHandle(ref, () => ({
@@ -107,9 +109,23 @@ const Dashboard = forwardRef((props, ref) => {
         </div>
 
         <div className="header-right">
+          <button
+            className="save-analysis-btn"
+            onClick={() => setShowSaveModal(true)}
+            title="Save current analysis view"
+          >
+            <span className="btn-icon">💾</span>
+            <span className="btn-text">Save</span>
+          </button>
           <IndicatorControls />
         </div>
       </header>
+
+      {/* Save Analysis Modal */}
+      <SaveAnalysisModal 
+        isOpen={showSaveModal} 
+        onClose={() => setShowSaveModal(false)} 
+      />
 
       {/* Main Chart Area */}
       <div className="chart-container">

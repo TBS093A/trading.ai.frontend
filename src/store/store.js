@@ -6,6 +6,7 @@ import analysisReducer from './slices/analysisSlice';
 import uiReducer from './slices/uiSlice';
 import syncReducer from './slices/syncSlice';
 import authReducer from './slices/authSlice';
+import savedAnalysisReducer from './slices/savedAnalysisSlice';
 
 export const store = configureStore({
   reducer: {
@@ -16,6 +17,7 @@ export const store = configureStore({
     ui: uiReducer,
     sync: syncReducer,
     auth: authReducer,
+    savedAnalysis: savedAnalysisReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

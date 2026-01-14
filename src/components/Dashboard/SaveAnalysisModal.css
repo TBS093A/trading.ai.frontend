@@ -1,0 +1,268 @@
+/* ============================================
+   SAVE ANALYSIS MODAL STYLES
+   ============================================ */
+
+.save-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.save-modal {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  width: 90%;
+  max-width: 450px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 60px rgba(0, 240, 255, 0.1);
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.save-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.save-modal-header h3 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.save-modal-header .close-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  transition: color var(--transition-fast);
+}
+
+.save-modal-header .close-btn:hover {
+  color: var(--text-primary);
+}
+
+.save-modal-content {
+  padding: var(--spacing-lg);
+}
+
+/* Info section */
+.save-modal-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+  padding: var(--spacing-md);
+  background: rgba(0, 240, 255, 0.05);
+  border: 1px solid rgba(0, 240, 255, 0.1);
+  border-radius: var(--radius-md);
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.info-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.info-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  color: var(--accent-cyan);
+  font-weight: 500;
+}
+
+.info-value.interval-badge {
+  background: rgba(0, 240, 255, 0.15);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+}
+
+/* Form fields */
+.save-modal-content .form-field {
+  margin-bottom: var(--spacing-md);
+}
+
+.save-modal-content .form-field label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.save-modal-content .form-field input,
+.save-modal-content .form-field textarea {
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.9rem;
+  transition: all var(--transition-fast);
+}
+
+.save-modal-content .form-field input:focus,
+.save-modal-content .form-field textarea:focus {
+  outline: none;
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 2px rgba(0, 240, 255, 0.2);
+}
+
+.save-modal-content .form-field input::placeholder,
+.save-modal-content .form-field textarea::placeholder {
+  color: var(--text-muted);
+  font-family: 'Outfit', sans-serif;
+}
+
+.save-modal-content .form-field textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* Error message */
+.save-modal-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+  background: rgba(255, 51, 102, 0.1);
+  border: 1px solid rgba(255, 51, 102, 0.3);
+  border-radius: var(--radius-md);
+  color: var(--accent-red);
+  font-size: 0.8rem;
+}
+
+.save-modal-error button {
+  background: none;
+  border: none;
+  color: var(--accent-red);
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0;
+  line-height: 1;
+}
+
+/* Success message */
+.save-modal-success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-xl);
+  text-align: center;
+}
+
+.save-modal-success .success-icon {
+  font-size: 3rem;
+  color: var(--accent-green);
+  animation: popIn 0.3s ease-out;
+}
+
+@keyframes popIn {
+  0% { transform: scale(0); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.save-modal-success span:nth-child(2) {
+  font-size: 1rem;
+  color: var(--accent-green);
+}
+
+/* Actions */
+.save-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-lg);
+}
+
+.save-modal-actions .cancel-btn {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  background: transparent;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.save-modal-actions .cancel-btn:hover:not(:disabled) {
+  border-color: var(--text-secondary);
+  color: var(--text-primary);
+}
+
+.save-modal-actions .save-btn {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  background: linear-gradient(135deg, var(--accent-cyan) 0%, #0088aa 100%);
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--bg-primary);
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.save-modal-actions .save-btn:hover:not(:disabled) {
+  box-shadow: 0 4px 15px rgba(0, 240, 255, 0.4);
+  transform: translateY(-1px);
+}
+
+.save-modal-actions .save-btn:disabled,
+.save-modal-actions .cancel-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
