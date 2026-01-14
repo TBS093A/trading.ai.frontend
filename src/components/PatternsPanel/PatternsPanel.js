@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { 
   setSelectedPattern, 
@@ -19,6 +19,7 @@ import './PatternsPanel.css';
 
 const PatternsPanel = ({ isOpen, onCenterPattern }) => {
   const dispatch = useDispatch();
+  const [isSettingsExpanded, setIsSettingsExpanded] = useState(false);
   const { 
     harmonicPatterns, 
     selectedPattern, 
@@ -169,125 +170,140 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
         </button>
       </div>
 
-      {/* Display Settings */}
-      <div className="display-settings">
-        <div className="settings-section">
-          <label className="settings-label">
-            <span className="settings-icon">◔</span>
-            Unselected Opacity
-            <span className="settings-value">{Math.round(unselectedAlpha * 100)}%</span>
-          </label>
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.05"
-            value={unselectedAlpha}
-            onChange={handleAlphaChange}
-            className="settings-slider"
-          />
-        </div>
+      {/* Display Settings - Collapsible */}
+      <div className={`display-settings-container ${isSettingsExpanded ? 'expanded' : 'collapsed'}`}>
+        <button 
+          className="settings-header"
+          onClick={() => setIsSettingsExpanded(!isSettingsExpanded)}
+        >
+          <div className="settings-header-title">
+            <span className="settings-header-icon">⚙</span>
+            <span>Harmonic Patterns Display Settings</span>
+          </div>
+          <span className={`settings-expand-icon ${isSettingsExpanded ? 'expanded' : ''}`}>▾</span>
+        </button>
         
-        {/* Auto-center checkbox */}
-        <label className="settings-checkbox-label">
-          <input
-            type="checkbox"
-            checked={autoCenterOnSelect}
-            onChange={handleAutoCenterToggle}
-            className="settings-checkbox"
-          />
-          <span className="checkbox-custom"></span>
-          <span className="checkbox-text">Center chart on click</span>
-        </label>
-
-        {/* Pattern Shapes checkbox */}
-        <label className="settings-checkbox-label">
-          <input
-            type="checkbox"
-            checked={globalPatternDisplay.showPatternShapes}
-            onChange={() => dispatch(toggleShowPatternShapes())}
-            className="settings-checkbox"
-          />
-          <span className="checkbox-custom"></span>
-          <span className="checkbox-text">Show pattern shapes</span>
-        </label>
-
-        {/* Retrace Lines checkbox */}
-        <label className="settings-checkbox-label">
-          <input
-            type="checkbox"
-            checked={globalPatternDisplay.showRetraceLines}
-            onChange={() => dispatch(toggleShowRetraceLines())}
-            className="settings-checkbox"
-          />
-          <span className="checkbox-custom"></span>
-          <span className="checkbox-text">Show retrace lines</span>
-        </label>
-
-        {/* Point Level Lines checkbox */}
-        <label className="settings-checkbox-label">
-          <input
-            type="checkbox"
-            checked={globalPatternDisplay.showPointLevelLines}
-            onChange={() => dispatch(toggleShowPointLevelLines())}
-            className="settings-checkbox"
-          />
-          <span className="checkbox-custom"></span>
-          <span className="checkbox-text">Show point level lines</span>
-        </label>
-
-        {/* Line display style - applies to all pattern lines */}
-        <div className="settings-section line-style-section">
-          <div className="settings-section-title">Line Display Style</div>
-          <div className="settings-radio-group">
-            <label className="settings-radio-label">
+        {isSettingsExpanded && (
+          <div className="display-settings">
+            <div className="settings-section">
+              <label className="settings-label">
+                <span className="settings-icon">◔</span>
+                Unselected Opacity
+                <span className="settings-value">{Math.round(unselectedAlpha * 100)}%</span>
+              </label>
               <input
-                type="radio"
-                name="lineDisplayStyle"
-                checked={globalPatternDisplay.lineDisplayStyle === 'fromFirstPoint'}
-                onChange={() => dispatch(setLineDisplayStyle('fromFirstPoint'))}
-                className="settings-radio"
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                value={unselectedAlpha}
+                onChange={handleAlphaChange}
+                className="settings-slider"
               />
-              <span className="radio-custom"></span>
-              <span className="radio-text">From first point to scale</span>
+            </div>
+            
+            {/* Auto-center checkbox */}
+            <label className="settings-checkbox-label">
+              <input
+                type="checkbox"
+                checked={autoCenterOnSelect}
+                onChange={handleAutoCenterToggle}
+                className="settings-checkbox"
+              />
+              <span className="checkbox-custom"></span>
+              <span className="checkbox-text">Center chart on click</span>
             </label>
-            <label className="settings-radio-label">
+
+            {/* Pattern Shapes checkbox */}
+            <label className="settings-checkbox-label">
               <input
-                type="radio"
-                name="lineDisplayStyle"
-                checked={globalPatternDisplay.lineDisplayStyle === 'fullWidth'}
-                onChange={() => dispatch(setLineDisplayStyle('fullWidth'))}
-                className="settings-radio"
+                type="checkbox"
+                checked={globalPatternDisplay.showPatternShapes}
+                onChange={() => dispatch(toggleShowPatternShapes())}
+                className="settings-checkbox"
               />
-              <span className="radio-custom"></span>
-              <span className="radio-text">Full width</span>
+              <span className="checkbox-custom"></span>
+              <span className="checkbox-text">Show pattern shapes</span>
+            </label>
+
+            {/* Retrace Lines checkbox */}
+            <label className="settings-checkbox-label">
+              <input
+                type="checkbox"
+                checked={globalPatternDisplay.showRetraceLines}
+                onChange={() => dispatch(toggleShowRetraceLines())}
+                className="settings-checkbox"
+              />
+              <span className="checkbox-custom"></span>
+              <span className="checkbox-text">Show retrace lines</span>
+            </label>
+
+            {/* Point Level Lines checkbox */}
+            <label className="settings-checkbox-label">
+              <input
+                type="checkbox"
+                checked={globalPatternDisplay.showPointLevelLines}
+                onChange={() => dispatch(toggleShowPointLevelLines())}
+                className="settings-checkbox"
+              />
+              <span className="checkbox-custom"></span>
+              <span className="checkbox-text">Show point level lines</span>
+            </label>
+
+            {/* Line display style - applies to all pattern lines */}
+            <div className="settings-section line-style-section">
+              <div className="settings-section-title">Line Display Style</div>
+              <div className="settings-radio-group">
+                <label className="settings-radio-label">
+                  <input
+                    type="radio"
+                    name="lineDisplayStyle"
+                    checked={globalPatternDisplay.lineDisplayStyle === 'fromFirstPoint'}
+                    onChange={() => dispatch(setLineDisplayStyle('fromFirstPoint'))}
+                    className="settings-radio"
+                  />
+                  <span className="radio-custom"></span>
+                  <span className="radio-text">From first point to scale</span>
+                </label>
+                <label className="settings-radio-label">
+                  <input
+                    type="radio"
+                    name="lineDisplayStyle"
+                    checked={globalPatternDisplay.lineDisplayStyle === 'fullWidth'}
+                    onChange={() => dispatch(setLineDisplayStyle('fullWidth'))}
+                    className="settings-radio"
+                  />
+                  <span className="radio-custom"></span>
+                  <span className="radio-text">Full width</span>
+                </label>
+              </div>
+              
+              {/* Show labels for unselected patterns */}
+              <label className="settings-checkbox-label sub-option">
+                <input
+                  type="checkbox"
+                  checked={globalPatternDisplay.showUnselectedLabels}
+                  onChange={() => dispatch(toggleShowUnselectedLabels())}
+                  className="settings-checkbox"
+                />
+                <span className="checkbox-custom"></span>
+                <span className="checkbox-text">Show labels for all patterns</span>
+              </label>
+            </div>
+
+            {/* Monochromatic Mode checkbox */}
+            <label className="settings-checkbox-label monochromatic">
+              <input
+                type="checkbox"
+                checked={globalPatternDisplay.monochromaticMode}
+                onChange={() => dispatch(toggleMonochromaticMode())}
+                className="settings-checkbox"
+              />
+              <span className="checkbox-custom"></span>
+              <span className="checkbox-text">Monochromatic mode</span>
             </label>
           </div>
-          
-          {/* Show labels for unselected patterns */}
-          <label className="settings-checkbox-label sub-option">
-            <input
-              type="checkbox"
-              checked={globalPatternDisplay.showUnselectedLabels}
-              onChange={() => dispatch(toggleShowUnselectedLabels())}
-              className="settings-checkbox"
-            />
-            <span className="checkbox-custom"></span>
-            <span className="checkbox-text">Show labels for all patterns</span>
-          </label>
-        </div>
-
-        {/* Monochromatic Mode checkbox */}
-        <label className="settings-checkbox-label monochromatic">
-          <input
-            type="checkbox"
-            checked={globalPatternDisplay.monochromaticMode}
-            onChange={() => dispatch(toggleMonochromaticMode())}
-            className="settings-checkbox"
-          />
-          <span className="checkbox-custom"></span>
-          <span className="checkbox-text">Monochromatic mode</span>
-        </label>
+        )}
       </div>
 
       {/* Patterns List */}
