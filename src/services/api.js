@@ -36,8 +36,11 @@ axiosInstance.interceptors.response.use(
   (error) => {
     console.error('[API Error]', error.response?.data || error.message);
     
-    // Jeśli 401, usuń token i przekieruj do logowania
-    if (error.response?.status === 401) {
+    // Jeśli 401 i NIE jest to endpoint logowania, wyloguj użytkownika
+    // (401 na /user/auth/login to normalna odpowiedź dla błędnych danych)
+    const isLoginEndpoint = error.config?.url?.includes('/user/auth/login');
+    
+    if (error.response?.status === 401 && !isLoginEndpoint) {
       localStorage.removeItem('authToken');
       localStorage.removeItem('authUser');
       // Dispatch event dla App.js do obsługi
