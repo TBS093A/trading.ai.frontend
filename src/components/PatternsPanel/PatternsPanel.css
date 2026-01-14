@@ -676,6 +676,56 @@
   margin-bottom: var(--spacing-xs);
 }
 
+/* Strategy Section */
+.strategy-section {
+  background: rgba(153, 69, 255, 0.05);
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--spacing-sm);
+  border-left: 2px solid var(--accent-purple);
+}
+
+.strategy-section .details-title {
+  color: var(--accent-purple);
+}
+
+.strategy-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.strategy-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 6px;
+  background: var(--bg-card);
+  border-radius: var(--radius-sm);
+}
+
+.strategy-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.strategy-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.strategy-detail {
+  color: var(--accent-cyan);
+  font-size: 0.55rem;
+}
+
 /* Points Row */
 .points-row {
   display: flex;

@@ -373,6 +373,31 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
                       {/* Expanded Details */}
                       {isExpanded && (
                         <div className="pattern-details">
+                          {/* Detection Strategy Info */}
+                          <div className="details-section strategy-section">
+                            <div className="details-title">Detection Strategy</div>
+                            <div className="strategy-row">
+                              <div className="strategy-item" title="Fibonacci tolerance strategy - deviation from ideal pattern">
+                                <span className="strategy-label">Fib Tolerance</span>
+                                <span className="strategy-value">
+                                  {taData.pattern_fib_tolerance_strategy || 'N/A'}
+                                  {taData.pattern_fib_tolerance !== undefined && (
+                                    <span className="strategy-detail">({(taData.pattern_fib_tolerance * 100).toFixed(1)}%)</span>
+                                  )}
+                                </span>
+                              </div>
+                              <div className="strategy-item" title="Peak spacing strategy - candle range for pattern detection">
+                                <span className="strategy-label">Peak Spacing</span>
+                                <span className="strategy-value">
+                                  {taData.pattern_peak_spacing_strategy || 'N/A'}
+                                  {taData.pattern_peak_spacing !== undefined && (
+                                    <span className="strategy-detail">({taData.pattern_peak_spacing} candles)</span>
+                                  )}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
                           {/* Points */}
                           <div className="details-section">
                             <div className="details-title">Points</div>
