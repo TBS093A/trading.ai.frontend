@@ -171,7 +171,7 @@ const SavedAnalysisSection = ({ onClose }) => {
       {/* Error message */}
       {error && (
         <div className="saved-analysis-error">
-          <span>{error}</span>
+          <span>{typeof error === 'string' ? error : 'Wystąpił błąd'}</span>
           <button onClick={() => dispatch(clearError())}>×</button>
         </div>
       )}

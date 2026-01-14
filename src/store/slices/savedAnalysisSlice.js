@@ -2,6 +2,44 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import api from '../../services/api';
 
 /**
+ * Helper function to extract error message from API error response
+ * FastAPI 422 errors have format: { detail: [{ type, loc, msg, input }] }
+ * Standard errors have format: { detail: "string message" }
+ */
+const extractErrorMessage = (error, fallbackMessage) => {
+  const detail = error.response?.data?.detail;
+  
+  if (!detail) {
+    return error.message || fallbackMessage;
+  }
+  
+  // If detail is an array (Pydantic validation errors), extract messages
+  if (Array.isArray(detail)) {
+    const messages = detail.map(err => {
+      if (typeof err === 'object' && err.msg) {
+        // Include location for context: "field_name: error message"
+        const loc = err.loc?.slice(-1)?.[0] || '';
+        return loc ? `${loc}: ${err.msg}` : err.msg;
+      }
+      return String(err);
+    });
+    return messages.join('; ') || fallbackMessage;
+  }
+  
+  // If detail is a string, return it directly
+  if (typeof detail === 'string') {
+    return detail;
+  }
+  
+  // If detail is an object with a message property
+  if (typeof detail === 'object' && detail.msg) {
+    return detail.msg;
+  }
+  
+  return fallbackMessage;
+};
+
+/**
  * Async thunk do tworzenia nowej zapisanej analizy
  */
 export const createSavedAnalysis = createAsyncThunk(
@@ -12,7 +50,7 @@ export const createSavedAnalysis = createAsyncThunk(
       return response.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.detail || 'Błąd podczas zapisywania analizy'
+        extractErrorMessage(error, 'Błąd podczas zapisywania analizy')
       );
     }
   }
@@ -29,7 +67,7 @@ export const fetchSavedAnalyses = createAsyncThunk(
       return response.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.detail || 'Błąd podczas pobierania zapisanych analiz'
+        extractErrorMessage(error, 'Błąd podczas pobierania zapisanych analiz')
       );
     }
   }
@@ -46,7 +84,7 @@ export const fetchSavedAnalysis = createAsyncThunk(
       return response.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.detail || 'Błąd podczas pobierania analizy'
+        extractErrorMessage(error, 'Błąd podczas pobierania analizy')
       );
     }
   }
@@ -63,7 +101,7 @@ export const updateSavedAnalysis = createAsyncThunk(
       return { ...response.data, analysisId };
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.detail || 'Błąd podczas aktualizacji analizy'
+        extractErrorMessage(error, 'Błąd podczas aktualizacji analizy')
       );
     }
   }
@@ -80,7 +118,7 @@ export const deleteSavedAnalysis = createAsyncThunk(
       return { ...response.data, analysisId };
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.detail || 'Błąd podczas usuwania analizy'
+        extractErrorMessage(error, 'Błąd podczas usuwania analizy')
       );
     }
   }
