@@ -5,6 +5,7 @@ import { fetchAssetsByExchange, setSelectedAsset, setSearchTerm, clearAssets } f
 import { clearChart } from '../../store/slices/chartSlice';
 import { clearAnalysis } from '../../store/slices/analysisSlice';
 import { toggleSidebar } from '../../store/slices/uiSlice';
+import UserSection from './UserSection';
 import SyncSection from './SyncSection';
 import api from '../../services/api';
 import './Sidebar.css';
@@ -91,6 +92,10 @@ const Sidebar = ({ isOpen }) => {
               ◀
             </button>
           </div>
+          
+          {/* User Section - Collapsible */}
+          <UserSection />
+          
           {/* Sync Section - Collapsible */}
           <SyncSection />
 

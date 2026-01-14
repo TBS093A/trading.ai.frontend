@@ -8,6 +8,7 @@ import {
   clearSyncError,
   removeTask,
 } from '../../store/slices/syncSlice';
+import { selectIsAdmin } from '../../store/slices/authSlice';
 import api from '../../services/api';
 import './SyncSection.css';
 
@@ -18,6 +19,7 @@ const SyncSection = () => {
     (state) => state.sync
   );
   const { list: exchangesList } = useSelector((state) => state.exchanges);
+  const isAdmin = useSelector(selectIsAdmin);
 
   // Form states
   const [exchangesParams, setExchangesParams] = useState({ testMode: false });
@@ -234,6 +236,7 @@ const SyncSection = () => {
       >
         <span className="toggle-icon">⟳</span>
         <span className="toggle-text">Synchronization</span>
+        {!isAdmin && <span className="admin-lock-icon" title="Wymaga uprawnień administratora">🔒</span>}
         {hasActiveTasks && <span className="active-badge pulse" />}
         <span className="expand-arrow">{isExpanded ? '▼' : '▶'}</span>
       </button>
@@ -241,6 +244,14 @@ const SyncSection = () => {
       {/* Expanded content */}
       {isExpanded && (
         <div className="sync-dropdown-content">
+          {/* Admin restriction notice */}
+          {!isAdmin && (
+            <div className="admin-notice">
+              <span className="notice-icon">🔒</span>
+              <span className="notice-text">Operacje synchronizacji są dostępne tylko dla administratorów</span>
+            </div>
+          )}
+
           {/* Active tasks mini list */}
           {activeTasksList.length > 0 && (
             <div className="tasks-mini">
@@ -298,7 +309,8 @@ const SyncSection = () => {
                 <button
                   className="sync-action-btn"
                   onClick={handleSyncExchanges}
-                  disabled={exchangesSync.loading}
+                  disabled={exchangesSync.loading || !isAdmin}
+                  title={!isAdmin ? 'Wymaga uprawnień administratora' : ''}
                 >
                   {exchangesSync.loading ? '⟳ Syncing...' : '⟳ Sync'}
                 </button>
@@ -372,7 +384,8 @@ const SyncSection = () => {
                 <button
                   className="sync-action-btn"
                   onClick={handleSyncTechnical}
-                  disabled={technical.loading}
+                  disabled={technical.loading || !isAdmin}
+                  title={!isAdmin ? 'Wymaga uprawnień administratora' : ''}
                 >
                   {technical.loading ? '⟳ Analyzing...' : '📊 Run Analysis'}
                 </button>
@@ -505,7 +518,8 @@ const SyncSection = () => {
                     <button
                       className="sync-action-btn accent"
                       onClick={handleSyncBulk}
-                      disabled={bulk.loading || selectedAssetIds.size === 0}
+                      disabled={bulk.loading || selectedAssetIds.size === 0 || !isAdmin}
+                      title={!isAdmin ? 'Wymaga uprawnień administratora' : ''}
                     >
                       {bulk.loading
                         ? '⟳ Processing...'
@@ -598,7 +612,7 @@ const SyncSection = () => {
                                 </span>
                               </div>
                             )}
-                            {(task.status === 'RUNNING' || task.status === 'PENDING') && (
+                            {(task.status === 'RUNNING' || task.status === 'PENDING') && isAdmin && (
                               <button
                                 className="cancel-task-btn"
                                 onClick={(e) => {

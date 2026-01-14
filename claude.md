@@ -19,17 +19,22 @@ src/
 │   ├── Chart/           # TradingView chart with patterns overlay
 │   ├── Dashboard/       # Main layout with header and chart container
 │   ├── IndicatorControls/  # Toggle buttons for VOL, RSI, MACD, OBV
+│   ├── Login/           # Login page with animated XABCD chart
 │   ├── PatternTooltip/  # Hover popup for harmonic patterns
 │   ├── PatternsPanel/   # Right-side panel listing all harmonic patterns
 │   ├── RightPanel/      # (Legacy) Fibonacci levels side panel for single pattern
-│   ├── Sidebar/         # Exchange/asset selection with embedded sync controls
+│   ├── Sidebar/         # Exchange/asset selection with sync & user controls
+│       ├── Sidebar.js/.css       # Main sidebar component
+│       ├── SyncSection.js/.css   # Sync operations (admin only)
+│       └── UserSection.js/.css   # User profile & settings (dark red theme)
 ├── services/
-│   └── api.js           # Axios-based API client
+│   └── api.js           # Axios-based API client with auth token interceptor
 ├── store/
 │   ├── store.js         # Redux store configuration
 │   └── slices/          # Redux Toolkit slices
 │       ├── analysisSlice.js   # Harmonic patterns & indicators state
 │       ├── assetsSlice.js     # Assets list and selection
+│       ├── authSlice.js       # Authentication state (user, token, session)
 │       ├── chartSlice.js      # Klines data and interval
 │       ├── exchangesSlice.js  # Exchanges list and selection
 │       ├── syncSlice.js       # Sync operations state (tasks, loading)
@@ -38,7 +43,7 @@ src/
 │   └── global.css       # Theme variables and base styles
 ├── utils/
 │   └── indicators.js    # Client-side indicator calculations
-├── App.js               # Root component with layout
+├── App.js               # Root component with auth routing
 └── index.js             # Entry point with Redux Provider
 ```
 
@@ -48,6 +53,7 @@ src/
 
 | Slice | Purpose | Key State |
 |-------|---------|-----------|
+| `auth` | Authentication | `isAuthenticated`, `user`, `token`, `sessionVerified`, `avatar` |
 | `exchanges` | Exchange data | `list`, `selectedExchange`, `loading` |
 | `assets` | Asset data | `list`, `filteredList`, `selectedAsset`, `searchTerm` |
 | `chart` | Chart data | `klines`, `interval`, `asset`, `quote` |
@@ -78,6 +84,18 @@ API base URL configured via `REACT_APP_API_URL` environment variable (default: `
 ### Key Endpoints Used
 
 ```javascript
+// Authentication
+POST /user/auth/login                        // Login with username/password
+POST /user/auth/logout                       // Logout (invalidate session)
+GET  /user/auth/verify                       // Verify current session
+
+// User Profile
+GET  /user/me                                // Get current user profile
+PUT  /user/me                                // Update username
+POST /user/me/password                       // Change password
+GET  /user/me/avatar                         // Get avatar (base64)
+POST /user/me/avatar                         // Upload avatar (multipart)
+
 // Exchanges
 GET /exchanges/list                          // List all exchanges
 GET /exchanges/klines/{asset_id}/{interval}  // Get candlestick data
@@ -89,11 +107,12 @@ GET /assets/search/asset/{name}              // Search assets
 // Technical Analysis
 GET /analysis/technical/asset/{asset_id}/interval/{interval}  // Harmonic patterns
 
-// Sync Operations
+// Sync Operations (Admin only)
 POST /exchanges/sync                         // Sync exchanges from APIs
 POST /analysis/technical/sync                // Sync technical analysis
 POST /analysis/technical/sync/assets         // Bulk sync for specific asset IDs
 GET  /sync/status/{task_id}                  // Get Celery task status
+DELETE /sync/status/{task_id}                // Cancel task (Admin only)
 ```
 
 ### Sync Endpoints Parameters

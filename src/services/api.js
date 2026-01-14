@@ -10,10 +10,17 @@ const axiosInstance = axios.create({
   },
 });
 
-// Request interceptor
+// Request interceptor - dodaje token autoryzacji
 axiosInstance.interceptors.request.use(
   (config) => {
     console.log(`[API] ${config.method?.toUpperCase()} ${config.url}`);
+    
+    // Dodaj token autoryzacji jeśli istnieje
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    
     return config;
   },
   (error) => {
@@ -21,18 +28,88 @@ axiosInstance.interceptors.request.use(
   }
 );
 
-// Response interceptor
+// Response interceptor - obsługuje 401 (nieautoryzowany)
 axiosInstance.interceptors.response.use(
   (response) => {
     return response;
   },
   (error) => {
     console.error('[API Error]', error.response?.data || error.message);
+    
+    // Jeśli 401, usuń token i przekieruj do logowania
+    if (error.response?.status === 401) {
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('authUser');
+      // Dispatch event dla App.js do obsługi
+      window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+    }
+    
     return Promise.reject(error);
   }
 );
 
 const api = {
+  // ==================
+  // AUTHENTICATION
+  // ==================
+  login: (username, password) =>
+    axiosInstance.post('/user/auth/login', { username, password }),
+
+  logout: () =>
+    axiosInstance.post('/user/auth/logout'),
+
+  verifySession: () =>
+    axiosInstance.get('/user/auth/verify'),
+
+  // ==================
+  // USER PROFILE
+  // ==================
+  getMyProfile: () =>
+    axiosInstance.get('/user/me'),
+
+  updateMyProfile: (data) =>
+    axiosInstance.put('/user/me', data),
+
+  changePassword: (currentPassword, newPassword) =>
+    axiosInstance.post('/user/me/password', {
+      current_password: currentPassword,
+      new_password: newPassword,
+    }),
+
+  getMyAvatar: () =>
+    axiosInstance.get('/user/me/avatar'),
+
+  uploadAvatar: (file) => {
+    const formData = new FormData();
+    formData.append('avatar', file);
+    return axiosInstance.post('/user/me/avatar', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+
+  deleteAvatar: () =>
+    axiosInstance.delete('/user/me/avatar'),
+
+  // ==================
+  // USER MANAGEMENT (Admin only)
+  // ==================
+  getUsers: (limit = 50, offset = 0) =>
+    axiosInstance.get('/user/list', { params: { limit, offset } }),
+
+  createUser: (userData) =>
+    axiosInstance.post('/user/create', userData),
+
+  getUserById: (userId) =>
+    axiosInstance.get(`/user/${userId}`),
+
+  updateUser: (userId, userData) =>
+    axiosInstance.put(`/user/${userId}`, userData),
+
+  deleteUser: (userId) =>
+    axiosInstance.delete(`/user/${userId}`),
+
   // ==================
   // EXCHANGES
   // ==================
