@@ -1,7 +1,7 @@
 {
-  "name": "trading-ai-frontend",
+  "name": "00x097-trade-frontend",
   "version": "1.0.0",
-  "description": "Trading AI Dashboard with Harmonic Patterns Analysis",
+  "description": "00x097 Trade Dashboard with Harmonic Patterns Analysis",
   "private": true,
   "dependencies": {
     "@reduxjs/toolkit": "^2.0.1",

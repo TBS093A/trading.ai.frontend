@@ -1,4 +1,4 @@
-# Trading AI Frontend
+# 00x097 Trade Frontend
 
 ## Project Overview
 

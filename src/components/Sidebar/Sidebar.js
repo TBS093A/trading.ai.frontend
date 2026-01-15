@@ -86,7 +86,7 @@ const Sidebar = ({ isOpen }) => {
           <div className="sidebar-header">
             <div className="logo">
               <span className="logo-icon">◈</span>
-              <span className="logo-text">TRADING AI</span>
+              <span className="logo-text">00x097 TRADE</span>
             </div>
             <button className="sidebar-toggle" onClick={() => dispatch(toggleSidebar())}>
               ◀

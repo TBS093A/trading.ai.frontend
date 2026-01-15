@@ -60,7 +60,7 @@ const Dashboard = forwardRef((props, ref) => {
         <div className="welcome-screen">
           <div className="welcome-content">
             <div className="welcome-icon">◈</div>
-            <h1 className="welcome-title">Trading AI Dashboard</h1>
+            <h1 className="welcome-title">00x097 Trade Dashboard</h1>
             <p className="welcome-subtitle">
               Select an asset from the sidebar to start analyzing harmonic patterns
             </p>

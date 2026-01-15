@@ -1,4 +1,4 @@
-# Trading AI Frontend
+# 00x097 Trade Frontend
 
 A React-based trading dashboard with TradingView Lightweight Charts for cryptocurrency technical analysis, featuring harmonic pattern detection and Fibonacci levels visualization.
 
@@ -63,12 +63,12 @@ When a pattern is selected, toggle visibility of:
     # Verify npm version:
     npm -v # Should print "11.6.2".
 ```
-- [] Backend API running (trading.ai.backend)
+- [] Backend API running (00x097-trade-backend)
 
 ### Installation
 
 ```bash
-cd trading.ai.frontend
+cd 00x097-trade-frontend
 npm install
 ```
 

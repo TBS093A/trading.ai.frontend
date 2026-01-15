@@ -293,7 +293,7 @@ const Login = () => {
             <div className="login-header">
               <div className="login-logo">
                 <span className="login-logo-icon">◈</span>
-                <span className="login-logo-text">TRADING AI</span>
+                <span className="login-logo-text">00x097 TRADE</span>
               </div>
               <p className="login-subtitle">Zaloguj się do panelu</p>
             </div>
