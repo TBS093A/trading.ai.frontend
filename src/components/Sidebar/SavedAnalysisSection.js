@@ -106,86 +106,94 @@ const SavedAnalysisSection = ({ onClose }) => {
     setExpandedItemId(prev => prev === analysisId ? null : analysisId);
   }, []);
 
-  // Obsługa kliknięcia w ikonę oka - załaduj i przywróć stan
+  // Pomocnicza funkcja do przywracania stanu analizy
+  const restoreAnalysisState = useCallback(async (analysisId) => {
+    const result = await dispatch(fetchSavedAnalysis(analysisId)).unwrap();
+    const analysis = result.analysis;
+
+    if (!analysis) return;
+
+    // 1. Ustaw asset
+    if (analysis.asset_id) {
+      dispatch(setSelectedAsset({
+        id: analysis.asset_id,
+        asset_name: analysis.asset_name,
+        quote_name: analysis.quote_name,
+      }));
+    }
+
+    // 2. Ustaw interval
+    if (analysis.interval) {
+      dispatch(setInterval(analysis.interval));
+    }
+
+    // 3. Wymuś reset skali wykresu (po załadowaniu danych)
+    setTimeout(() => {
+      dispatch(triggerScaleReset());
+    }, 500);
+
+    // 4. Przywróć pattern display options
+    if (analysis.pattern_display_options) {
+      Object.entries(analysis.pattern_display_options).forEach(([patternId, options]) => {
+        Object.entries(options).forEach(([option, value]) => {
+          if (typeof value === 'boolean') {
+            dispatch(setPatternDisplayOption({ patternId, option, value }));
+          }
+        });
+      });
+    }
+
+    // 5. Przywróć globalne ustawienia patternów
+    if (analysis.global_pattern_display) {
+      const gpd = analysis.global_pattern_display;
+      if (gpd.lineDisplayStyle) {
+        dispatch(setLineDisplayStyle(gpd.lineDisplayStyle));
+      }
+    }
+
+    // 6. Przywróć indykatory
+    if (analysis.indicators) {
+      Object.entries(analysis.indicators).forEach(([indicator, value]) => {
+        dispatch(setIndicator({ indicator, value }));
+      });
+    }
+
+    // 7. Przywróć alpha i auto-center
+    if (analysis.unselected_alpha !== undefined) {
+      dispatch(setUnselectedAlpha(analysis.unselected_alpha));
+    }
+    if (analysis.auto_center_on_select !== undefined) {
+      dispatch(setAutoCenterOnSelect(analysis.auto_center_on_select));
+    }
+  }, [dispatch]);
+
+  // Obsługa kliknięcia w ikonę oka - załaduj i przywróć stan (zamyka panel)
   const handleLoadAnalysis = useCallback(async (analysisId, e) => {
     e?.stopPropagation();
     try {
-      const result = await dispatch(fetchSavedAnalysis(analysisId)).unwrap();
-      const analysis = result.analysis;
-
-      if (!analysis) return;
-
-      // 1. Ustaw asset
-      if (analysis.asset_id) {
-        dispatch(setSelectedAsset({
-          id: analysis.asset_id,
-          asset_name: analysis.asset_name,
-          quote_name: analysis.quote_name,
-        }));
-      }
-
-      // 2. Ustaw interval
-      if (analysis.interval) {
-        dispatch(setInterval(analysis.interval));
-      }
-
-      // 3. Wymuś reset skali wykresu (po załadowaniu danych)
-      setTimeout(() => {
-        dispatch(triggerScaleReset());
-      }, 500);
-
-      // 4. Przywróć pattern display options
-      if (analysis.pattern_display_options) {
-        Object.entries(analysis.pattern_display_options).forEach(([patternId, options]) => {
-          Object.entries(options).forEach(([option, value]) => {
-            if (typeof value === 'boolean') {
-              dispatch(setPatternDisplayOption({ patternId, option, value }));
-            }
-          });
-        });
-      }
-
-      // 5. Przywróć globalne ustawienia patternów
-      if (analysis.global_pattern_display) {
-        const gpd = analysis.global_pattern_display;
-        if (gpd.lineDisplayStyle) {
-          dispatch(setLineDisplayStyle(gpd.lineDisplayStyle));
-        }
-      }
-
-      // 6. Przywróć indykatory
-      if (analysis.indicators) {
-        Object.entries(analysis.indicators).forEach(([indicator, value]) => {
-          dispatch(setIndicator({ indicator, value }));
-        });
-      }
-
-      // 7. Przywróć alpha i auto-center
-      if (analysis.unselected_alpha !== undefined) {
-        dispatch(setUnselectedAlpha(analysis.unselected_alpha));
-      }
-      if (analysis.auto_center_on_select !== undefined) {
-        dispatch(setAutoCenterOnSelect(analysis.auto_center_on_select));
-      }
-
+      await restoreAnalysisState(analysisId);
+      
       // Zamknij panel po załadowaniu
       if (onClose) {
         onClose();
       }
-
     } catch (err) {
       console.error('Failed to load analysis:', err);
     }
-  }, [dispatch, onClose]);
+  }, [restoreAnalysisState, onClose]);
 
-  // Włącz tryb edycji - Save button będzie updateował tę analizę
-  const handleEnterEditMode = useCallback((analysisId, e) => {
+  // Włącz tryb edycji - Save button będzie updateował tę analizę (NIE zamyka panelu)
+  const handleEnterEditMode = useCallback(async (analysisId, e) => {
     e?.stopPropagation();
-    // Najpierw załaduj analizę na wykres
-    handleLoadAnalysis(analysisId, e);
-    // Ustaw tryb edycji
-    dispatch(setEditingAnalysis(analysisId));
-  }, [dispatch, handleLoadAnalysis]);
+    try {
+      // Załaduj analizę na wykres (bez zamykania panelu)
+      await restoreAnalysisState(analysisId);
+      // Ustaw tryb edycji
+      dispatch(setEditingAnalysis(analysisId));
+    } catch (err) {
+      console.error('Failed to enter edit mode:', err);
+    }
+  }, [dispatch, restoreAnalysisState]);
 
   // Rozpocznij edycję description
   const handleStartEditDescription = useCallback((analysis, e) => {

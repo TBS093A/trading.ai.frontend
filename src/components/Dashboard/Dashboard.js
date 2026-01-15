@@ -5,6 +5,7 @@ import IndicatorControls from '../IndicatorControls/IndicatorControls';
 import SaveAnalysisModal from './SaveAnalysisModal';
 import { fetchKlines, setInterval } from '../../store/slices/chartSlice';
 import { fetchTechnicalAnalysis, clearAnalysis } from '../../store/slices/analysisSlice';
+import { selectEditingAnalysisId } from '../../store/slices/savedAnalysisSlice';
 import './Dashboard.css';
 
 const Dashboard = forwardRef((props, ref) => {
@@ -22,6 +23,8 @@ const Dashboard = forwardRef((props, ref) => {
   const { selectedExchange } = useSelector((state) => state.exchanges);
   const { klines, interval, availableIntervals, loading: chartLoading, asset, quote } = useSelector((state) => state.chart);
   const { loading: analysisLoading } = useSelector((state) => state.analysis);
+  const editingAnalysisId = useSelector(selectEditingAnalysisId);
+  const isEditMode = !!editingAnalysisId;
 
   // Fetch klines when asset or interval changes
   useEffect(() => {
@@ -110,12 +113,12 @@ const Dashboard = forwardRef((props, ref) => {
 
         <div className="header-right">
           <button
-            className="save-analysis-btn"
+            className={`save-analysis-btn ${isEditMode ? 'edit-mode' : ''}`}
             onClick={() => setShowSaveModal(true)}
-            title="Save current analysis view"
+            title={isEditMode ? "Update current analysis" : "Save current analysis view"}
           >
-            <span className="btn-icon">💾</span>
-            <span className="btn-text">Save</span>
+            <span className="btn-icon">{isEditMode ? '✏️' : '💾'}</span>
+            <span className="btn-text">{isEditMode ? 'Update' : 'Save'}</span>
           </button>
           <IndicatorControls />
         </div>
