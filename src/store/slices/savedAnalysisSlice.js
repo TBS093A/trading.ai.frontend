@@ -131,6 +131,9 @@ const savedAnalysisSlice = createSlice({
     analyses: [],
     totalCount: 0,
     
+    // Search term for filtering
+    searchTerm: '',
+    
     // Aktualnie ładowana/wyświetlana pełna analiza
     currentAnalysis: null,
     
@@ -159,10 +162,14 @@ const savedAnalysisSlice = createSlice({
     clearCurrentAnalysis: (state) => {
       state.currentAnalysis = null;
     },
+    setSearchTerm: (state, action) => {
+      state.searchTerm = action.payload;
+    },
     // Resetuje cały stan (np. przy wylogowaniu)
     resetSavedAnalysisState: (state) => {
       state.analyses = [];
       state.totalCount = 0;
+      state.searchTerm = '';
       state.currentAnalysis = null;
       state.loading = false;
       state.creating = false;
@@ -281,12 +288,14 @@ export const {
   clearError,
   clearSuccess,
   clearCurrentAnalysis,
+  setSearchTerm,
   resetSavedAnalysisState,
 } = savedAnalysisSlice.actions;
 
 // Selektory
 export const selectSavedAnalyses = (state) => state.savedAnalysis.analyses;
 export const selectTotalCount = (state) => state.savedAnalysis.totalCount;
+export const selectSearchTerm = (state) => state.savedAnalysis.searchTerm;
 export const selectCurrentAnalysis = (state) => state.savedAnalysis.currentAnalysis;
 export const selectSavedAnalysisLoading = (state) => state.savedAnalysis.loading;
 export const selectSavedAnalysisCreating = (state) => state.savedAnalysis.creating;

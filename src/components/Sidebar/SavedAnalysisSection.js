@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   fetchSavedAnalyses,
@@ -6,6 +6,7 @@ import {
   deleteSavedAnalysis,
   clearError,
   clearSuccess,
+  setSearchTerm,
   selectSavedAnalyses,
   selectTotalCount,
   selectSavedAnalysisLoading,
@@ -13,6 +14,7 @@ import {
   selectSavedAnalysisError,
   selectLastSuccess,
   selectLoadingAnalysisId,
+  selectSearchTerm,
 } from '../../store/slices/savedAnalysisSlice';
 import { setSelectedAsset } from '../../store/slices/assetsSlice';
 import { setInterval, triggerScaleReset } from '../../store/slices/chartSlice';
@@ -41,12 +43,14 @@ const SavedAnalysisSection = ({ onClose }) => {
   const error = useSelector(selectSavedAnalysisError);
   const lastSuccess = useSelector(selectLastSuccess);
   const loadingAnalysisId = useSelector(selectLoadingAnalysisId);
+  const searchTerm = useSelector(selectSearchTerm);
 
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [isExpanded, setIsExpanded] = useState(true);
 
-  // Pobierz listę analiz przy montowaniu
+  // Pobierz listę analiz przy montowaniu (limit 1000)
   useEffect(() => {
-    dispatch(fetchSavedAnalyses());
+    dispatch(fetchSavedAnalyses({ limit: 1000, offset: 0 }));
   }, [dispatch]);
 
   // Wyczyść komunikat sukcesu po 3 sekundach
@@ -58,6 +62,32 @@ const SavedAnalysisSection = ({ onClose }) => {
       return () => clearTimeout(timer);
     }
   }, [lastSuccess, dispatch]);
+
+  // Filtruj analizy według search term
+  const filteredAnalyses = useMemo(() => {
+    if (!searchTerm.trim()) {
+      return analyses;
+    }
+    const search = searchTerm.toLowerCase();
+    return analyses.filter((analysis) =>
+      analysis.name?.toLowerCase().includes(search) ||
+      analysis.asset_name?.toLowerCase().includes(search) ||
+      analysis.quote_name?.toLowerCase().includes(search) ||
+      analysis.interval?.toLowerCase().includes(search) ||
+      analysis.exchange_name?.toLowerCase().includes(search) ||
+      `${analysis.asset_name}/${analysis.quote_name}`.toLowerCase().includes(search)
+    );
+  }, [analyses, searchTerm]);
+
+  // Obsługa zmiany search term
+  const handleSearchChange = useCallback((e) => {
+    dispatch(setSearchTerm(e.target.value));
+  }, [dispatch]);
+
+  // Obsługa czyszczenia search term
+  const handleClearSearch = useCallback(() => {
+    dispatch(setSearchTerm(''));
+  }, [dispatch]);
 
   // Obsługa kliknięcia w analizę - załaduj i przywróć stan
   const handleLoadAnalysis = useCallback(async (analysisId) => {
@@ -167,99 +197,131 @@ const SavedAnalysisSection = ({ onClose }) => {
   };
 
   return (
-    <div className="saved-analysis-section">
-      <div className="saved-analysis-header">
-        <span className="header-icon">💾</span>
-        <span className="header-title">Saved Analyses</span>
-        <span className="header-count">({totalCount})</span>
-      </div>
+    <div className={`saved-analysis-section ${isExpanded ? 'section-expanded' : 'section-collapsed'}`}>
+      {/* Collapsible Header */}
+      <button
+        className={`section-label collapsible ${isExpanded ? 'expanded' : ''}`}
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <span className="section-icon">💾</span>
+        <span className="section-title">Saved Analyses</span>
+        <span className="count-badge">{filteredAnalyses.length}</span>
+        <span className="collapse-arrow">{isExpanded ? '▼' : '▶'}</span>
+      </button>
 
-      {/* Error message */}
-      {error && (
-        <div className="saved-analysis-error">
-          <span>{typeof error === 'string' ? error : 'Wystąpił błąd'}</span>
-          <button onClick={() => dispatch(clearError())}>×</button>
-        </div>
-      )}
-
-      {/* Success message */}
-      {lastSuccess && lastSuccess.type === 'delete' && (
-        <div className="saved-analysis-success">
-          <span className="success-icon">✓</span>
-          {lastSuccess.message}
-        </div>
-      )}
-
-      {/* Loading state */}
-      {loading && (
-        <div className="saved-analysis-loading">
-          <span className="loading-spinner">⟳</span>
-          <span>Ładowanie...</span>
-        </div>
-      )}
-
-      {/* Empty state */}
-      {!loading && analyses.length === 0 && (
-        <div className="saved-analysis-empty">
-          <span className="empty-icon">📊</span>
-          <span>Brak zapisanych analiz</span>
-          <span className="empty-hint">
-            Użyj przycisku "Save" na wykresie aby zapisać aktualny widok
-          </span>
-        </div>
-      )}
-
-      {/* Analyses list */}
-      {!loading && analyses.length > 0 && (
-        <div className="saved-analysis-list">
-          {analyses.map((analysis) => (
-            <div
-              key={analysis.id}
-              className={`saved-analysis-item ${loadingAnalysisId === analysis.id ? 'loading' : ''}`}
-            >
-              <div 
-                className="analysis-info"
-                onClick={() => handleLoadAnalysis(analysis.id)}
-              >
-                <div className="analysis-name">
-                  {analysis.name}
-                </div>
-                <div className="analysis-meta">
-                  <span className="meta-asset">
-                    {analysis.asset_name || 'Unknown'}/{analysis.quote_name || '?'}
-                  </span>
-                  <span className="meta-separator">•</span>
-                  <span className="meta-interval">{analysis.interval}</span>
-                  {analysis.exchange_name && (
-                    <>
-                      <span className="meta-separator">•</span>
-                      <span className="meta-exchange">{analysis.exchange_name}</span>
-                    </>
-                  )}
-                </div>
-                <div className="analysis-date">
-                  {formatDate(analysis.updated_at)}
-                </div>
-              </div>
-
-              <button
-                className={`delete-btn ${confirmDeleteId === analysis.id ? 'confirm' : ''}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDelete(analysis.id);
-                }}
-                disabled={deleting}
-                title={confirmDeleteId === analysis.id ? 'Kliknij ponownie aby potwierdzić' : 'Usuń analizę'}
-              >
-                {confirmDeleteId === analysis.id ? '⚠️' : '🗑️'}
-              </button>
+      {isExpanded && (
+        <>
+          {/* Search Bar */}
+          <div className="saved-analysis-search">
+            <div className="search-input-wrapper">
+              <input
+                type="text"
+                className="input search-input"
+                placeholder="Search analyses..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+              />
+              {searchTerm && (
+                <button
+                  className="search-clear-btn"
+                  onClick={handleClearSearch}
+                >
+                  ×
+                </button>
+              )}
+              <span className="search-icon">⌕</span>
             </div>
-          ))}
-        </div>
+          </div>
+
+          {/* Error message */}
+          {error && (
+            <div className="saved-analysis-error">
+              <span>{typeof error === 'string' ? error : 'Wystąpił błąd'}</span>
+              <button onClick={() => dispatch(clearError())}>×</button>
+            </div>
+          )}
+
+          {/* Success message */}
+          {lastSuccess && lastSuccess.type === 'delete' && (
+            <div className="saved-analysis-success">
+              <span className="success-icon">✓</span>
+              {lastSuccess.message}
+            </div>
+          )}
+
+          {/* Loading state */}
+          {loading && (
+            <div className="saved-analysis-loading">
+              <span className="loading-spinner">⟳</span>
+              <span>Ładowanie...</span>
+            </div>
+          )}
+
+          {/* Empty state */}
+          {!loading && filteredAnalyses.length === 0 && (
+            <div className="saved-analysis-empty">
+              <span className="empty-icon">📊</span>
+              <span>{searchTerm ? 'Brak wyników' : 'Brak zapisanych analiz'}</span>
+              {!searchTerm && (
+                <span className="empty-hint">
+                  Użyj przycisku "Save" na wykresie aby zapisać aktualny widok
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Analyses list */}
+          {!loading && filteredAnalyses.length > 0 && (
+            <div className="saved-analysis-list">
+              {filteredAnalyses.map((analysis) => (
+                <div
+                  key={analysis.id}
+                  className={`saved-analysis-item ${loadingAnalysisId === analysis.id ? 'loading' : ''}`}
+                >
+                  <div 
+                    className="analysis-info"
+                    onClick={() => handleLoadAnalysis(analysis.id)}
+                  >
+                    <div className="analysis-name">
+                      {analysis.name}
+                    </div>
+                    <div className="analysis-meta">
+                      <span className="meta-asset">
+                        {analysis.asset_name || 'Unknown'}/{analysis.quote_name || '?'}
+                      </span>
+                      <span className="meta-separator">•</span>
+                      <span className="meta-interval">{analysis.interval}</span>
+                      {analysis.exchange_name && (
+                        <>
+                          <span className="meta-separator">•</span>
+                          <span className="meta-exchange">{analysis.exchange_name}</span>
+                        </>
+                      )}
+                    </div>
+                    <div className="analysis-date">
+                      {formatDate(analysis.updated_at)}
+                    </div>
+                  </div>
+
+                  <button
+                    className={`delete-btn ${confirmDeleteId === analysis.id ? 'confirm' : ''}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(analysis.id);
+                    }}
+                    disabled={deleting}
+                    title={confirmDeleteId === analysis.id ? 'Kliknij ponownie aby potwierdzić' : 'Usuń analizę'}
+                  >
+                    {confirmDeleteId === analysis.id ? '⚠️' : '🗑️'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
 };
 
 export default SavedAnalysisSection;
-
