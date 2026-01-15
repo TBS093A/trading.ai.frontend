@@ -15,7 +15,7 @@ import {
   selectLoadingAnalysisId,
 } from '../../store/slices/savedAnalysisSlice';
 import { setSelectedAsset } from '../../store/slices/assetsSlice';
-import { setInterval } from '../../store/slices/chartSlice';
+import { setInterval, triggerScaleReset } from '../../store/slices/chartSlice';
 import {
   setPatternDisplayOption,
   setSelectedPattern,
@@ -81,7 +81,13 @@ const SavedAnalysisSection = ({ onClose }) => {
         dispatch(setInterval(analysis.interval));
       }
 
-      // 3. Przywróć pattern display options
+      // 3. Wymuś reset skali wykresu (po załadowaniu danych)
+      // Małe opóźnienie żeby dane zdążyły się załadować
+      setTimeout(() => {
+        dispatch(triggerScaleReset());
+      }, 500);
+
+      // 4. Przywróć pattern display options
       if (analysis.pattern_display_options) {
         Object.entries(analysis.pattern_display_options).forEach(([patternId, options]) => {
           Object.entries(options).forEach(([option, value]) => {
@@ -92,7 +98,7 @@ const SavedAnalysisSection = ({ onClose }) => {
         });
       }
 
-      // 4. Przywróć globalne ustawienia patternów
+      // 5. Przywróć globalne ustawienia patternów
       if (analysis.global_pattern_display) {
         const gpd = analysis.global_pattern_display;
         
@@ -103,14 +109,14 @@ const SavedAnalysisSection = ({ onClose }) => {
         }
       }
 
-      // 5. Przywróć indykatory
+      // 6. Przywróć indykatory
       if (analysis.indicators) {
         Object.entries(analysis.indicators).forEach(([indicator, value]) => {
           dispatch(setIndicator({ indicator, value }));
         });
       }
 
-      // 6. Przywróć alpha i auto-center
+      // 7. Przywróć alpha i auto-center
       if (analysis.unselected_alpha !== undefined) {
         dispatch(setUnselectedAlpha(analysis.unselected_alpha));
       }

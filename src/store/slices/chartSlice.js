@@ -28,6 +28,7 @@ const chartSlice = createSlice({
     availableIntervals: ['1m', '5m', '15m', '30m', '1h', '4h', '1d', '1w', '1M'],
     loading: false,
     error: null,
+    shouldResetScale: false, // Flag to force chart scale reset
   },
   reducers: {
     setInterval: (state, action) => {
@@ -40,6 +41,12 @@ const chartSlice = createSlice({
     },
     clearChartError: (state) => {
       state.error = null;
+    },
+    triggerScaleReset: (state) => {
+      state.shouldResetScale = true;
+    },
+    clearScaleReset: (state) => {
+      state.shouldResetScale = false;
     },
   },
   extraReducers: (builder) => {
@@ -62,6 +69,6 @@ const chartSlice = createSlice({
   },
 });
 
-export const { setInterval, clearChart, clearChartError } = chartSlice.actions;
+export const { setInterval, clearChart, clearChartError, triggerScaleReset, clearScaleReset } = chartSlice.actions;
 export default chartSlice.reducer;
 

@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { createChart, CrosshairMode } from 'lightweight-charts';
 import { setSelectedPattern, setHoveredPattern } from '../../store/slices/analysisSlice';
 import { showTooltip, hideTooltip } from '../../store/slices/uiSlice';
+import { clearScaleReset } from '../../store/slices/chartSlice';
 import { calculateRSI, calculateMACD, calculateOBV } from '../../utils/indicators';
 import './TradingViewChart.css';
 
@@ -31,7 +32,7 @@ const TradingViewChart = forwardRef((props, ref) => {
   const indicatorChartsRef = useRef([]);
   const isSyncingRef = useRef(false); // Prevent infinite sync loops
 
-  const { klines, asset, quote, interval: currentInterval } = useSelector((state) => state.chart);
+  const { klines, asset, quote, interval: currentInterval, shouldResetScale } = useSelector((state) => state.chart);
   const { selectedAsset } = useSelector((state) => state.assets);
   const { harmonicPatterns, selectedPattern, expandedPatternId, unselectedAlpha, patternDisplayOptions, globalPatternDisplay, indicators, sharedPatternData } = useSelector((state) => state.analysis);
 
@@ -319,6 +320,22 @@ const TradingViewChart = forwardRef((props, ref) => {
       }
     }
   }, [klines, selectedAsset, convertKlinesToCandlestickData, convertKlinesToVolumeData, indicators.volume]);
+
+  // Force scale reset when triggered (e.g., when loading saved analysis)
+  useEffect(() => {
+    if (shouldResetScale && chartRef.current) {
+      // Reset time scale to fit all content
+      chartRef.current.timeScale().fitContent();
+      
+      // Reset price scale to auto-fit
+      chartRef.current.priceScale('right').applyOptions({
+        autoScale: true,
+      });
+      
+      // Clear the flag
+      dispatch(clearScaleReset());
+    }
+  }, [shouldResetScale, dispatch]);
 
   // Draw harmonic patterns - point level lines and markers
   useEffect(() => {
