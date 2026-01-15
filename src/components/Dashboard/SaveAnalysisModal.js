@@ -1,14 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { createSavedAnalysis, clearError, clearSuccess, selectSavedAnalysisCreating, selectSavedAnalysisError, selectLastSuccess } from '../../store/slices/savedAnalysisSlice';
-import { fetchSavedAnalyses } from '../../store/slices/savedAnalysisSlice';
+import { 
+  createSavedAnalysis, 
+  updateSavedAnalysis,
+  fetchSavedAnalyses,
+  clearError, 
+  clearSuccess,
+  clearEditingAnalysis,
+  selectSavedAnalysisCreating, 
+  selectSavedAnalysisUpdating,
+  selectSavedAnalysisError, 
+  selectLastSuccess,
+  selectEditingAnalysisId,
+  selectSavedAnalyses,
+} from '../../store/slices/savedAnalysisSlice';
 import './SaveAnalysisModal.css';
 
 const SaveAnalysisModal = ({ isOpen, onClose }) => {
   const dispatch = useDispatch();
   const creating = useSelector(selectSavedAnalysisCreating);
+  const updating = useSelector(selectSavedAnalysisUpdating);
   const error = useSelector(selectSavedAnalysisError);
   const lastSuccess = useSelector(selectLastSuccess);
+  const editingAnalysisId = useSelector(selectEditingAnalysisId);
+  const analyses = useSelector(selectSavedAnalyses);
 
   // Get current state from Redux
   const { selectedAsset } = useSelector((state) => state.assets);
@@ -29,21 +44,46 @@ const SaveAnalysisModal = ({ isOpen, onClose }) => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
 
-  // Generate default name based on asset
+  // Znajdź edytowaną analizę
+  const editingAnalysis = editingAnalysisId 
+    ? analyses.find(a => a.id === editingAnalysisId) 
+    : null;
+
+  // Określ czy jesteśmy w trybie edycji
+  const isEditMode = !!editingAnalysisId;
+  const isSaving = creating || updating;
+
+  // Generate default name based on asset OR load from editing analysis
   useEffect(() => {
-    if (isOpen && selectedAsset) {
-      const date = new Date().toLocaleDateString('pl-PL');
-      setName(`${selectedAsset.asset}/${selectedAsset.quote} - ${interval} - ${date}`);
-      setDescription('');
+    if (isOpen) {
       dispatch(clearError());
+      
+      if (isEditMode && editingAnalysis) {
+        // Tryb edycji - załaduj dane z istniejącej analizy
+        setName(editingAnalysis.name || '');
+        setDescription(editingAnalysis.description || '');
+      } else {
+        // Tryb tworzenia - generuj domyślną nazwę
+        if (selectedAsset) {
+          const date = new Date().toLocaleDateString('pl-PL');
+          setName(`${selectedAsset.asset || selectedAsset.asset_name}/${selectedAsset.quote || selectedAsset.quote_name} - ${interval} - ${date}`);
+          setDescription('');
+        }
+      }
     }
-  }, [isOpen, selectedAsset, interval, dispatch]);
+  }, [isOpen, selectedAsset, interval, dispatch, isEditMode, editingAnalysis]);
 
   // Close modal on success
   useEffect(() => {
-    if (lastSuccess && lastSuccess.type === 'create') {
+    if (lastSuccess && (lastSuccess.type === 'create' || lastSuccess.type === 'update')) {
       // Refresh the saved analyses list
-      dispatch(fetchSavedAnalyses());
+      dispatch(fetchSavedAnalyses({ limit: 1000, offset: 0 }));
+      
+      // Jeśli był update, wyłącz tryb edycji
+      if (lastSuccess.type === 'update') {
+        dispatch(clearEditingAnalysis());
+      }
+      
       setTimeout(() => {
         dispatch(clearSuccess());
         onClose();
@@ -75,26 +115,67 @@ const SaveAnalysisModal = ({ isOpen, onClose }) => {
       harmonic_pattern_ids: harmonicPatterns.map(p => p.id),
     };
 
-    dispatch(createSavedAnalysis(analysisData));
+    if (isEditMode) {
+      // Tryb edycji - update istniejącej analizy
+      dispatch(updateSavedAnalysis({
+        analysisId: editingAnalysisId,
+        updateData: analysisData
+      }));
+    } else {
+      // Tryb tworzenia - stwórz nową analizę
+      dispatch(createSavedAnalysis(analysisData));
+    }
+  };
+
+  const handleClose = () => {
+    // Nie czyścimy trybu edycji przy zamknięciu modalu
+    // żeby użytkownik mógł otworzyć ponownie i kontynuować edycję
+    onClose();
+  };
+
+  const handleExitEditMode = () => {
+    dispatch(clearEditingAnalysis());
   };
 
   if (!isOpen) return null;
 
+  const successType = lastSuccess?.type;
+  const isSuccess = successType === 'create' || successType === 'update';
+
   return (
-    <div className="save-modal-overlay" onClick={onClose}>
-      <div className="save-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="save-modal-overlay" onClick={handleClose}>
+      <div className={`save-modal ${isEditMode ? 'edit-mode' : ''}`} onClick={(e) => e.stopPropagation()}>
         <div className="save-modal-header">
-          <h3>💾 Save Analysis</h3>
-          <button className="close-btn" onClick={onClose}>×</button>
+          <h3>
+            {isEditMode ? '✏️ Update Analysis' : '💾 Save Analysis'}
+          </h3>
+          <button className="close-btn" onClick={handleClose}>×</button>
         </div>
 
-        {lastSuccess && lastSuccess.type === 'create' ? (
+        {isSuccess ? (
           <div className="save-modal-success">
             <span className="success-icon">✓</span>
             <span>{lastSuccess.message}</span>
           </div>
         ) : (
           <div className="save-modal-content">
+            {/* Edit mode indicator */}
+            {isEditMode && (
+              <div className="edit-mode-banner">
+                <span className="banner-icon">✏️</span>
+                <span className="banner-text">
+                  Edytujesz: <strong>{editingAnalysis?.name}</strong>
+                </span>
+                <button 
+                  className="exit-edit-btn"
+                  onClick={handleExitEditMode}
+                  title="Przełącz na tryb tworzenia"
+                >
+                  Nowa analiza
+                </button>
+              </div>
+            )}
+
             <div className="save-modal-info">
               <div className="info-item">
                 <span className="info-label">Asset:</span>
@@ -143,15 +224,20 @@ const SaveAnalysisModal = ({ isOpen, onClose }) => {
             )}
 
             <div className="save-modal-actions">
-              <button className="cancel-btn" onClick={onClose} disabled={creating}>
+              <button className="cancel-btn" onClick={handleClose} disabled={isSaving}>
                 Cancel
               </button>
               <button
-                className="save-btn"
+                className={`save-btn ${isEditMode ? 'update-btn' : ''}`}
                 onClick={handleSave}
-                disabled={creating || !name.trim()}
+                disabled={isSaving || !name.trim()}
               >
-                {creating ? '⟳ Saving...' : '💾 Save Analysis'}
+                {isSaving 
+                  ? '⟳ Saving...' 
+                  : isEditMode 
+                    ? '✏️ Update Analysis' 
+                    : '💾 Save Analysis'
+                }
               </button>
             </div>
           </div>
@@ -162,4 +248,3 @@ const SaveAnalysisModal = ({ isOpen, onClose }) => {
 };
 
 export default SaveAnalysisModal;
-

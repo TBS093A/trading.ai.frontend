@@ -137,6 +137,9 @@ const savedAnalysisSlice = createSlice({
     // Aktualnie ładowana/wyświetlana pełna analiza
     currentAnalysis: null,
     
+    // Tryb edycji - ID analizy która jest edytowana (null = tryb tworzenia)
+    editingAnalysisId: null,
+    
     // Flagi stanu
     loading: false,
     creating: false,
@@ -165,12 +168,29 @@ const savedAnalysisSlice = createSlice({
     setSearchTerm: (state, action) => {
       state.searchTerm = action.payload;
     },
+    // Ustawia tryb edycji - analiza do edycji
+    setEditingAnalysis: (state, action) => {
+      state.editingAnalysisId = action.payload;
+    },
+    // Wyłącza tryb edycji
+    clearEditingAnalysis: (state) => {
+      state.editingAnalysisId = null;
+    },
+    // Aktualizuje description lokalnie w liście (po edycji inline)
+    updateAnalysisDescription: (state, action) => {
+      const { analysisId, description } = action.payload;
+      const analysis = state.analyses.find(a => a.id === analysisId);
+      if (analysis) {
+        analysis.description = description;
+      }
+    },
     // Resetuje cały stan (np. przy wylogowaniu)
     resetSavedAnalysisState: (state) => {
       state.analyses = [];
       state.totalCount = 0;
       state.searchTerm = '';
       state.currentAnalysis = null;
+      state.editingAnalysisId = null;
       state.loading = false;
       state.creating = false;
       state.updating = false;
@@ -289,6 +309,9 @@ export const {
   clearSuccess,
   clearCurrentAnalysis,
   setSearchTerm,
+  setEditingAnalysis,
+  clearEditingAnalysis,
+  updateAnalysisDescription,
   resetSavedAnalysisState,
 } = savedAnalysisSlice.actions;
 
@@ -296,6 +319,7 @@ export const {
 export const selectSavedAnalyses = (state) => state.savedAnalysis.analyses;
 export const selectTotalCount = (state) => state.savedAnalysis.totalCount;
 export const selectSearchTerm = (state) => state.savedAnalysis.searchTerm;
+export const selectEditingAnalysisId = (state) => state.savedAnalysis.editingAnalysisId;
 export const selectCurrentAnalysis = (state) => state.savedAnalysis.currentAnalysis;
 export const selectSavedAnalysisLoading = (state) => state.savedAnalysis.loading;
 export const selectSavedAnalysisCreating = (state) => state.savedAnalysis.creating;
