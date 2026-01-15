@@ -397,23 +397,32 @@
 .saved-analysis-item .analysis-actions {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 1px;
   flex-shrink: 0;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+/* Show actions on hover */
+.saved-analysis-item:hover .analysis-actions {
+  opacity: 1;
+}
+
+/* Always show when item is expanded or editing */
+.saved-analysis-item.item-expanded .analysis-actions,
+.saved-analysis-item.editing .analysis-actions {
+  opacity: 1;
 }
 
 .saved-analysis-item .action-btn {
   background: transparent;
   border: none;
-  font-size: 0.85rem;
+  font-size: 0.55rem;
   cursor: pointer;
-  padding: 4px 6px;
+  padding: 3px 4px;
   border-radius: var(--radius-sm);
-  opacity: 0.5;
+  opacity: 0.6;
   transition: all var(--transition-fast);
-}
-
-.saved-analysis-item:hover .action-btn {
-  opacity: 0.8;
 }
 
 .saved-analysis-item .action-btn:hover {
