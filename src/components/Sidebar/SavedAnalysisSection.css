@@ -264,7 +264,8 @@
 .saved-analysis-list {
   flex: 1;
   overflow-y: auto;
-  margin: 0 calc(-1 * var(--spacing-md));
+  overflow-x: hidden;
+  margin: 0;
   padding: 0 var(--spacing-xs);
   min-height: 0;
 }
@@ -296,6 +297,7 @@
   border-left: 2px solid transparent;
   transition: all var(--transition-fast);
   margin-bottom: 1px;
+  overflow: visible;
 }
 
 .saved-analysis-item:hover {
@@ -323,7 +325,9 @@
   align-items: center;
   gap: var(--spacing-xs);
   padding: var(--spacing-xs) var(--spacing-sm);
+  padding-right: var(--spacing-xs);
   cursor: pointer;
+  overflow: visible;
 }
 
 .saved-analysis-item .analysis-info {
@@ -397,10 +401,11 @@
 .saved-analysis-item .analysis-actions {
   display: flex;
   align-items: center;
-  gap: 1px;
+  gap: 2px;
   flex-shrink: 0;
   opacity: 0;
   transition: opacity var(--transition-fast);
+  margin-right: 2px;
 }
 
 /* Show actions on hover */
