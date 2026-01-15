@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { login, clearError, selectAuthLoading, selectAuthError } from '../../store/slices/authSlice';
+import { sanitizeString } from '../../utils/security';
 import './Login.css';
 
 // Dane dla animowanego wykresu
@@ -258,7 +259,9 @@ const Login = () => {
       return;
     }
     
-    dispatch(login({ username: username.trim(), password }));
+    // Sanitize username before sending
+    const sanitizedUsername = sanitizeString(username.trim());
+    dispatch(login({ username: sanitizedUsername, password }));
   };
   
   const handleBlur = (field) => {

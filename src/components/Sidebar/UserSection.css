@@ -220,6 +220,25 @@
   color: var(--accent-red);
 }
 
+/* Password strength indicators */
+.password-errors {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.field-hint.strength-weak {
+  color: var(--accent-red);
+}
+
+.field-hint.strength-medium {
+  color: #ffb400;
+}
+
+.field-hint.strength-strong {
+  color: var(--accent-green);
+}
+
 /* Action button */
 .user-action-btn {
   width: 100%;

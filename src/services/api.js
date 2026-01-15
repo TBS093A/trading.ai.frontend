@@ -1,6 +1,10 @@
 import axios from 'axios';
+import { getCsrfToken, clearCsrfToken, sanitizeObject } from '../utils/security';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+
+// Cache dla CSRF tokenu
+let csrfTokenPromise = null;
 
 const axiosInstance = axios.create({
   baseURL: API_BASE_URL,
@@ -10,15 +14,51 @@ const axiosInstance = axios.create({
   },
 });
 
-// Request interceptor - dodaje token autoryzacji
+/**
+ * Pobiera CSRF token (z cache lub z serwera)
+ */
+const ensureCsrfToken = async () => {
+  try {
+    // Unikaj wielokrotnych równoczesnych requestów po token
+    if (!csrfTokenPromise) {
+      csrfTokenPromise = getCsrfToken(API_BASE_URL);
+    }
+    const token = await csrfTokenPromise;
+    csrfTokenPromise = null;
+    return token;
+  } catch (error) {
+    csrfTokenPromise = null;
+    console.warn('[API] Failed to get CSRF token:', error);
+    return null;
+  }
+};
+
+// Request interceptor - dodaje token autoryzacji i CSRF
 axiosInstance.interceptors.request.use(
-  (config) => {
+  async (config) => {
     console.log(`[API] ${config.method?.toUpperCase()} ${config.url}`);
     
     // Dodaj token autoryzacji jeśli istnieje
     const token = localStorage.getItem('authToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    
+    // Dodaj CSRF token dla requestów modyfikujących
+    const modifyingMethods = ['post', 'put', 'delete', 'patch'];
+    if (modifyingMethods.includes(config.method?.toLowerCase())) {
+      // Pomijaj CSRF dla logowania
+      if (!config.url?.includes('/auth/login')) {
+        const csrfToken = await ensureCsrfToken();
+        if (csrfToken) {
+          config.headers['X-CSRF-Token'] = csrfToken;
+        }
+      }
+      
+      // Sanityzuj dane w body (jeśli to nie FormData)
+      if (config.data && !(config.data instanceof FormData)) {
+        config.data = sanitizeObject(config.data);
+      }
     }
     
     return config;
@@ -28,7 +68,7 @@ axiosInstance.interceptors.request.use(
   }
 );
 
-// Response interceptor - obsługuje 401 (nieautoryzowany)
+// Response interceptor - obsługuje błędy
 axiosInstance.interceptors.response.use(
   (response) => {
     return response;
@@ -36,15 +76,33 @@ axiosInstance.interceptors.response.use(
   (error) => {
     console.error('[API Error]', error.response?.data || error.message);
     
-    // Jeśli 401 i NIE jest to endpoint logowania, wyloguj użytkownika
-    // (401 na /user/auth/login to normalna odpowiedź dla błędnych danych)
+    const status = error.response?.status;
     const isLoginEndpoint = error.config?.url?.includes('/user/auth/login');
     
-    if (error.response?.status === 401 && !isLoginEndpoint) {
+    // 401 - nieautoryzowany
+    if (status === 401 && !isLoginEndpoint) {
       localStorage.removeItem('authToken');
       localStorage.removeItem('authUser');
-      // Dispatch event dla App.js do obsługi
+      clearCsrfToken(); // Wyczyść CSRF token przy wylogowaniu
       window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+    }
+    
+    // 403 - CSRF validation failed - odśwież token i spróbuj ponownie
+    if (status === 403 && error.response?.data?.error === 'CSRF Validation Failed') {
+      console.warn('[API] CSRF token expired, clearing cache');
+      clearCsrfToken();
+      // Możesz dodać logikę retry tutaj
+    }
+    
+    // 429 - Rate limit exceeded
+    if (status === 429) {
+      const retryAfter = error.response?.headers?.['retry-after'] || 
+                         error.response?.data?.retry_after || 60;
+      console.warn(`[API] Rate limit exceeded. Retry after ${retryAfter} seconds`);
+      // Dispatch event dla UI do obsługi
+      window.dispatchEvent(new CustomEvent('api:rate-limited', { 
+        detail: { retryAfter } 
+      }));
     }
     
     return Promise.reject(error);

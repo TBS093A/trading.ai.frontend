@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   logout,
@@ -15,6 +15,7 @@ import {
   selectAuthError,
 } from '../../store/slices/authSlice';
 import SavedAnalysisSection from './SavedAnalysisSection';
+import { validatePassword, sanitizeString, clearCsrfToken } from '../../utils/security';
 import './UserSection.css';
 
 const UserSection = () => {
@@ -68,6 +69,7 @@ const UserSection = () => {
   }, [passwordChangeSuccess, dispatch]);
 
   const handleLogout = () => {
+    clearCsrfToken(); // Clear CSRF token on logout
     dispatch(logout());
   };
 
@@ -81,8 +83,9 @@ const UserSection = () => {
 
   const handleUpdateUsername = (e) => {
     e.preventDefault();
-    if (newUsername.trim() && newUsername !== user?.username) {
-      dispatch(updateProfile({ username: newUsername.trim() }));
+    const sanitizedUsername = sanitizeString(newUsername.trim());
+    if (sanitizedUsername && sanitizedUsername !== user?.username) {
+      dispatch(updateProfile({ username: sanitizedUsername }));
     }
   };
 
@@ -99,8 +102,10 @@ const UserSection = () => {
     }
   };
 
+  // Use security utility for password validation
+  const passwordValidation = useMemo(() => validatePassword(newPassword), [newPassword]);
   const passwordsMatch = newPassword === confirmPassword;
-  const isPasswordValid = newPassword.length >= 8;
+  const isPasswordValid = passwordValidation.isValid;
 
   return (
     <div className="user-section-wrapper">
@@ -260,11 +265,21 @@ const UserSection = () => {
                         type="password"
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
-                        placeholder="Min. 8 znaków"
+                        placeholder="Min. 8 znaków, wielka i mała litera, cyfra"
                         minLength={8}
                       />
-                      {newPassword && !isPasswordValid && (
-                        <span className="field-hint error">Hasło musi mieć min. 8 znaków</span>
+                      {newPassword && !isPasswordValid && passwordValidation.errors.length > 0 && (
+                        <div className="password-errors">
+                          {passwordValidation.errors.map((err, idx) => (
+                            <span key={idx} className="field-hint error">{err}</span>
+                          ))}
+                        </div>
+                      )}
+                      {newPassword && isPasswordValid && (
+                        <span className={`field-hint strength-${passwordValidation.strength}`}>
+                          Siła hasła: {passwordValidation.strength === 'strong' ? 'silne' : 
+                                       passwordValidation.strength === 'medium' ? 'średnie' : 'słabe'}
+                        </span>
                       )}
                     </div>
 
