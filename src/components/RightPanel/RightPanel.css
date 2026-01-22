@@ -392,6 +392,31 @@
   color: var(--accent-cyan);
 }
 
+/* Secondary FE groups (not shown by default on chart) */
+.fe-leg-group.secondary-group {
+  opacity: 0.7;
+}
+
+.fe-secondary-badge {
+  font-size: 0.5rem;
+  color: var(--text-muted);
+  background: rgba(128, 128, 128, 0.2);
+  padding: 1px 4px;
+  border-radius: var(--radius-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.fe-default-badge {
+  font-size: 0.5rem;
+  color: var(--accent-cyan);
+  background: rgba(0, 240, 255, 0.15);
+  padding: 1px 4px;
+  border-radius: var(--radius-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
 /* FE Info Tooltip */
 .fe-info-tooltip {
   background: var(--bg-secondary);

@@ -874,9 +874,27 @@ const TradingViewChart = forwardRef((props, ref) => {
       }
 
       // Fibonacci FE Extensions
+      // By default, only draw FE(ABC) and FE(BCD) - other FE types are hidden by default
+      // User can toggle visibility via eye icon in UI
+      const DEFAULT_VISIBLE_FE_LEGS = ['ABC', 'BCD'];
       if (shouldShowFiboFE && fibLevels.fe_extensions) {
         Object.entries(fibLevels.fe_extensions).forEach(([name, data]) => {
+          // Check if explicitly hidden by user (individual line)
           if (hiddenLines.fiboFE?.includes(name)) return;
+          
+          const leg = data.leg || name.split('_')[1] || 'OTHER';
+          const isDefaultLeg = DEFAULT_VISIBLE_FE_LEGS.includes(leg);
+          
+          if (isDefaultLeg) {
+            // Default legs (ABC, BCD): visible unless _disable_<leg> is in hiddenLines
+            const disableKey = `_disable_${leg}`;
+            if (hiddenLines.fiboFE?.includes(disableKey)) return; // User disabled this group
+          } else {
+            // Non-default legs (XA, BC, AB, AC): hidden unless _enable_<leg> is in hiddenLines
+            const enableKey = `_enable_${leg}`;
+            if (!hiddenLines.fiboFE?.includes(enableKey)) return; // Not enabled by user
+          }
+          
           const label = makeLabel('FE', name);
           createFibLine(
             data.price,

@@ -1013,6 +1013,29 @@
   font-style: italic;
 }
 
+/* FE Chart Toggle (eye icon) */
+.fe-chart-toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  opacity: 0.5;
+  transition: all 0.2s ease;
+  filter: grayscale(100%);
+}
+
+.fe-chart-toggle:hover {
+  opacity: 0.8;
+}
+
+.fe-chart-toggle.active {
+  opacity: 1;
+  filter: grayscale(0%);
+  color: var(--accent-cyan);
+}
+
 /* FE Info Button */
 .fe-info-btn {
   background: none;
@@ -1030,6 +1053,16 @@
 .fe-info-btn.active {
   opacity: 1;
   color: var(--accent-cyan);
+}
+
+/* Disabled FE group (not shown on chart) */
+.fe-leg-group.disabled-group {
+  opacity: 0.5;
+}
+
+.fe-leg-group.disabled-group .fe-leg-name {
+  color: var(--text-muted);
+  background: rgba(128, 128, 128, 0.1);
 }
 
 /* FE Info Tooltip */

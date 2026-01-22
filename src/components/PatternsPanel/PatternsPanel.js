@@ -667,13 +667,40 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
                                   feGroups[leg].push({ name, ...data });
                                 });
                                 
+                                // Default visible FE legs (ABC and BCD)
+                                const DEFAULT_VISIBLE_FE_LEGS = ['ABC', 'BCD'];
+                                
                                 return legOrder.filter(leg => feGroups[leg]).map((leg) => {
                                   const isCollapsed = collapsedFEGroups[leg];
                                   const info = FE_GROUP_INFO[leg];
                                   const isInfoActive = activeInfoTooltip === `${pattern.id}-${leg}`;
                                   
+                                  // Check if this FE leg is shown on chart
+                                  const isDefaultLeg = DEFAULT_VISIBLE_FE_LEGS.includes(leg);
+                                  const enableKey = `_enable_${leg}`;
+                                  const disableKey = `_disable_${leg}`;
+                                  const options = getPatternOptions(pattern.id);
+                                  const hiddenFE = options.hiddenLines?.fiboFE || [];
+                                  
+                                  // For default legs: visible if disableKey is NOT in hiddenLines
+                                  // For non-default legs: visible only if enableKey IS in hiddenLines
+                                  const isGroupEnabled = isDefaultLeg 
+                                    ? !hiddenFE.includes(disableKey)
+                                    : hiddenFE.includes(enableKey);
+                                  
+                                  const handleToggleGroupEnabled = (e) => {
+                                    e.stopPropagation();
+                                    // Toggle the appropriate key in hiddenLines
+                                    const toggleKey = isDefaultLeg ? disableKey : enableKey;
+                                    dispatch(toggleFibLineVisibility({ 
+                                      patternId: pattern.id, 
+                                      category: 'fiboFE', 
+                                      lineKey: toggleKey 
+                                    }));
+                                  };
+                                  
                                   return (
-                                    <div key={leg} className={`fe-leg-group ${isCollapsed ? 'collapsed' : ''}`}>
+                                    <div key={leg} className={`fe-leg-group ${isCollapsed ? 'collapsed' : ''} ${!isGroupEnabled ? 'disabled-group' : ''}`}>
                                       <div className="fe-leg-header">
                                         <button 
                                           className="fe-leg-toggle"
@@ -687,6 +714,14 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
                                         </button>
                                         <span className="fe-leg-name">FE({leg})</span>
                                         <span className="fe-leg-levels">{info?.levels}</span>
+                                        {/* Eye toggle for all FE groups */}
+                                        <button 
+                                          className={`fe-chart-toggle ${isGroupEnabled ? 'active' : ''}`}
+                                          onClick={handleToggleGroupEnabled}
+                                          title={isGroupEnabled ? 'Ukryj na wykresie' : 'Pokaż na wykresie'}
+                                        >
+                                          {isGroupEnabled ? '👁' : '👁‍🗨'}
+                                        </button>
                                         <button 
                                           className={`fe-info-btn ${isInfoActive ? 'active' : ''}`}
                                           onClick={(e) => {

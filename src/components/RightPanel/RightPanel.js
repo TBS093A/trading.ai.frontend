@@ -211,13 +211,17 @@ const RightPanel = ({ isOpen }) => {
               feGroups[leg].push({ name, ...data });
             });
             
+            // Default visible FE legs
+            const DEFAULT_VISIBLE_FE_LEGS = ['ABC', 'BCD'];
+            
             return legOrder.filter(leg => feGroups[leg]).map((leg) => {
               const isCollapsed = collapsedFEGroups[leg];
               const info = FE_GROUP_INFO[leg];
               const isInfoActive = activeInfoTooltip === leg;
+              const isDefaultLeg = DEFAULT_VISIBLE_FE_LEGS.includes(leg);
               
               return (
-                <div key={leg} className={`fe-leg-group ${isCollapsed ? 'collapsed' : ''}`}>
+                <div key={leg} className={`fe-leg-group ${isCollapsed ? 'collapsed' : ''} ${!isDefaultLeg ? 'secondary-group' : ''}`}>
                   <div className="fe-leg-header">
                     <button 
                       className="fe-leg-toggle"
@@ -228,6 +232,16 @@ const RightPanel = ({ isOpen }) => {
                     </button>
                     <span className="fe-leg-name">FE({leg})</span>
                     <span className="fe-leg-levels">{info?.levels}</span>
+                    {!isDefaultLeg && (
+                      <span className="fe-secondary-badge" title="Nie wyświetlane domyślnie na wykresie">
+                        opcjonalne
+                      </span>
+                    )}
+                    {isDefaultLeg && (
+                      <span className="fe-default-badge" title="Wyświetlane domyślnie na wykresie">
+                        domyślne
+                      </span>
+                    )}
                     <button 
                       className={`fe-info-btn ${isInfoActive ? 'active' : ''}`}
                       onClick={() => setActiveInfoTooltip(isInfoActive ? null : leg)}
