@@ -12,26 +12,26 @@ const FE_GROUP_INFO = {
   'XA': {
     title: 'FE(XA)',
     levels: '1.272, 1.618',
-    patterns: 'Butterfly, Crab, Deep Crab',
-    description: 'Gdzie rynek przestrzeli impuls (sprawdza poziom pkt D). Jeśli wygląda na to, że D > X, to można sprawdzić poziom D właśnie FE(XA).',
+    patterns: 'Butterfly, Crab, Deep Crab (tylko XABCD)',
+    description: 'Gdzie rynek przestrzeli impuls (sprawdza poziom pkt D). Jeśli wygląda na to, że D > X, to można sprawdzić poziom D właśnie FE(XA). Niedostępne dla ABCD.',
   },
   'BC': {
     title: 'FE(BC)',
     levels: '1.13, 1.272, 1.618, 2.0',
-    patterns: 'Shark, Deep Shark, 5-0',
-    description: 'Emocjonalne wykończenie ruchu - stop hunt, panic moves. To FE szuka D-ekstremum.',
+    patterns: 'Shark, Deep Shark, 5-0, ABCD',
+    description: 'Emocjonalne wykończenie ruchu - stop hunt, panic moves. To FE szuka D-ekstremum. Kluczowe dla szukania punktu wejścia.',
   },
   'AB': {
     title: 'FE(AB)',
     levels: '1.0, 1.272, 1.618',
-    patterns: 'Bat, Gartley, korekty ABCD',
-    description: 'Sprawdza czy korekta jest geometrycznie zdrowa / symetria rynku. To FE sprawdza strukturę AB/CD.',
+    patterns: 'Bat, Gartley, ABCD',
+    description: 'Sprawdza czy korekta jest geometrycznie zdrowa / symetria rynku. 1.0 = AB=CD, 1.272/1.618 = rozszerzone ABCD.',
   },
   'AC': {
     title: 'FE(AC)',
     levels: '1.272, 1.618',
-    patterns: 'Bat',
-    description: 'Sprawdza drugą falę impulsu (CD) wewnątrz struktury - tzn. sprawdza poziom pkt D.',
+    patterns: 'Bat, ABCD',
+    description: 'Sprawdza drugą falę impulsu (CD) wewnątrz struktury - tzn. sprawdza poziom pkt D względem całego ruchu A→C.',
   },
   'ABC': {
     title: 'FE(ABC)',
@@ -42,8 +42,8 @@ const FE_GROUP_INFO = {
   'BCD': {
     title: 'FE(BCD)',
     levels: '1.272, 1.618',
-    patterns: 'Wszystkie XABCD',
-    description: 'Sprawdza domknięcie korekty (weryfikuje pkt D). Ma rolę weryfikacyjną - sprawdza symetrię korekty podwyższając wiarygodność formacji.',
+    patterns: 'ABCD, wszystkie XABCD',
+    description: 'Sprawdza domknięcie korekty (weryfikuje pkt D). KLUCZOWE dla ABCD! 1.618 = korekta pędząca. Sprawdza symetrię BC/CD.',
   },
 };
 
