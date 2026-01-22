@@ -262,10 +262,12 @@
 }
 
 .patterns-list .asset-item.pattern-item {
-  flex-direction: column;
-  align-items: stretch;
+  flex-direction: row;
+  align-items: center;
   gap: 4px;
-  padding: var(--spacing-sm) var(--spacing-md);
+  padding: 0;
+  padding-left: 0;
+  border-left: 2px solid transparent;
 }
 
 .patterns-list .asset-item.pattern-item:hover {
@@ -276,6 +278,24 @@
 .patterns-list .asset-item.pattern-item.selected {
   border-left-color: var(--accent-purple, #a855f7);
   background: rgba(168, 85, 247, 0.1);
+}
+
+.patterns-list .asset-item.pattern-item.confirm-delete {
+  border-left-color: var(--accent-red);
+  background: rgba(255, 51, 102, 0.1);
+}
+
+.pattern-item-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
 }
 
 .pattern-item-main {
@@ -289,6 +309,56 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--spacing-sm);
+}
+
+/* Pattern Delete Button */
+.pattern-delete-btn {
+  width: 24px;
+  height: 100%;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-left: 1px solid var(--border-primary);
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  cursor: pointer;
+  opacity: 0;
+  transition: all var(--transition-fast);
+}
+
+.patterns-list .asset-item.pattern-item:hover .pattern-delete-btn {
+  opacity: 0.6;
+}
+
+.pattern-delete-btn:hover {
+  opacity: 1 !important;
+  color: var(--accent-red);
+  background: rgba(255, 51, 102, 0.1);
+}
+
+.pattern-delete-btn.confirming {
+  opacity: 1 !important;
+  color: var(--accent-yellow);
+  background: rgba(255, 204, 0, 0.15);
+  animation: pulse-warning 0.5s ease infinite alternate;
+}
+
+@keyframes pulse-warning {
+  from { background: rgba(255, 204, 0, 0.1); }
+  to { background: rgba(255, 204, 0, 0.25); }
+}
+
+.pattern-delete-btn:disabled {
+  cursor: not-allowed;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .pattern-date {

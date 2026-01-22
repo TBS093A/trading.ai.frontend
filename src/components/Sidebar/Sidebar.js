@@ -14,6 +14,8 @@ const Sidebar = ({ isOpen }) => {
   const dispatch = useDispatch();
   const { list: exchanges, selectedExchange, loading: exchangesLoading } = useSelector((state) => state.exchanges);
   const { filteredList: assets, selectedAsset, searchTerm, loading: assetsLoading } = useSelector((state) => state.assets);
+  const { user } = useSelector((state) => state.auth);
+  const isAdmin = user?.role === 'administrator';
 
   // Collapsible sections state
   const [assetsExpanded, setAssetsExpanded] = useState(true);
@@ -22,6 +24,10 @@ const Sidebar = ({ isOpen }) => {
   // Assets with patterns state
   const [assetsWithPatterns, setAssetsWithPatterns] = useState([]);
   const [patternsLoading, setPatternsLoading] = useState(false);
+  
+  // Delete confirmation state
+  const [deletingAssetId, setDeletingAssetId] = useState(null);
+  const [deleteConfirmAssetId, setDeleteConfirmAssetId] = useState(null);
 
   // Fetch assets when exchange changes
   useEffect(() => {
@@ -77,6 +83,61 @@ const Sidebar = ({ isOpen }) => {
   const handleSearchChange = useCallback((e) => {
     dispatch(setSearchTerm(e.target.value));
   }, [dispatch]);
+
+  // Refresh assets with patterns list
+  const refreshAssetsWithPatterns = useCallback(() => {
+    if (selectedExchange) {
+      setPatternsLoading(true);
+      api.getAssetsWithPatterns(selectedExchange.id)
+        .then((response) => {
+          setAssetsWithPatterns(response.data.assets || []);
+        })
+        .catch((error) => {
+          console.error('Failed to fetch assets with patterns:', error);
+        })
+        .finally(() => {
+          setPatternsLoading(false);
+        });
+    }
+  }, [selectedExchange]);
+
+  // Handle delete all patterns for asset
+  const handleDeletePatterns = useCallback(async (assetId, e) => {
+    e.stopPropagation();
+    
+    if (deleteConfirmAssetId !== assetId) {
+      // First click - show confirmation
+      setDeleteConfirmAssetId(assetId);
+      return;
+    }
+    
+    // Second click - perform delete
+    setDeletingAssetId(assetId);
+    setDeleteConfirmAssetId(null);
+    
+    try {
+      const response = await api.deleteAllPatternsForAsset(assetId);
+      console.log('Delete response:', response.data);
+      
+      // Refresh the list
+      refreshAssetsWithPatterns();
+      
+      // Clear selected asset if it was the deleted one
+      if (selectedAsset?.id === assetId) {
+        dispatch(clearAnalysis());
+      }
+    } catch (error) {
+      console.error('Failed to delete patterns:', error);
+      alert(error.response?.data?.detail || 'Nie udało się usunąć wzorców');
+    } finally {
+      setDeletingAssetId(null);
+    }
+  }, [deleteConfirmAssetId, refreshAssetsWithPatterns, selectedAsset, dispatch]);
+
+  // Cancel delete confirmation when clicking elsewhere
+  const handleCancelDeleteConfirm = useCallback(() => {
+    setDeleteConfirmAssetId(null);
+  }, []);
 
   return (
     <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
@@ -197,7 +258,7 @@ const Sidebar = ({ isOpen }) => {
             </button>
             
             {patternsExpanded && (
-              <div className="asset-list patterns-list">
+              <div className="asset-list patterns-list" onClick={handleCancelDeleteConfirm}>
                 {patternsLoading ? (
                   <div className="loader">
                     <div className="loader-spinner"></div>
@@ -208,26 +269,45 @@ const Sidebar = ({ isOpen }) => {
                     <span>No patterns found</span>
                   </div>
                 ) : (
-                  filteredAssetsWithPatterns.map((asset) => (
-                    <button
-                      key={asset.id}
-                      className={`asset-item pattern-item ${selectedAsset?.id === asset.id ? 'selected' : ''}`}
-                      onClick={() => handleAssetSelect(asset)}
-                    >
-                      <div className="pattern-item-main">
-                        <span className="asset-symbol">{asset.asset}</span>
-                        <span className="asset-quote">/{asset.quote}</span>
+                  filteredAssetsWithPatterns.map((asset) => {
+                    const isDeleting = deletingAssetId === asset.id;
+                    const isConfirming = deleteConfirmAssetId === asset.id;
+                    
+                    return (
+                      <div
+                        key={asset.id}
+                        className={`asset-item pattern-item ${selectedAsset?.id === asset.id ? 'selected' : ''} ${isConfirming ? 'confirm-delete' : ''}`}
+                      >
+                        <button
+                          className="pattern-item-content"
+                          onClick={() => handleAssetSelect(asset)}
+                        >
+                          <div className="pattern-item-main">
+                            <span className="asset-symbol">{asset.asset}</span>
+                            <span className="asset-quote">/{asset.quote}</span>
+                          </div>
+                          <div className="pattern-item-meta">
+                            <span className="pattern-date" title="Latest Pattern">
+                              {asset.latest_pattern_date || '—'}
+                            </span>
+                            <span className="pattern-count" title="Patterns Count">
+                              {asset.patterns_count}
+                            </span>
+                          </div>
+                        </button>
+                        {isAdmin && (
+                          <button
+                            className={`pattern-delete-btn ${isConfirming ? 'confirming' : ''}`}
+                            onClick={(e) => handleDeletePatterns(asset.id, e)}
+                            disabled={isDeleting}
+                            title={isConfirming ? 'Kliknij ponownie aby potwierdzić' : 'Usuń wszystkie wzorce'}
+                          >
+                            {isDeleting ? '⟳' : isConfirming ? '⚠' : '✕'}
+                          </button>
+                        )}
                       </div>
-                      <div className="pattern-item-meta">
-                        <span className="pattern-date" title="Latest Pattern">
-                          {asset.latest_pattern_date || '—'}
-                        </span>
-                        <span className="pattern-count" title="Patterns Count">
-                          {asset.patterns_count}
-                        </span>
-                      </div>
-                    </button>
-                  ))
+                    );
+                  })
                 )}
               </div>
             )}

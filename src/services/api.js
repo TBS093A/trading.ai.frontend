@@ -270,6 +270,10 @@ const api = {
       params: { limit },
     }),
 
+  // Delete all patterns for an asset (admin only)
+  deleteAllPatternsForAsset: (assetId) =>
+    axiosInstance.delete(`/analysis/technical/asset/${assetId}/all`),
+
   // ==================
   // STATS
   // ==================
