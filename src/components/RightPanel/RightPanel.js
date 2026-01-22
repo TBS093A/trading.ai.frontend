@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { 
   clearSelectedPattern, 
@@ -7,9 +7,61 @@ import {
 import { setRightPanelOpen } from '../../store/slices/uiSlice';
 import './RightPanel.css';
 
+// FE Group descriptions for info tooltips
+const FE_GROUP_INFO = {
+  'XA': {
+    title: 'FE(XA)',
+    levels: '1.272, 1.618',
+    patterns: 'Butterfly, Crab, Deep Crab',
+    description: 'Gdzie rynek przestrzeli impuls (sprawdza poziom pkt D). Jeśli wygląda na to, że D > X, to można sprawdzić poziom D właśnie FE(XA).',
+  },
+  'BC': {
+    title: 'FE(BC)',
+    levels: '1.13, 1.272, 1.618, 2.0',
+    patterns: 'Shark, Deep Shark, 5-0',
+    description: 'Emocjonalne wykończenie ruchu - stop hunt, panic moves. To FE szuka D-ekstremum.',
+  },
+  'AB': {
+    title: 'FE(AB)',
+    levels: '1.0, 1.272, 1.618',
+    patterns: 'Bat, Gartley, korekty ABCD',
+    description: 'Sprawdza czy korekta jest geometrycznie zdrowa / symetria rynku. To FE sprawdza strukturę AB/CD.',
+  },
+  'AC': {
+    title: 'FE(AC)',
+    levels: '1.272, 1.618',
+    patterns: 'Bat',
+    description: 'Sprawdza drugą falę impulsu (CD) wewnątrz struktury - tzn. sprawdza poziom pkt D.',
+  },
+  'ABC': {
+    title: 'FE(ABC)',
+    levels: '1.272, 1.618',
+    patterns: 'ABCD, Bat, Gartley',
+    description: 'Sprawdza kontynuację impulsu (czy po korekcie BC rynek ma jeszcze siłę, aby pociągnąć impuls AB dalej?). Ma rolę prognostyczną - dobre pod TP.',
+  },
+  'BCD': {
+    title: 'FE(BCD)',
+    levels: '1.272, 1.618',
+    patterns: 'Wszystkie XABCD',
+    description: 'Sprawdza domknięcie korekty (weryfikuje pkt D). Ma rolę weryfikacyjną - sprawdza symetrię korekty podwyższając wiarygodność formacji.',
+  },
+};
+
 const RightPanel = ({ isOpen }) => {
   const dispatch = useDispatch();
   const { selectedPattern, panelOptions } = useSelector((state) => state.analysis);
+  
+  // State for collapsed FE groups - only ABC and BCD expanded by default
+  const [collapsedFEGroups, setCollapsedFEGroups] = useState({
+    'XA': true,
+    'BC': true,
+    'AB': true,
+    'AC': true,
+    'ABC': false,
+    'BCD': false,
+  });
+  // State for info tooltip visibility
+  const [activeInfoTooltip, setActiveInfoTooltip] = useState(null);
 
   if (!selectedPattern) return null;
 
@@ -148,14 +200,66 @@ const RightPanel = ({ isOpen }) => {
           <h4 className="section-title fib-title fe">
             Fibonacci FE
           </h4>
-          <div className="fib-levels-list">
-            {Object.entries(fibLevels.fe_extensions).map(([name, data]) => (
-              <div key={name} className="fib-level-item">
-                <span className="fib-level">{name}</span>
-                <span className="fib-price">{data.price?.toFixed(8)}</span>
-              </div>
-            ))}
-          </div>
+          {/* Group FE levels by leg */}
+          {(() => {
+            const feGroups = {};
+            const legOrder = ['XA', 'BC', 'AB', 'AC', 'ABC', 'BCD'];
+            
+            Object.entries(fibLevels.fe_extensions).forEach(([name, data]) => {
+              const leg = data.leg || name.split('_')[1] || 'OTHER';
+              if (!feGroups[leg]) feGroups[leg] = [];
+              feGroups[leg].push({ name, ...data });
+            });
+            
+            return legOrder.filter(leg => feGroups[leg]).map((leg) => {
+              const isCollapsed = collapsedFEGroups[leg];
+              const info = FE_GROUP_INFO[leg];
+              const isInfoActive = activeInfoTooltip === leg;
+              
+              return (
+                <div key={leg} className={`fe-leg-group ${isCollapsed ? 'collapsed' : ''}`}>
+                  <div className="fe-leg-header">
+                    <button 
+                      className="fe-leg-toggle"
+                      onClick={() => setCollapsedFEGroups(prev => ({ ...prev, [leg]: !prev[leg] }))}
+                      title={isCollapsed ? 'Rozwiń' : 'Zwiń'}
+                    >
+                      <span className={`toggle-arrow ${isCollapsed ? '' : 'expanded'}`}>▶</span>
+                    </button>
+                    <span className="fe-leg-name">FE({leg})</span>
+                    <span className="fe-leg-levels">{info?.levels}</span>
+                    <button 
+                      className={`fe-info-btn ${isInfoActive ? 'active' : ''}`}
+                      onClick={() => setActiveInfoTooltip(isInfoActive ? null : leg)}
+                      title="Pokaż opis"
+                    >
+                      ⓘ
+                    </button>
+                  </div>
+                  
+                  {isInfoActive && info && (
+                    <div className="fe-info-tooltip">
+                      <div className="fe-info-patterns">
+                        <strong>Patterny:</strong> {info.patterns}
+                      </div>
+                      <div className="fe-info-desc">{info.description}</div>
+                    </div>
+                  )}
+                  
+                  {!isCollapsed && (
+                    <div className="fib-levels-list">
+                      {feGroups[leg].map(({ name, price, level }) => (
+                        <div key={name} className="fib-level-item">
+                          <span className="fib-level">{(level * 100).toFixed(1)}%</span>
+                          <span className="fib-price">{price?.toFixed(8)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            });
+          })()}
         </section>
       )}
 

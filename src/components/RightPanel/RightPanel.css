@@ -297,6 +297,132 @@
   border-left-color: var(--accent-red);
 }
 
+/* FE Leg Groups */
+.fe-leg-group {
+  margin-bottom: var(--spacing-sm);
+  padding-bottom: var(--spacing-xs);
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.fe-leg-group:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.fe-leg-group.collapsed {
+  padding-bottom: 0;
+}
+
+.fe-leg-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.fe-leg-group.collapsed .fe-leg-header {
+  margin-bottom: 0;
+}
+
+.fe-leg-toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+}
+
+.toggle-arrow {
+  font-size: 0.55rem;
+  color: var(--text-muted);
+  transition: transform 0.2s ease;
+}
+
+.toggle-arrow.expanded {
+  transform: rotate(90deg);
+}
+
+.fe-leg-toggle:hover .toggle-arrow {
+  color: var(--accent-cyan);
+}
+
+.fe-leg-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--accent-cyan);
+  padding: 2px 6px;
+  background: rgba(0, 240, 255, 0.1);
+  border-radius: var(--radius-sm);
+}
+
+.fe-leg-levels {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--text-muted);
+}
+
+.fe-leg-desc {
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* FE Info Button */
+.fe-info-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  opacity: 0.6;
+  transition: all 0.2s ease;
+  margin-left: auto;
+}
+
+.fe-info-btn:hover,
+.fe-info-btn.active {
+  opacity: 1;
+  color: var(--accent-cyan);
+}
+
+/* FE Info Tooltip */
+.fe-info-tooltip {
+  background: var(--bg-secondary);
+  border: 1px solid var(--accent-cyan);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  margin: 6px 0;
+  font-size: 0.65rem;
+  animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fe-info-patterns {
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.fe-info-patterns strong {
+  color: var(--accent-cyan);
+  font-weight: 600;
+}
+
+.fe-info-desc {
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
 .fib-level {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.7rem;

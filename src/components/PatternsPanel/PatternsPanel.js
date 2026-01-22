@@ -18,9 +18,60 @@ import {
 import { togglePatternsPanel } from '../../store/slices/uiSlice';
 import './PatternsPanel.css';
 
+// FE Group descriptions for info tooltips
+const FE_GROUP_INFO = {
+  'XA': {
+    title: 'FE(XA)',
+    levels: '1.272, 1.618',
+    patterns: 'Butterfly, Crab, Deep Crab',
+    description: 'Gdzie rynek przestrzeli impuls (sprawdza poziom pkt D). Jeśli wygląda na to, że D > X, to można sprawdzić poziom D właśnie FE(XA).',
+  },
+  'BC': {
+    title: 'FE(BC)',
+    levels: '1.13, 1.272, 1.618, 2.0',
+    patterns: 'Shark, Deep Shark, 5-0',
+    description: 'Emocjonalne wykończenie ruchu - stop hunt, panic moves. To FE szuka D-ekstremum.',
+  },
+  'AB': {
+    title: 'FE(AB)',
+    levels: '1.0, 1.272, 1.618',
+    patterns: 'Bat, Gartley, korekty ABCD',
+    description: 'Sprawdza czy korekta jest geometrycznie zdrowa / symetria rynku. To FE sprawdza strukturę AB/CD.',
+  },
+  'AC': {
+    title: 'FE(AC)',
+    levels: '1.272, 1.618',
+    patterns: 'Bat',
+    description: 'Sprawdza drugą falę impulsu (CD) wewnątrz struktury - tzn. sprawdza poziom pkt D.',
+  },
+  'ABC': {
+    title: 'FE(ABC)',
+    levels: '1.272, 1.618',
+    patterns: 'ABCD, Bat, Gartley',
+    description: 'Sprawdza kontynuację impulsu (czy po korekcie BC rynek ma jeszcze siłę, aby pociągnąć impuls AB dalej?). Ma rolę prognostyczną - dobre pod TP.',
+  },
+  'BCD': {
+    title: 'FE(BCD)',
+    levels: '1.272, 1.618',
+    patterns: 'Wszystkie XABCD',
+    description: 'Sprawdza domknięcie korekty (weryfikuje pkt D). Ma rolę weryfikacyjną - sprawdza symetrię korekty podwyższając wiarygodność formacji.',
+  },
+};
+
 const PatternsPanel = ({ isOpen, onCenterPattern }) => {
   const dispatch = useDispatch();
   const [isSettingsExpanded, setIsSettingsExpanded] = useState(false);
+  // State for collapsed FE groups - only ABC and BCD expanded by default
+  const [collapsedFEGroups, setCollapsedFEGroups] = useState({
+    'XA': true,
+    'BC': true,
+    'AB': true,
+    'AC': true,
+    'ABC': false,
+    'BCD': false,
+  });
+  // State for info tooltip visibility
+  const [activeInfoTooltip, setActiveInfoTooltip] = useState(null);
   const { 
     harmonicPatterns, 
     selectedPattern, 
@@ -603,22 +654,82 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
                           {patternOptions.showFiboFE && fibLevels.fe_extensions && (
                             <div className="details-section fib-section">
                               <div className="details-title fib-fe">Fibo FE</div>
-                              <div className="fib-grid">
-                                {Object.entries(fibLevels.fe_extensions).map(([name, data]) => {
-                                  const visible = isLineVisible(pattern.id, 'fiboFE', name);
+                              {/* Group FE levels by leg */}
+                              {(() => {
+                                const feGroups = {};
+                                // Define leg order
+                                const legOrder = ['XA', 'BC', 'AB', 'AC', 'ABC', 'BCD'];
+                                
+                                // Group by leg
+                                Object.entries(fibLevels.fe_extensions).forEach(([name, data]) => {
+                                  const leg = data.leg || name.split('_')[1] || 'OTHER';
+                                  if (!feGroups[leg]) feGroups[leg] = [];
+                                  feGroups[leg].push({ name, ...data });
+                                });
+                                
+                                return legOrder.filter(leg => feGroups[leg]).map((leg) => {
+                                  const isCollapsed = collapsedFEGroups[leg];
+                                  const info = FE_GROUP_INFO[leg];
+                                  const isInfoActive = activeInfoTooltip === `${pattern.id}-${leg}`;
+                                  
                                   return (
-                                    <button
-                                      key={name}
-                                      className={`fib-item clickable ${visible ? 'visible' : 'hidden'}`}
-                                      onClick={(e) => handleFibLineClick(e, pattern.id, 'fiboFE', name)}
-                                      title={visible ? 'Click to hide' : 'Click to show'}
-                                    >
-                                    <span className="fib-lvl">{name}</span>
-                                    <span className="fib-prc">{data.price?.toFixed(6)}</span>
-                                    </button>
+                                    <div key={leg} className={`fe-leg-group ${isCollapsed ? 'collapsed' : ''}`}>
+                                      <div className="fe-leg-header">
+                                        <button 
+                                          className="fe-leg-toggle"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setCollapsedFEGroups(prev => ({ ...prev, [leg]: !prev[leg] }));
+                                          }}
+                                          title={isCollapsed ? 'Rozwiń' : 'Zwiń'}
+                                        >
+                                          <span className={`toggle-arrow ${isCollapsed ? '' : 'expanded'}`}>▶</span>
+                                        </button>
+                                        <span className="fe-leg-name">FE({leg})</span>
+                                        <span className="fe-leg-levels">{info?.levels}</span>
+                                        <button 
+                                          className={`fe-info-btn ${isInfoActive ? 'active' : ''}`}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setActiveInfoTooltip(isInfoActive ? null : `${pattern.id}-${leg}`);
+                                          }}
+                                          title="Pokaż opis"
+                                        >
+                                          ⓘ
+                                        </button>
+                                      </div>
+                                      
+                                      {isInfoActive && info && (
+                                        <div className="fe-info-tooltip">
+                                          <div className="fe-info-patterns">
+                                            <strong>Patterny:</strong> {info.patterns}
+                                          </div>
+                                          <div className="fe-info-desc">{info.description}</div>
+                                        </div>
+                                      )}
+                                      
+                                      {!isCollapsed && (
+                                        <div className="fib-grid">
+                                          {feGroups[leg].map(({ name, price, level }) => {
+                                            const visible = isLineVisible(pattern.id, 'fiboFE', name);
+                                            return (
+                                              <button
+                                                key={name}
+                                                className={`fib-item clickable ${visible ? 'visible' : 'hidden'}`}
+                                                onClick={(e) => handleFibLineClick(e, pattern.id, 'fiboFE', name)}
+                                                title={visible ? 'Click to hide' : 'Click to show'}
+                                              >
+                                                <span className="fib-lvl">{(level * 100).toFixed(1)}%</span>
+                                                <span className="fib-prc">{price?.toFixed(6)}</span>
+                                              </button>
+                                            );
+                                          })}
+                                        </div>
+                                      )}
+                                    </div>
                                   );
-                                })}
-                              </div>
+                                });
+                              })()}
                               <div className="shared-intervals">
                                 <span className="shared-label">Shared on:</span>
                                 <div className="interval-buttons">
