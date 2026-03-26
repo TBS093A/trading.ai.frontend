@@ -10,14 +10,14 @@
   min-height: 0;
   flex: 0 0 auto;
   transition: flex var(--transition-fast);
+  max-height: none;
 }
 
-/* Only expand when section is expanded */
 .saved-analysis-section.section-expanded {
   flex: 1 1 0;
+  max-height: 350px;
 }
 
-/* When collapsed, don't take extra space */
 .saved-analysis-section.section-collapsed {
   flex: 0 0 auto;
 }

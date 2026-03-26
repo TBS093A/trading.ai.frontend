@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   logout,
@@ -14,6 +14,11 @@ import {
   selectAuthLoading,
   selectAuthError,
 } from '../../store/slices/authSlice';
+import { setSelectedExchange } from '../../store/slices/exchangesSlice';
+import { clearAssets } from '../../store/slices/assetsSlice';
+import { clearChart } from '../../store/slices/chartSlice';
+import { clearAnalysis } from '../../store/slices/analysisSlice';
+import SyncSection from './SyncSection';
 import SavedAnalysisSection from './SavedAnalysisSection';
 import { validatePassword, sanitizeString, clearCsrfToken } from '../../utils/security';
 import './UserSection.css';
@@ -29,6 +34,8 @@ const UserSection = () => {
   const passwordChangeLoading = useSelector((state) => state.auth.passwordChangeLoading);
   const profileUpdateLoading = useSelector((state) => state.auth.profileUpdateLoading);
   const avatarLoading = useSelector((state) => state.auth.avatarLoading);
+
+  const { list: exchanges, selectedExchange, loading: exchangesLoading } = useSelector((state) => state.exchanges);
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeSection, setActiveSection] = useState(null);
@@ -67,6 +74,17 @@ const UserSection = () => {
       return () => clearTimeout(timer);
     }
   }, [passwordChangeSuccess, dispatch]);
+
+  const handleExchangeChange = useCallback((e) => {
+    const exchangeId = parseInt(e.target.value);
+    const exchange = exchanges.find((ex) => ex.id === exchangeId);
+    if (exchange) {
+      dispatch(setSelectedExchange(exchange));
+      dispatch(clearAssets());
+      dispatch(clearChart());
+      dispatch(clearAnalysis());
+    }
+  }, [dispatch, exchanges]);
 
   const handleLogout = () => {
     clearCsrfToken(); // Clear CSRF token on logout
@@ -135,6 +153,31 @@ const UserSection = () => {
       {/* Expanded content */}
       {isExpanded && (
         <div className="user-dropdown-content">
+          {/* Exchange Selector */}
+          <div className="user-item exchange-item">
+            <div className="user-item-header exchange-header">
+              <span className="item-icon">⬡</span>
+              <span className="item-title">Exchange</span>
+            </div>
+            <div className="user-item-content exchange-content">
+              <select
+                className="user-exchange-select"
+                value={selectedExchange?.id || ''}
+                onChange={handleExchangeChange}
+                disabled={exchangesLoading}
+              >
+                {exchanges.map((exchange) => (
+                  <option key={exchange.id} value={exchange.id}>
+                    {exchange.display_name || exchange.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Synchronization Section */}
+          <SyncSection />
+
           {/* Saved Analyses Section */}
           <SavedAnalysisSection onClose={() => setIsExpanded(false)} />
 

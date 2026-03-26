@@ -291,10 +291,21 @@
   white-space: nowrap;
 }
 
+.group-pattern-count {
+  font-size: 0.58rem;
+  font-family: 'JetBrains Mono', monospace;
+  padding: 1px 4px;
+  background: rgba(168, 85, 247, 0.15);
+  border-radius: var(--radius-sm);
+  color: var(--accent-purple, #a855f7);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
 .group-count {
   font-size: 0.6rem;
   opacity: 0.5;
-  margin-left: auto;
+  margin-left: 4px;
   flex-shrink: 0;
 }
 
@@ -337,6 +348,18 @@
 .asset-quote {
   color: var(--text-muted);
   font-weight: 400;
+}
+
+.pattern-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-purple, #a855f7);
+  box-shadow: 0 0 4px rgba(168, 85, 247, 0.5);
+  margin-right: 5px;
+  vertical-align: middle;
+  flex-shrink: 0;
 }
 
 .asset-full-name-sub {

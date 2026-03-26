@@ -1,12 +1,9 @@
 import React, { useEffect, useCallback, useState, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { setSelectedExchange } from '../../store/slices/exchangesSlice';
-import { fetchAssetsByExchange, setSelectedAsset, setSearchTerm, clearAssets } from '../../store/slices/assetsSlice';
-import { clearChart } from '../../store/slices/chartSlice';
+import { fetchAssetsByExchange, setSelectedAsset, setSearchTerm } from '../../store/slices/assetsSlice';
 import { clearAnalysis } from '../../store/slices/analysisSlice';
 import { toggleSidebar } from '../../store/slices/uiSlice';
 import UserSection from './UserSection';
-import SyncSection from './SyncSection';
 import api from '../../services/api';
 import './Sidebar.css';
 
@@ -47,12 +44,15 @@ function countGroupAssets(groups) {
   return total;
 }
 
-const AssetItem = ({ asset, isSelected, onClick, className = '' }) => (
+const AssetItem = ({ asset, isSelected, onClick, hasPatterns, className = '' }) => (
   <button
     className={`asset-item ${isSelected ? 'selected' : ''} ${className}`}
     onClick={onClick}
   >
-    <span className="asset-symbol">{asset.asset}<span className="asset-quote">/{asset.quote}</span></span>
+    <span className="asset-symbol">
+      {hasPatterns && <span className="pattern-dot" title="Has harmonic patterns" />}
+      {asset.asset}<span className="asset-quote">/{asset.quote}</span>
+    </span>
     {asset.full_name && (
       <span className="asset-full-name-sub">{asset.full_name}</span>
     )}
@@ -61,7 +61,7 @@ const AssetItem = ({ asset, isSelected, onClick, className = '' }) => (
 
 const Sidebar = ({ isOpen }) => {
   const dispatch = useDispatch();
-  const { list: exchanges, selectedExchange, loading: exchangesLoading } = useSelector((state) => state.exchanges);
+  const { selectedExchange } = useSelector((state) => state.exchanges);
   const { filteredList: assets, selectedAsset, searchTerm, loading: assetsLoading } = useSelector((state) => state.assets);
   const { user } = useSelector((state) => state.auth);
   const isAdmin = user?.role === 'administrator';
@@ -113,6 +113,7 @@ const Sidebar = ({ isOpen }) => {
 
   const groupedAssets = useMemo(() => groupAssets(assets), [assets]);
   const groupedPatterns = useMemo(() => groupAssets(filteredAssetsWithPatterns), [filteredAssetsWithPatterns]);
+  const patternAssetIds = useMemo(() => new Set(assetsWithPatterns.map((a) => a.id)), [assetsWithPatterns]);
 
   const isSearching = searchTerm.trim().length > 0;
 
@@ -141,20 +142,6 @@ const Sidebar = ({ isOpen }) => {
     if (isSearching) return true;
     return expandedKinds.has(`${prefix}:${country}:${kind}`);
   }, [isSearching, expandedKinds]);
-
-  const handleExchangeChange = useCallback((e) => {
-    const exchangeId = parseInt(e.target.value);
-    const exchange = exchanges.find((ex) => ex.id === exchangeId);
-    if (exchange) {
-      dispatch(setSelectedExchange(exchange));
-      dispatch(clearAssets());
-      dispatch(clearChart());
-      dispatch(clearAnalysis());
-      setAssetsWithPatterns([]);
-      setExpandedCountries(new Set());
-      setExpandedKinds(new Set());
-    }
-  }, [dispatch, exchanges]);
 
   const handleAssetSelect = useCallback((asset) => {
     dispatch(setSelectedAsset(asset));
@@ -218,24 +205,34 @@ const Sidebar = ({ isOpen }) => {
       const countryOpen = isCountryOpen(country, prefix);
       const countryLabel = COUNTRY_LABELS[country] || country;
       const countryCount = Object.values(kinds).reduce((s, arr) => s + arr.length, 0);
+      const countryPatternCount = Object.values(kinds).reduce(
+        (s, arr) => s + arr.filter((a) => patternAssetIds.has(a.id)).length, 0
+      );
 
       return (
         <div key={countryKey} className="group-country">
           <button className={`group-header country-header ${countryOpen ? 'open' : ''}`} onClick={() => toggleCountry(countryKey)}>
             <span className="group-arrow">{countryOpen ? '▼' : '▶'}</span>
             <span className="group-label">{countryLabel}</span>
+            {countryPatternCount > 0 && (
+              <span className="group-pattern-count" title="Assets with harmonic patterns">{countryPatternCount}</span>
+            )}
             <span className="group-count">{countryCount}</span>
           </button>
           {countryOpen && Object.keys(kinds).sort().map((kind) => {
             const kindKey = `${prefix}:${country}:${kind}`;
             const kindOpen = isKindOpen(country, kind, prefix);
             const kindAssets = kinds[kind];
+            const kindPatternCount = kindAssets.filter((a) => patternAssetIds.has(a.id)).length;
 
             return (
               <div key={kindKey} className="group-kind">
                 <button className={`group-header kind-header ${kindOpen ? 'open' : ''}`} onClick={() => toggleKind(kindKey)}>
                   <span className="group-arrow">{kindOpen ? '▼' : '▶'}</span>
                   <span className="group-label">{kind}</span>
+                  {kindPatternCount > 0 && (
+                    <span className="group-pattern-count" title="Assets with harmonic patterns">{kindPatternCount}</span>
+                  )}
                   <span className="group-count">{kindAssets.length}</span>
                 </button>
                 {kindOpen && kindAssets.map((asset) => (
@@ -244,6 +241,7 @@ const Sidebar = ({ isOpen }) => {
                     asset={asset}
                     isSelected={selectedAsset?.id === asset.id}
                     onClick={() => handleAssetSelect(asset)}
+                    hasPatterns={patternAssetIds.has(asset.id)}
                   />
                 ))}
               </div>
@@ -269,26 +267,6 @@ const Sidebar = ({ isOpen }) => {
           </div>
 
           <UserSection />
-          <SyncSection />
-
-          <div className="sidebar-section">
-            <label className="section-label">
-              <span className="section-icon">⬡</span>
-              Exchange
-            </label>
-            <select
-              className="input select exchange-select"
-              value={selectedExchange?.id || ''}
-              onChange={handleExchangeChange}
-              disabled={exchangesLoading}
-            >
-              {exchanges.map((exchange) => (
-                <option key={exchange.id} value={exchange.id}>
-                  {exchange.display_name || exchange.name}
-                </option>
-              ))}
-            </select>
-          </div>
 
           <div className="sidebar-section">
             <label className="section-label">
