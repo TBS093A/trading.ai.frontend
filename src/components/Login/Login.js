@@ -292,7 +292,6 @@ const Login = () => {
           <div className="login-form-card">
             <div className="login-header">
               <div className="login-logo">
-                <span className="login-logo-icon">◈</span>
                 <span className="login-logo-text">00x097 TRADE</span>
               </div>
               <p className="login-subtitle">Zaloguj się do panelu</p>
@@ -370,10 +369,7 @@ const Login = () => {
                     Logowanie...
                   </>
                 ) : (
-                  <>
-                    <span className="btn-icon">→</span>
-                    Zaloguj się
-                  </>
+                  <>Zaloguj się</>
                 )}
               </button>
             </form>
