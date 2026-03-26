@@ -19,6 +19,22 @@ export const fetchKlines = createAsyncThunk(
   }
 );
 
+export const fetchPatternCounts = createAsyncThunk(
+  'chart/fetchPatternCounts',
+  async (assetId, { rejectWithValue }) => {
+    try {
+      const response = await api.getPatternCounts(assetId);
+      const map = {};
+      for (const c of response.data.counts) {
+        map[c.interval] = { bullish: c.bullish, bearish: c.bearish };
+      }
+      return map;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.detail || 'Failed to fetch pattern counts');
+    }
+  }
+);
+
 const chartSlice = createSlice({
   name: 'chart',
   initialState: {
@@ -30,7 +46,8 @@ const chartSlice = createSlice({
     availableIntervals: ['1m', '5m', '15m', '30m', '1h', '4h', '1d', '1w', '1M'],
     loading: false,
     error: null,
-    shouldResetScale: false, // Flag to force chart scale reset
+    patternCounts: {},
+    shouldResetScale: false,
   },
   reducers: {
     setInterval: (state, action) => {
@@ -41,6 +58,7 @@ const chartSlice = createSlice({
       state.asset = null;
       state.quote = null;
       state.full_name = null;
+      state.patternCounts = {};
     },
     clearChartError: (state) => {
       state.error = null;
@@ -69,6 +87,9 @@ const chartSlice = createSlice({
       .addCase(fetchKlines.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+      })
+      .addCase(fetchPatternCounts.fulfilled, (state, action) => {
+        state.patternCounts = action.payload;
       });
   },
 });

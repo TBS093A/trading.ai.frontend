@@ -144,6 +144,10 @@
 }
 
 .interval-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
   padding: 4px 8px;
   background: transparent;
   border: none;
@@ -163,6 +167,32 @@
 
 .interval-btn.active {
   background: var(--accent-cyan);
+  color: var(--bg-primary);
+}
+
+.interval-pattern-count {
+  display: flex;
+  align-items: center;
+  font-size: 0.5rem;
+  line-height: 1;
+  gap: 1px;
+}
+
+.ipc-bullish {
+  color: var(--text-primary);
+}
+
+.ipc-sep {
+  color: inherit;
+}
+
+.ipc-bearish {
+  color: var(--text-muted);
+}
+
+.interval-btn.active .ipc-bullish,
+.interval-btn.active .ipc-sep,
+.interval-btn.active .ipc-bearish {
   color: var(--bg-primary);
 }
 

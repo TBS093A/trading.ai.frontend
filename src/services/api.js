@@ -265,6 +265,9 @@ const api = {
   getTechnicalAnalysisById: (analysisId) =>
     axiosInstance.get(`/analysis/technical/${analysisId}`),
 
+  getPatternCounts: (assetId) =>
+    axiosInstance.get(`/analysis/technical/pattern-counts/${assetId}`),
+
   getCompletePatterns: (assetId, limit = 100) =>
     axiosInstance.get(`/analysis/technical/patterns/complete/${assetId}`, {
       params: { limit },

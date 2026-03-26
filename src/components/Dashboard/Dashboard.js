@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import TradingViewChart from '../Chart/TradingViewChart';
 import IndicatorControls from '../IndicatorControls/IndicatorControls';
 import SaveAnalysisModal from './SaveAnalysisModal';
-import { fetchKlines, setInterval } from '../../store/slices/chartSlice';
+import { fetchKlines, fetchPatternCounts, setInterval } from '../../store/slices/chartSlice';
 import { fetchTechnicalAnalysis, clearAnalysis } from '../../store/slices/analysisSlice';
 import { selectEditingAnalysisId } from '../../store/slices/savedAnalysisSlice';
 import './Dashboard.css';
@@ -21,7 +21,7 @@ const Dashboard = forwardRef((props, ref) => {
   const dispatch = useDispatch();
   const { selectedAsset } = useSelector((state) => state.assets);
   const { selectedExchange } = useSelector((state) => state.exchanges);
-  const { klines, interval, availableIntervals, loading: chartLoading, asset, quote, full_name } = useSelector((state) => state.chart);
+  const { klines, interval, availableIntervals, patternCounts, loading: chartLoading, asset, quote, full_name } = useSelector((state) => state.chart);
   const { loading: analysisLoading } = useSelector((state) => state.analysis);
   const editingAnalysisId = useSelector(selectEditingAnalysisId);
   const isEditMode = !!editingAnalysisId;
@@ -32,6 +32,13 @@ const Dashboard = forwardRef((props, ref) => {
       dispatch(fetchKlines({ assetId: selectedAsset.id, interval, limit: 500 }));
     }
   }, [dispatch, selectedAsset, interval]);
+
+  // Fetch pattern counts when asset changes
+  useEffect(() => {
+    if (selectedAsset) {
+      dispatch(fetchPatternCounts(selectedAsset.id));
+    }
+  }, [dispatch, selectedAsset]);
 
   // Fetch technical analysis after klines are loaded
   useEffect(() => {
@@ -102,15 +109,26 @@ const Dashboard = forwardRef((props, ref) => {
 
         <div className="header-center">
           <div className="interval-selector">
-            {availableIntervals.map((int) => (
-              <button
-                key={int}
-                className={`interval-btn ${interval === int ? 'active' : ''}`}
-                onClick={() => handleIntervalChange(int)}
-              >
-                {int}
-              </button>
-            ))}
+            {availableIntervals.map((int) => {
+              const counts = patternCounts[int];
+              const total = counts ? counts.bullish + counts.bearish : 0;
+              return (
+                <button
+                  key={int}
+                  className={`interval-btn ${interval === int ? 'active' : ''}`}
+                  onClick={() => handleIntervalChange(int)}
+                >
+                  <span className="interval-label">{int}</span>
+                  {total > 0 && (
+                    <span className="interval-pattern-count">
+                      <span className="ipc-bullish">{counts.bullish}</span>
+                      <span className="ipc-sep">:</span>
+                      <span className="ipc-bearish">{counts.bearish}</span>
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
 
