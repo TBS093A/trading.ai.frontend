@@ -236,3 +236,70 @@
   height: 48px;
 }
 
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .dashboard {
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .dashboard-header {
+    flex-wrap: wrap;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    gap: var(--spacing-xs);
+  }
+
+  .header-left {
+    flex: 0 0 auto;
+    order: 1;
+  }
+
+  .header-center {
+    flex: 1 1 100%;
+    order: 3;
+    justify-content: center;
+  }
+
+  .header-right {
+    flex: 0 0 auto;
+    order: 2;
+    margin-left: auto;
+  }
+
+  .asset-info-row {
+    gap: 4px;
+  }
+
+  .asset-name {
+    font-size: 0.75rem;
+  }
+
+  .asset-full-name-label {
+    font-size: 0.55rem;
+  }
+
+  .exchange-badge {
+    display: none;
+  }
+
+  .interval-selector {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .interval-btn {
+    padding: 4px 6px;
+    font-size: 0.6rem;
+  }
+
+  .save-analysis-btn {
+    padding: 3px 8px;
+    font-size: 0.55rem;
+  }
+
+  .chart-container {
+    flex: 1;
+    min-height: 0;
+  }
+}
+

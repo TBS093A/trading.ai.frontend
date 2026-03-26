@@ -147,12 +147,23 @@
 
 /* Responsiveness */
 @media (max-width: 768px) {
+  .trading-chart-wrapper {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
   .trading-chart {
-    min-height: 300px;
+    min-height: 250px;
+    flex-shrink: 0;
   }
   
+  .indicator-chart {
+    flex-shrink: 0;
+  }
+
   .indicator-chart > div {
-    height: 80px !important;
+    height: 70px !important;
   }
 }
 

@@ -471,9 +471,13 @@ h1, h2, h3, h4, h5, h6 {
     --patterns-panel-width: 100%;
   }
   
-  /* On mobile, panels overlay the content */
   .app {
-    flex-direction: column;
+    flex-direction: row;
+  }
+
+  .main-content {
+    min-height: 100vh;
+    height: 100vh;
   }
   
   .sidebar.open,
