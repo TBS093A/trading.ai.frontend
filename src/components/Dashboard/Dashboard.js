@@ -89,12 +89,14 @@ const Dashboard = forwardRef((props, ref) => {
       {/* Header Bar */}
       <header className="dashboard-header">
         <div className="header-left">
-          <h2 className="asset-name">
-            {asset}<span className="quote-name">/{quote}</span>
-          </h2>
-          {full_name && (
-            <span className="asset-full-name-label">{full_name}</span>
-          )}
+          <div className="asset-info-row">
+            <h2 className="asset-name">
+              {asset}<span className="quote-name">/{quote}</span>
+            </h2>
+            {full_name && (
+              <span className="asset-full-name-label">{full_name}</span>
+            )}
+          </div>
           <span className="exchange-badge">{selectedExchange?.name}</span>
         </div>
 

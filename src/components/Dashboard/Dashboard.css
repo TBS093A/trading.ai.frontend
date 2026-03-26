@@ -88,12 +88,18 @@
   min-width: 0;
 }
 
+.asset-info-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  white-space: nowrap;
+}
+
 .asset-name {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.85rem;
   font-weight: 700;
   color: var(--text-primary);
-  white-space: nowrap;
 }
 
 .quote-name {
@@ -106,9 +112,6 @@
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.65rem;
   font-weight: 400;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .exchange-badge {
