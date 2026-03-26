@@ -74,16 +74,18 @@ const TradingViewChart = forwardRef((props, ref) => {
     }
   }), []);
 
-  // Register indicator chart for synchronization
-  const registerIndicatorChart = useCallback((chart) => {
-    if (chart && !indicatorChartsRef.current.includes(chart)) {
-      indicatorChartsRef.current.push(chart);
+  const isSyncingCrosshairRef = useRef(false);
+
+  // Register indicator chart for synchronization (chart + its primary series)
+  const registerIndicatorChart = useCallback((chart, series) => {
+    if (chart && !indicatorChartsRef.current.find(e => e.chart === chart)) {
+      indicatorChartsRef.current.push({ chart, series });
     }
   }, []);
 
   // Unregister indicator chart
   const unregisterIndicatorChart = useCallback((chart) => {
-    indicatorChartsRef.current = indicatorChartsRef.current.filter(c => c !== chart);
+    indicatorChartsRef.current = indicatorChartsRef.current.filter(e => e.chart !== chart);
   }, []);
 
   // Sync time range from source to all other charts
@@ -98,7 +100,7 @@ const TradingViewChart = forwardRef((props, ref) => {
       }
 
       // Sync all indicator charts
-      indicatorChartsRef.current.forEach((chart) => {
+      indicatorChartsRef.current.forEach(({ chart }) => {
         if (chart !== sourceChart && chart) {
           try {
             chart.timeScale().setVisibleRange(range);
@@ -114,26 +116,37 @@ const TradingViewChart = forwardRef((props, ref) => {
   }, []);
 
   // Sync crosshair position across all charts
-  const syncCrosshair = useCallback((sourceChart, time, point) => {
-    if (!time) return;
+  const syncCrosshair = useCallback((sourceChart, time) => {
+    if (isSyncingCrosshairRef.current) return;
+    isSyncingCrosshairRef.current = true;
 
-    // Sync to main chart
-    if (sourceChart !== chartRef.current && chartRef.current) {
-      chartRef.current.setCrosshairPosition(0, time, chartRef.current.series?.[0]);
-    }
-
-    // Sync to indicator charts
-    indicatorChartsRef.current.forEach((chart) => {
-      if (chart !== sourceChart && chart) {
-        try {
-          // Get the first series of the chart
-          const series = chart.series?.[0];
-          if (series) {
-            chart.setCrosshairPosition(0, time, series);
+    try {
+      if (!time) {
+        if (sourceChart !== chartRef.current && chartRef.current) {
+          try { chartRef.current.clearCrosshairPosition(); } catch (e) {}
+        }
+        indicatorChartsRef.current.forEach(({ chart }) => {
+          if (chart !== sourceChart && chart) {
+            try { chart.clearCrosshairPosition(); } catch (e) {}
           }
-        } catch (e) {}
+        });
+        return;
       }
-    });
+
+      if (sourceChart !== chartRef.current && chartRef.current && candlestickSeriesRef.current) {
+        try { chartRef.current.setCrosshairPosition(0, time, candlestickSeriesRef.current); } catch (e) {}
+      }
+
+      indicatorChartsRef.current.forEach(({ chart, series }) => {
+        if (chart !== sourceChart && chart && series) {
+          try { chart.setCrosshairPosition(0, time, series); } catch (e) {}
+        }
+      });
+    } finally {
+      requestAnimationFrame(() => {
+        isSyncingCrosshairRef.current = false;
+      });
+    }
   }, []);
 
   // Convert klines to chart data format
@@ -977,8 +990,10 @@ const TradingViewChart = forwardRef((props, ref) => {
     }
   }, [dispatch, harmonicPatterns]);
 
-  // Handle hover for tooltip
+  // Handle hover for tooltip + crosshair sync
   const handleCrosshairMove = useCallback((param) => {
+    syncCrosshair(chartRef.current, param.time);
+
     if (!param.point || harmonicPatterns.length === 0) {
       dispatch(hideTooltip());
       dispatch(setHoveredPattern(null));
@@ -1009,7 +1024,7 @@ const TradingViewChart = forwardRef((props, ref) => {
       dispatch(hideTooltip());
       dispatch(setHoveredPattern(null));
     }
-  }, [dispatch, harmonicPatterns]);
+  }, [dispatch, harmonicPatterns, syncCrosshair]);
 
   // Subscribe to chart events
   useEffect(() => {
@@ -1052,6 +1067,7 @@ const TradingViewChart = forwardRef((props, ref) => {
           onChartReady={registerIndicatorChart}
           onChartDestroy={unregisterIndicatorChart}
           syncTimeRange={syncTimeRange}
+          syncCrosshair={syncCrosshair}
         />
       )}
       
@@ -1062,6 +1078,7 @@ const TradingViewChart = forwardRef((props, ref) => {
           onChartReady={registerIndicatorChart}
           onChartDestroy={unregisterIndicatorChart}
           syncTimeRange={syncTimeRange}
+          syncCrosshair={syncCrosshair}
         />
       )}
       
@@ -1072,6 +1089,7 @@ const TradingViewChart = forwardRef((props, ref) => {
           onChartReady={registerIndicatorChart}
           onChartDestroy={unregisterIndicatorChart}
           syncTimeRange={syncTimeRange}
+          syncCrosshair={syncCrosshair}
         />
       )}
     </div>
@@ -1079,7 +1097,7 @@ const TradingViewChart = forwardRef((props, ref) => {
 });
 
 // RSI Indicator Component
-const RSIIndicator = ({ klines, onChartReady, onChartDestroy, syncTimeRange }) => {
+const RSIIndicator = ({ klines, onChartReady, onChartDestroy, syncTimeRange, syncCrosshair }) => {
   const containerRef = useRef(null);
   const chartRef = useRef(null);
 
@@ -1103,22 +1121,21 @@ const RSIIndicator = ({ klines, onChartReady, onChartDestroy, syncTimeRange }) =
     });
     series.setData(rsiData);
 
-    // Add overbought/oversold lines
     series.createPriceLine({ price: 70, color: '#ff3366', lineWidth: 1, lineStyle: 2 });
     series.createPriceLine({ price: 30, color: '#00ff88', lineWidth: 1, lineStyle: 2 });
 
-    // Register for sync
-    onChartReady?.(chart);
+    onChartReady?.(chart, series);
 
-    // Subscribe to time range changes for sync
     const handleTimeRangeChange = (range) => {
-      if (range) {
-        syncTimeRange?.(chart, range);
-      }
+      if (range) syncTimeRange?.(chart, range);
     };
     chart.timeScale().subscribeVisibleTimeRangeChange(handleTimeRangeChange);
 
-    // Resize observer for responsive width
+    const handleCrosshair = (param) => {
+      syncCrosshair?.(chart, param.time);
+    };
+    chart.subscribeCrosshairMove(handleCrosshair);
+
     const resizeObserver = new ResizeObserver((entries) => {
       const { width } = entries[0].contentRect;
       chart.applyOptions({ width });
@@ -1128,10 +1145,11 @@ const RSIIndicator = ({ klines, onChartReady, onChartDestroy, syncTimeRange }) =
     return () => {
       resizeObserver.disconnect();
       chart.timeScale().unsubscribeVisibleTimeRangeChange(handleTimeRangeChange);
+      chart.unsubscribeCrosshairMove(handleCrosshair);
       onChartDestroy?.(chart);
       chart.remove();
     };
-  }, [klines, onChartReady, onChartDestroy, syncTimeRange]);
+  }, [klines, onChartReady, onChartDestroy, syncTimeRange, syncCrosshair]);
 
   return (
     <div className="indicator-chart">
@@ -1142,7 +1160,7 @@ const RSIIndicator = ({ klines, onChartReady, onChartDestroy, syncTimeRange }) =
 };
 
 // MACD Indicator Component
-const MACDIndicator = ({ klines, onChartReady, onChartDestroy, syncTimeRange }) => {
+const MACDIndicator = ({ klines, onChartReady, onChartDestroy, syncTimeRange, syncCrosshair }) => {
   const containerRef = useRef(null);
   const chartRef = useRef(null);
 
@@ -1161,35 +1179,30 @@ const MACDIndicator = ({ klines, onChartReady, onChartDestroy, syncTimeRange }) 
 
     const { macdLine, signalLine, histogram } = calculateMACD(klines);
 
-    // MACD Line
     const macdSeries = chart.addLineSeries({ color: '#00f0ff', lineWidth: 2 });
     macdSeries.setData(macdLine);
 
-    // Signal Line
     const signalSeries = chart.addLineSeries({ color: '#ff9933', lineWidth: 2 });
     signalSeries.setData(signalLine);
 
-    // Histogram
-    const histSeries = chart.addHistogramSeries({
-      color: '#00ff88',
-    });
+    const histSeries = chart.addHistogramSeries({ color: '#00ff88' });
     histSeries.setData(histogram.map(h => ({
       ...h,
       color: h.value >= 0 ? '#00ff88' : '#ff3366'
     })));
 
-    // Register for sync
-    onChartReady?.(chart);
+    onChartReady?.(chart, macdSeries);
 
-    // Subscribe to time range changes for sync
     const handleTimeRangeChange = (range) => {
-      if (range) {
-        syncTimeRange?.(chart, range);
-      }
+      if (range) syncTimeRange?.(chart, range);
     };
     chart.timeScale().subscribeVisibleTimeRangeChange(handleTimeRangeChange);
 
-    // Resize observer for responsive width
+    const handleCrosshair = (param) => {
+      syncCrosshair?.(chart, param.time);
+    };
+    chart.subscribeCrosshairMove(handleCrosshair);
+
     const resizeObserver = new ResizeObserver((entries) => {
       const { width } = entries[0].contentRect;
       chart.applyOptions({ width });
@@ -1199,10 +1212,11 @@ const MACDIndicator = ({ klines, onChartReady, onChartDestroy, syncTimeRange }) 
     return () => {
       resizeObserver.disconnect();
       chart.timeScale().unsubscribeVisibleTimeRangeChange(handleTimeRangeChange);
+      chart.unsubscribeCrosshairMove(handleCrosshair);
       onChartDestroy?.(chart);
       chart.remove();
     };
-  }, [klines, onChartReady, onChartDestroy, syncTimeRange]);
+  }, [klines, onChartReady, onChartDestroy, syncTimeRange, syncCrosshair]);
 
   return (
     <div className="indicator-chart">
@@ -1213,7 +1227,7 @@ const MACDIndicator = ({ klines, onChartReady, onChartDestroy, syncTimeRange }) 
 };
 
 // OBV Indicator Component
-const OBVIndicator = ({ klines, onChartReady, onChartDestroy, syncTimeRange }) => {
+const OBVIndicator = ({ klines, onChartReady, onChartDestroy, syncTimeRange, syncCrosshair }) => {
   const containerRef = useRef(null);
   const chartRef = useRef(null);
 
@@ -1234,18 +1248,18 @@ const OBVIndicator = ({ klines, onChartReady, onChartDestroy, syncTimeRange }) =
     const series = chart.addLineSeries({ color: '#ffcc00', lineWidth: 2 });
     series.setData(obvData);
 
-    // Register for sync
-    onChartReady?.(chart);
+    onChartReady?.(chart, series);
 
-    // Subscribe to time range changes for sync
     const handleTimeRangeChange = (range) => {
-      if (range) {
-        syncTimeRange?.(chart, range);
-      }
+      if (range) syncTimeRange?.(chart, range);
     };
     chart.timeScale().subscribeVisibleTimeRangeChange(handleTimeRangeChange);
 
-    // Resize observer for responsive width
+    const handleCrosshair = (param) => {
+      syncCrosshair?.(chart, param.time);
+    };
+    chart.subscribeCrosshairMove(handleCrosshair);
+
     const resizeObserver = new ResizeObserver((entries) => {
       const { width } = entries[0].contentRect;
       chart.applyOptions({ width });
@@ -1255,10 +1269,11 @@ const OBVIndicator = ({ klines, onChartReady, onChartDestroy, syncTimeRange }) =
     return () => {
       resizeObserver.disconnect();
       chart.timeScale().unsubscribeVisibleTimeRangeChange(handleTimeRangeChange);
+      chart.unsubscribeCrosshairMove(handleCrosshair);
       onChartDestroy?.(chart);
       chart.remove();
     };
-  }, [klines, onChartReady, onChartDestroy, syncTimeRange]);
+  }, [klines, onChartReady, onChartDestroy, syncTimeRange, syncCrosshair]);
 
   return (
     <div className="indicator-chart">
