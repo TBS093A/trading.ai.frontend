@@ -28,7 +28,7 @@
   width: 100% !important;
 }
 
-.indicator-label {
+.indicator-chart > .indicator-label {
   position: absolute;
   top: 8px;
   left: 12px;

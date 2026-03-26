@@ -120,7 +120,7 @@ const Dashboard = forwardRef((props, ref) => {
             onClick={() => setShowSaveModal(true)}
             title={isEditMode ? "Update current analysis" : "Save current analysis view"}
           >
-            <span className="btn-icon">{isEditMode ? '✏️' : '💾'}</span>
+            <span className="btn-icon">{isEditMode ? '✎' : '⛁'}</span>
             <span className="btn-text">{isEditMode ? 'Update' : 'Save'}</span>
           </button>
           <IndicatorControls />
