@@ -1108,7 +1108,7 @@ const RSIIndicator = ({ klines, onChartReady, onChartDestroy, syncTimeRange, syn
       height: 100,
       layout: { background: { type: 'solid', color: '#060810' }, textColor: '#8b949e' },
       grid: { vertLines: { color: 'rgba(255,255,255,0.03)' }, horzLines: { color: 'rgba(255,255,255,0.03)' } },
-      rightPriceScale: { borderColor: '#21262d' },
+      rightPriceScale: { borderColor: '#21262d', scaleMargins: { top: 0.08, bottom: 0.08 } },
       timeScale: { visible: false, borderColor: '#21262d' },
       handleScroll: { vertTouchDrag: false },
     });
@@ -1118,6 +1118,10 @@ const RSIIndicator = ({ klines, onChartReady, onChartDestroy, syncTimeRange, syn
     const series = chart.addLineSeries({
       color: '#9945ff',
       lineWidth: 2,
+      priceScaleId: 'right',
+      autoscaleInfoProvider: () => ({
+        priceRange: { minValue: 0, maxValue: 100 },
+      }),
     });
     series.setData(rsiData);
 
@@ -1171,7 +1175,7 @@ const MACDIndicator = ({ klines, onChartReady, onChartDestroy, syncTimeRange, sy
       height: 100,
       layout: { background: { type: 'solid', color: '#060810' }, textColor: '#8b949e' },
       grid: { vertLines: { color: 'rgba(255,255,255,0.03)' }, horzLines: { color: 'rgba(255,255,255,0.03)' } },
-      rightPriceScale: { borderColor: '#21262d' },
+      rightPriceScale: { borderColor: '#21262d', scaleMargins: { top: 0.1, bottom: 0.1 } },
       timeScale: { visible: false, borderColor: '#21262d' },
       handleScroll: { vertTouchDrag: false },
     });
@@ -1238,7 +1242,7 @@ const OBVIndicator = ({ klines, onChartReady, onChartDestroy, syncTimeRange, syn
       height: 80,
       layout: { background: { type: 'solid', color: '#060810' }, textColor: '#8b949e' },
       grid: { vertLines: { color: 'rgba(255,255,255,0.03)' }, horzLines: { color: 'rgba(255,255,255,0.03)' } },
-      rightPriceScale: { borderColor: '#21262d' },
+      rightPriceScale: { borderColor: '#21262d', scaleMargins: { top: 0.1, bottom: 0.1 } },
       timeScale: { visible: false, borderColor: '#21262d' },
       handleScroll: { vertTouchDrag: false },
     });
