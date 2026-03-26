@@ -89,15 +89,13 @@ const Dashboard = forwardRef((props, ref) => {
       {/* Header Bar */}
       <header className="dashboard-header">
         <div className="header-left">
-          <div className="asset-info">
-            <h2 className="asset-name">
-              {asset}<span className="quote-name">/{quote}</span>
-            </h2>
-            {full_name && (
-              <span className="asset-full-name-label">{full_name}</span>
-            )}
-            <span className="exchange-badge">{selectedExchange?.name}</span>
-          </div>
+          <h2 className="asset-name">
+            {asset}<span className="quote-name">/{quote}</span>
+          </h2>
+          {full_name && (
+            <span className="asset-full-name-label">{full_name}</span>
+          )}
+          <span className="exchange-badge">{selectedExchange?.name}</span>
         </div>
 
         <div className="header-center">
@@ -115,15 +113,14 @@ const Dashboard = forwardRef((props, ref) => {
         </div>
 
         <div className="header-right">
+          <IndicatorControls />
           <button
             className={`save-analysis-btn ${isEditMode ? 'edit-mode' : ''}`}
             onClick={() => setShowSaveModal(true)}
             title={isEditMode ? "Update current analysis" : "Save current analysis view"}
           >
-            <span className="btn-icon">{isEditMode ? '✎' : '⛁'}</span>
-            <span className="btn-text">{isEditMode ? 'Update' : 'Save'}</span>
+            {isEditMode ? 'Update' : 'Save'}
           </button>
-          <IndicatorControls />
         </div>
       </header>
 

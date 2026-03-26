@@ -75,29 +75,25 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--spacing-md) var(--spacing-lg);
+  padding: var(--spacing-sm) var(--spacing-lg);
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border-primary);
-  min-height: var(--header-height);
+  gap: var(--spacing-md);
 }
 
 .header-left {
   display: flex;
-  align-items: center;
-  gap: var(--spacing-lg);
-}
-
-.asset-info {
-  display: flex;
-  align-items: baseline;
-  gap: var(--spacing-md);
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
 .asset-name {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 1.25rem;
+  font-size: 0.85rem;
   font-weight: 700;
   color: var(--text-primary);
+  white-space: nowrap;
 }
 
 .quote-name {
@@ -108,18 +104,22 @@
 .asset-full-name-label {
   color: var(--text-muted);
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.75rem;
+  font-size: 0.65rem;
   font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .exchange-badge {
-  padding: 4px 10px;
+  align-self: flex-start;
+  padding: 2px 6px;
   background: rgba(153, 69, 255, 0.1);
   border: 1px solid var(--accent-purple);
   border-radius: var(--radius-sm);
   color: var(--accent-purple);
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.7rem;
+  font-size: 0.55rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -134,20 +134,20 @@
 .interval-selector {
   display: flex;
   gap: 2px;
-  padding: 3px;
+  padding: 2px;
   background: var(--bg-card);
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-md);
 }
 
 .interval-btn {
-  padding: 6px 12px;
+  padding: 4px 8px;
   background: transparent;
   border: none;
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.75rem;
+  font-size: 0.65rem;
   font-weight: 500;
   cursor: pointer;
   transition: all var(--transition-fast);
@@ -166,42 +166,30 @@
 .header-right {
   display: flex;
   align-items: center;
-  gap: var(--spacing-md);
+  gap: var(--spacing-sm);
 }
 
 /* Save Analysis Button */
 .save-analysis-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
+  padding: 4px 10px;
   background: rgba(0, 20, 30, 0.8);
   border: 1px solid rgba(0, 240, 255, 0.4);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   color: var(--accent-cyan);
-  font-family: 'Outfit', sans-serif;
-  font-size: 0.85rem;
-  font-weight: 500;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  font-weight: 600;
   cursor: pointer;
   transition: all var(--transition-fast);
   white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .save-analysis-btn:hover {
   background: rgba(0, 240, 255, 0.15);
   border-color: var(--accent-cyan);
-  box-shadow: 0 0 15px rgba(0, 240, 255, 0.3), inset 0 0 10px rgba(0, 240, 255, 0.1);
-  transform: translateY(-1px);
-}
-
-.save-analysis-btn .btn-icon {
-  font-size: 1rem;
-  line-height: 1;
-}
-
-.save-analysis-btn .btn-text {
-  letter-spacing: 0.03em;
-  font-weight: 600;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
 }
 
 /* Edit Mode - Yellow/Orange Theme */
@@ -209,13 +197,12 @@
   background: rgba(30, 20, 0, 0.8);
   border-color: rgba(255, 180, 0, 0.5);
   color: #ffb400;
-  box-shadow: 0 0 10px rgba(255, 180, 0, 0.15);
 }
 
 .save-analysis-btn.edit-mode:hover {
   background: rgba(255, 180, 0, 0.15);
   border-color: #ffb400;
-  box-shadow: 0 0 20px rgba(255, 180, 0, 0.35), inset 0 0 10px rgba(255, 180, 0, 0.1);
+  box-shadow: 0 0 10px rgba(255, 180, 0, 0.2);
 }
 
 /* Chart Container */
