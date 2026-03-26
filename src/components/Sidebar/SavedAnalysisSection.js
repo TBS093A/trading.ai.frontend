@@ -54,7 +54,7 @@ const SavedAnalysisSection = ({ onClose }) => {
   const editingAnalysisId = useSelector(selectEditingAnalysisId);
 
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [expandedItemId, setExpandedItemId] = useState(null);
   const [editingDescriptionId, setEditingDescriptionId] = useState(null);
   const [editedDescription, setEditedDescription] = useState('');
