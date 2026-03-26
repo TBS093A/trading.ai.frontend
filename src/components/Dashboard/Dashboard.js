@@ -21,7 +21,7 @@ const Dashboard = forwardRef((props, ref) => {
   const dispatch = useDispatch();
   const { selectedAsset } = useSelector((state) => state.assets);
   const { selectedExchange } = useSelector((state) => state.exchanges);
-  const { klines, interval, availableIntervals, loading: chartLoading, asset, quote } = useSelector((state) => state.chart);
+  const { klines, interval, availableIntervals, loading: chartLoading, asset, quote, full_name } = useSelector((state) => state.chart);
   const { loading: analysisLoading } = useSelector((state) => state.analysis);
   const editingAnalysisId = useSelector(selectEditingAnalysisId);
   const isEditMode = !!editingAnalysisId;
@@ -93,6 +93,9 @@ const Dashboard = forwardRef((props, ref) => {
             <h2 className="asset-name">
               {asset}<span className="quote-name">/{quote}</span>
             </h2>
+            {full_name && (
+              <span className="asset-full-name-label">{full_name}</span>
+            )}
             <span className="exchange-badge">{selectedExchange?.name}</span>
           </div>
         </div>

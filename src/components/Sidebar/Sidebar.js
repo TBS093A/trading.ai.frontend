@@ -10,6 +10,55 @@ import SyncSection from './SyncSection';
 import api from '../../services/api';
 import './Sidebar.css';
 
+const COUNTRY_LABELS = {
+  US: 'United States',
+  JP: 'Japan',
+  CN: 'China',
+  DE: 'Germany',
+  GB: 'United Kingdom',
+  PL: 'Poland',
+  RU: 'Russia',
+  IL: 'Israel',
+  FR: 'France',
+  CH: 'Switzerland',
+  EU: 'European Union',
+  CRYPTO: 'Crypto',
+};
+
+function groupAssets(assetList) {
+  const groups = {};
+  for (const asset of assetList) {
+    const country = asset.country || 'OTHER';
+    const kind = asset.kind || 'OTHER';
+    if (!groups[country]) groups[country] = {};
+    if (!groups[country][kind]) groups[country][kind] = [];
+    groups[country][kind].push(asset);
+  }
+  return groups;
+}
+
+function countGroupAssets(groups) {
+  let total = 0;
+  for (const kinds of Object.values(groups)) {
+    for (const arr of Object.values(kinds)) {
+      total += arr.length;
+    }
+  }
+  return total;
+}
+
+const AssetItem = ({ asset, isSelected, onClick, className = '' }) => (
+  <button
+    className={`asset-item ${isSelected ? 'selected' : ''} ${className}`}
+    onClick={onClick}
+  >
+    <span className="asset-symbol">{asset.asset}<span className="asset-quote">/{asset.quote}</span></span>
+    {asset.full_name && (
+      <span className="asset-full-name-sub">{asset.full_name}</span>
+    )}
+  </button>
+);
+
 const Sidebar = ({ isOpen }) => {
   const dispatch = useDispatch();
   const { list: exchanges, selectedExchange, loading: exchangesLoading } = useSelector((state) => state.exchanges);
@@ -17,24 +66,22 @@ const Sidebar = ({ isOpen }) => {
   const { user } = useSelector((state) => state.auth);
   const isAdmin = user?.role === 'administrator';
 
-  // Collapsible sections state
   const [assetsExpanded, setAssetsExpanded] = useState(true);
   const [patternsExpanded, setPatternsExpanded] = useState(true);
 
-  // Assets with patterns state
   const [assetsWithPatterns, setAssetsWithPatterns] = useState([]);
   const [patternsLoading, setPatternsLoading] = useState(false);
-  
-  // Delete confirmation state
+
   const [deletingAssetId, setDeletingAssetId] = useState(null);
   const [deleteConfirmAssetId, setDeleteConfirmAssetId] = useState(null);
 
-  // Fetch assets when exchange changes
+  const [expandedCountries, setExpandedCountries] = useState(new Set());
+  const [expandedKinds, setExpandedKinds] = useState(new Set());
+
   useEffect(() => {
     if (selectedExchange) {
       dispatch(fetchAssetsByExchange(selectedExchange.id));
-      
-      // Also fetch assets with patterns for this exchange
+
       setPatternsLoading(true);
       api.getAssetsWithPatterns(selectedExchange.id)
         .then((response) => {
@@ -50,7 +97,6 @@ const Sidebar = ({ isOpen }) => {
     }
   }, [dispatch, selectedExchange]);
 
-  // Filter assets with patterns by search term
   const filteredAssetsWithPatterns = useMemo(() => {
     if (!searchTerm.trim()) {
       return assetsWithPatterns;
@@ -60,9 +106,41 @@ const Sidebar = ({ isOpen }) => {
       (asset) =>
         asset.asset.toLowerCase().includes(search) ||
         asset.quote.toLowerCase().includes(search) ||
-        `${asset.asset}/${asset.quote}`.toLowerCase().includes(search)
+        `${asset.asset}/${asset.quote}`.toLowerCase().includes(search) ||
+        (asset.full_name && asset.full_name.toLowerCase().includes(search))
     );
   }, [assetsWithPatterns, searchTerm]);
+
+  const groupedAssets = useMemo(() => groupAssets(assets), [assets]);
+  const groupedPatterns = useMemo(() => groupAssets(filteredAssetsWithPatterns), [filteredAssetsWithPatterns]);
+
+  const isSearching = searchTerm.trim().length > 0;
+
+  const toggleCountry = useCallback((key) => {
+    setExpandedCountries((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }, []);
+
+  const toggleKind = useCallback((key) => {
+    setExpandedKinds((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }, []);
+
+  const isCountryOpen = useCallback((country, prefix) => {
+    if (isSearching) return true;
+    return expandedCountries.has(`${prefix}:${country}`);
+  }, [isSearching, expandedCountries]);
+
+  const isKindOpen = useCallback((country, kind, prefix) => {
+    if (isSearching) return true;
+    return expandedKinds.has(`${prefix}:${country}:${kind}`);
+  }, [isSearching, expandedKinds]);
 
   const handleExchangeChange = useCallback((e) => {
     const exchangeId = parseInt(e.target.value);
@@ -73,6 +151,8 @@ const Sidebar = ({ isOpen }) => {
       dispatch(clearChart());
       dispatch(clearAnalysis());
       setAssetsWithPatterns([]);
+      setExpandedCountries(new Set());
+      setExpandedKinds(new Set());
     }
   }, [dispatch, exchanges]);
 
@@ -84,7 +164,6 @@ const Sidebar = ({ isOpen }) => {
     dispatch(setSearchTerm(e.target.value));
   }, [dispatch]);
 
-  // Refresh assets with patterns list
   const refreshAssetsWithPatterns = useCallback(() => {
     if (selectedExchange) {
       setPatternsLoading(true);
@@ -101,28 +180,21 @@ const Sidebar = ({ isOpen }) => {
     }
   }, [selectedExchange]);
 
-  // Handle delete all patterns for asset
   const handleDeletePatterns = useCallback(async (assetId, e) => {
     e.stopPropagation();
-    
+
     if (deleteConfirmAssetId !== assetId) {
-      // First click - show confirmation
       setDeleteConfirmAssetId(assetId);
       return;
     }
-    
-    // Second click - perform delete
+
     setDeletingAssetId(assetId);
     setDeleteConfirmAssetId(null);
-    
+
     try {
       const response = await api.deleteAllPatternsForAsset(assetId);
       console.log('Delete response:', response.data);
-      
-      // Refresh the list
       refreshAssetsWithPatterns();
-      
-      // Clear selected asset if it was the deleted one
       if (selectedAsset?.id === assetId) {
         dispatch(clearAnalysis());
       }
@@ -134,16 +206,58 @@ const Sidebar = ({ isOpen }) => {
     }
   }, [deleteConfirmAssetId, refreshAssetsWithPatterns, selectedAsset, dispatch]);
 
-  // Cancel delete confirmation when clicking elsewhere
   const handleCancelDeleteConfirm = useCallback(() => {
     setDeleteConfirmAssetId(null);
   }, []);
+
+  const renderGroupedList = (groups, prefix) => {
+    const countries = Object.keys(groups).sort();
+    return countries.map((country) => {
+      const kinds = groups[country];
+      const countryKey = `${prefix}:${country}`;
+      const countryOpen = isCountryOpen(country, prefix);
+      const countryLabel = COUNTRY_LABELS[country] || country;
+      const countryCount = Object.values(kinds).reduce((s, arr) => s + arr.length, 0);
+
+      return (
+        <div key={countryKey} className="group-country">
+          <button className={`group-header country-header ${countryOpen ? 'open' : ''}`} onClick={() => toggleCountry(countryKey)}>
+            <span className="group-arrow">{countryOpen ? '▼' : '▶'}</span>
+            <span className="group-label">{countryLabel}</span>
+            <span className="group-count">{countryCount}</span>
+          </button>
+          {countryOpen && Object.keys(kinds).sort().map((kind) => {
+            const kindKey = `${prefix}:${country}:${kind}`;
+            const kindOpen = isKindOpen(country, kind, prefix);
+            const kindAssets = kinds[kind];
+
+            return (
+              <div key={kindKey} className="group-kind">
+                <button className={`group-header kind-header ${kindOpen ? 'open' : ''}`} onClick={() => toggleKind(kindKey)}>
+                  <span className="group-arrow">{kindOpen ? '▼' : '▶'}</span>
+                  <span className="group-label">{kind}</span>
+                  <span className="group-count">{kindAssets.length}</span>
+                </button>
+                {kindOpen && kindAssets.map((asset) => (
+                  <AssetItem
+                    key={asset.id}
+                    asset={asset}
+                    isSelected={selectedAsset?.id === asset.id}
+                    onClick={() => handleAssetSelect(asset)}
+                  />
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      );
+    });
+  };
 
   return (
     <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
       {isOpen && (
         <>
-          {/* Header */}
           <div className="sidebar-header">
             <div className="logo">
               <span className="logo-icon">◈</span>
@@ -153,14 +267,10 @@ const Sidebar = ({ isOpen }) => {
               ◀
             </button>
           </div>
-          
-          {/* User Section - Collapsible */}
+
           <UserSection />
-          
-          {/* Sync Section - Collapsible */}
           <SyncSection />
 
-          {/* Exchange Selector */}
           <div className="sidebar-section">
             <label className="section-label">
               <span className="section-icon">⬡</span>
@@ -180,7 +290,6 @@ const Sidebar = ({ isOpen }) => {
             </select>
           </div>
 
-          {/* Asset Search */}
           <div className="sidebar-section">
             <label className="section-label">
               <span className="section-icon">◎</span>
@@ -190,7 +299,7 @@ const Sidebar = ({ isOpen }) => {
               <input
                 type="text"
                 className="input search-input"
-                placeholder="Search by symbol..."
+                placeholder="Search by ticker or name..."
                 value={searchTerm}
                 onChange={handleSearchChange}
               />
@@ -206,7 +315,7 @@ const Sidebar = ({ isOpen }) => {
             </div>
           </div>
 
-          {/* Assets List - Collapsible */}
+          {/* Assets List */}
           <div className={`sidebar-section asset-list-section ${assetsExpanded ? 'section-expanded' : 'section-collapsed'}`}>
             <button
               className={`section-label collapsible ${assetsExpanded ? 'expanded' : ''}`}
@@ -217,9 +326,9 @@ const Sidebar = ({ isOpen }) => {
               <span className="count-badge">{assets.length}</span>
               <span className="collapse-arrow">{assetsExpanded ? '▼' : '▶'}</span>
             </button>
-            
+
             {assetsExpanded && (
-              <div className="asset-list">
+              <div className="asset-list grouped-asset-list">
                 {assetsLoading ? (
                   <div className="loader">
                     <div className="loader-spinner"></div>
@@ -230,22 +339,13 @@ const Sidebar = ({ isOpen }) => {
                     <span>No assets found</span>
                   </div>
                 ) : (
-                  assets.map((asset) => (
-                    <button
-                      key={asset.id}
-                      className={`asset-item ${selectedAsset?.id === asset.id ? 'selected' : ''}`}
-                      onClick={() => handleAssetSelect(asset)}
-                    >
-                      <span className="asset-symbol">{asset.asset}</span>
-                      <span className="asset-quote">/{asset.quote}</span>
-                    </button>
-                  ))
+                  renderGroupedList(groupedAssets, 'a')
                 )}
               </div>
             )}
           </div>
 
-          {/* Harmonic Patterns in Assets - Collapsible */}
+          {/* Harmonic Patterns */}
           <div className={`sidebar-section asset-list-section patterns-section ${patternsExpanded ? 'section-expanded' : 'section-collapsed'}`}>
             <button
               className={`section-label collapsible ${patternsExpanded ? 'expanded' : ''}`}
@@ -256,9 +356,9 @@ const Sidebar = ({ isOpen }) => {
               <span className="count-badge patterns">{filteredAssetsWithPatterns.length}</span>
               <span className="collapse-arrow">{patternsExpanded ? '▼' : '▶'}</span>
             </button>
-            
+
             {patternsExpanded && (
-              <div className="asset-list patterns-list" onClick={handleCancelDeleteConfirm}>
+              <div className="asset-list patterns-list grouped-asset-list" onClick={handleCancelDeleteConfirm}>
                 {patternsLoading ? (
                   <div className="loader">
                     <div className="loader-spinner"></div>
@@ -272,7 +372,7 @@ const Sidebar = ({ isOpen }) => {
                   filteredAssetsWithPatterns.map((asset) => {
                     const isDeleting = deletingAssetId === asset.id;
                     const isConfirming = deleteConfirmAssetId === asset.id;
-                    
+
                     return (
                       <div
                         key={asset.id}
@@ -283,8 +383,10 @@ const Sidebar = ({ isOpen }) => {
                           onClick={() => handleAssetSelect(asset)}
                         >
                           <div className="pattern-item-main">
-                            <span className="asset-symbol">{asset.asset}</span>
-                            <span className="asset-quote">/{asset.quote}</span>
+                            <span className="asset-symbol">{asset.asset}<span className="asset-quote">/{asset.quote}</span></span>
+                            {asset.full_name && (
+                              <span className="asset-full-name-sub">{asset.full_name}</span>
+                            )}
                           </div>
                           <div className="pattern-item-meta">
                             <span className="pattern-date" title="Latest Pattern">
@@ -313,7 +415,6 @@ const Sidebar = ({ isOpen }) => {
             )}
           </div>
 
-          {/* Footer Stats */}
           <div className="sidebar-footer">
             <div className="stat-item">
               <span className="stat-label">Exchange</span>

@@ -105,6 +105,13 @@
   font-weight: 400;
 }
 
+.asset-full-name-label {
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+
 .exchange-badge {
   padding: 4px 10px;
   background: rgba(153, 69, 255, 0.1);

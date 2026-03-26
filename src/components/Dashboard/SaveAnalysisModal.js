@@ -66,7 +66,9 @@ const SaveAnalysisModal = ({ isOpen, onClose }) => {
         // Tryb tworzenia - generuj domyślną nazwę
         if (selectedAsset) {
           const date = new Date().toLocaleDateString('pl-PL');
-          setName(`${selectedAsset.asset || selectedAsset.asset_name}/${selectedAsset.quote || selectedAsset.quote_name} - ${interval} - ${date}`);
+          const ticker = selectedAsset.asset || selectedAsset.asset_name;
+          const suffix = selectedAsset.full_name ? ` (${selectedAsset.full_name})` : '';
+          setName(`${ticker}/${selectedAsset.quote || selectedAsset.quote_name}${suffix} - ${interval} - ${date}`);
           setDescription('');
         }
       }

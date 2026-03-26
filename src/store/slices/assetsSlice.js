@@ -42,10 +42,12 @@ const assetsSlice = createSlice({
     setSearchTerm: (state, action) => {
       state.searchTerm = action.payload;
       if (action.payload) {
+        const term = action.payload.toLowerCase();
         state.filteredList = state.list.filter(
           (asset) =>
-            asset.asset.toLowerCase().includes(action.payload.toLowerCase()) ||
-            asset.quote.toLowerCase().includes(action.payload.toLowerCase())
+            asset.asset.toLowerCase().includes(term) ||
+            asset.quote.toLowerCase().includes(term) ||
+            (asset.full_name && asset.full_name.toLowerCase().includes(term))
         );
       } else {
         state.filteredList = state.list;

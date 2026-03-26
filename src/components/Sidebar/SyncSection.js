@@ -139,7 +139,8 @@ const SyncSection = () => {
       (asset) =>
         asset.asset.toLowerCase().includes(search) ||
         asset.quote.toLowerCase().includes(search) ||
-        `${asset.asset}/${asset.quote}`.toLowerCase().includes(search)
+        `${asset.asset}/${asset.quote}`.toLowerCase().includes(search) ||
+        (asset.full_name && asset.full_name.toLowerCase().includes(search))
     );
   }, [bulkAssets, bulkSearchTerm]);
 
@@ -486,7 +487,11 @@ const SyncSection = () => {
                               onChange={() => toggleAssetSelection(asset.id)}
                             />
                             <span className="asset-name">
-                              {asset.asset}<span className="quote">/{asset.quote}</span>
+                              {asset.full_name ? (
+                                <>{asset.full_name} <span className="ticker-hint">({asset.asset})</span><span className="quote">/{asset.quote}</span></>
+                              ) : (
+                                <>{asset.asset}<span className="quote">/{asset.quote}</span></>
+                              )}
                             </span>
                           </label>
                         ))

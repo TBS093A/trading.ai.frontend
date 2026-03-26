@@ -10,6 +10,7 @@ export const fetchKlines = createAsyncThunk(
         klines: response.data.klines,
         asset: response.data.asset,
         quote: response.data.quote,
+        full_name: response.data.full_name || null,
         interval: response.data.interval,
       };
     } catch (error) {
@@ -24,6 +25,7 @@ const chartSlice = createSlice({
     klines: [],
     asset: null,
     quote: null,
+    full_name: null,
     interval: '4h',
     availableIntervals: ['1m', '5m', '15m', '30m', '1h', '4h', '1d', '1w', '1M'],
     loading: false,
@@ -38,6 +40,7 @@ const chartSlice = createSlice({
       state.klines = [];
       state.asset = null;
       state.quote = null;
+      state.full_name = null;
     },
     clearChartError: (state) => {
       state.error = null;
@@ -60,6 +63,7 @@ const chartSlice = createSlice({
         state.klines = action.payload.klines;
         state.asset = action.payload.asset;
         state.quote = action.payload.quote;
+        state.full_name = action.payload.full_name || null;
         state.interval = action.payload.interval;
       })
       .addCase(fetchKlines.rejected, (state, action) => {
