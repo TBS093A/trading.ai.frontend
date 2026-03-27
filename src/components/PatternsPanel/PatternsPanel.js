@@ -476,6 +476,10 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
                   const dTimestamp = points.D?.timestamp || pattern.d_point_timestamp;
                   const patternOptions = getPatternOptions(pattern.id);
                   const hasActiveOptions = hasActiveDisplayOptions(pattern.id);
+                  const confList = pattern.confluences_json?.confluences;
+                  const confluenceCount = Array.isArray(confList)
+                    ? confList.length
+                    : (pattern.confluences_json?.total_score ?? 0);
 
                   return (
                     <div 
@@ -487,23 +491,20 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
                         <button 
                           className="pattern-header-main"
                           onClick={() => handlePatternClick(pattern)}
+                          title={`${taData.is_formed ? 'Formed' : 'Forming'} · ${confluenceCount} confluence${confluenceCount !== 1 ? 's' : ''}`}
                         >
                           <div className="pattern-main">
                             <span className={`pattern-direction ${taData.is_bullish ? 'bullish' : 'bearish'}`}>
                               {taData.is_bullish ? '▲' : '▼'}
                             </span>
                             <span className="pattern-name">{taData.pattern_type || 'Unknown'}</span>
-                            <span className={`pattern-status ${taData.is_formed ? 'formed' : 'forming'}`}>
-                              {taData.is_formed ? '●' : '○'}
-                            </span>
                           </div>
-                          {/* Active display options icons */}
-                          <div className="pattern-indicators">
-                            {patternOptions.showInternalFibo && <span className="indicator-icon fib-int" title="Internal Fibo">◐</span>}
-                            {patternOptions.showExternalFibo && <span className="indicator-icon fib-ext" title="External Fibo">◑</span>}
-                            {patternOptions.showFiboFE && <span className="indicator-icon fib-fe" title="Fibo FE">◒</span>}
-                            {patternOptions.showTPPRZSL && <span className="indicator-icon fib-tp" title="TP/PRZ/SL">◓</span>}
-                          </div>
+                          <span
+                            className={`pattern-confluence-count ${confluenceCount > 0 ? 'has-confluences' : ''}`}
+                            title={`${confluenceCount} confluence${confluenceCount !== 1 ? 's' : ''} at D`}
+                          >
+                            {confluenceCount}
+                          </span>
                           <span className="pattern-date">{formatTimestamp(dTimestamp)}</span>
                         </button>
                         <button 

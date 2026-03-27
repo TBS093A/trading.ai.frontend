@@ -562,35 +562,26 @@
   color: var(--text-muted);
 }
 
-/* Pattern Indicator Icons (showing active display options) */
-.pattern-indicators {
-  display: flex;
-  align-items: center;
-  gap: 3px;
+/* Confluence total in list row (between name and date) */
+.pattern-confluence-count {
   margin-left: auto;
   margin-right: var(--spacing-sm);
-}
-
-.indicator-icon {
+  min-width: 1.25rem;
+  padding: 1px 6px;
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', monospace;
   font-size: 0.65rem;
-  line-height: 1;
-  opacity: 0.9;
+  font-weight: 600;
+  text-align: center;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-primary);
 }
 
-.indicator-icon.fib-int {
-  color: var(--accent-yellow);
-}
-
-.indicator-icon.fib-ext {
-  color: var(--accent-purple);
-}
-
-.indicator-icon.fib-fe {
+.pattern-confluence-count.has-confluences {
   color: var(--accent-cyan);
-}
-
-.indicator-icon.fib-tp {
-  color: var(--accent-green);
+  background: rgba(0, 240, 255, 0.1);
+  border-color: rgba(0, 240, 255, 0.35);
 }
 
 /* Pattern with active options */
