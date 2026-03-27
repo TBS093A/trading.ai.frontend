@@ -548,65 +548,85 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
                             </div>
                           )}
 
-                          {/* Confluences */}
+                          {/* Confluences — filtered by pattern direction (bullish vs bearish) */}
                           {(() => {
                             const conf = pattern.confluences_json;
                             const cList = conf?.confluences || [];
                             const cTypes = new Set(cList.map(c => c.type));
+                            const patternDirection =
+                              taData.is_bullish === true
+                                ? 'bullish'
+                                : taData.is_bullish === false
+                                  ? 'bearish'
+                                  : 'both';
+
+                            const matchesDirection = (direction) => {
+                              if (patternDirection === 'both') return true;
+                              if (!direction || direction === 'both') return true;
+                              return direction === patternDirection;
+                            };
 
                             const CATEGORIES = [
                               {
                                 title: '1. RSI / Stochastic Divergence at D',
                                 items: [
-                                  { label: 'RSI Oversold', types: ['rsi_oversold'] },
-                                  { label: 'RSI Overbought', types: ['rsi_overbought'] },
-                                  { label: 'RSI Divergence', types: ['rsi_bullish_divergence', 'rsi_bearish_divergence'] },
-                                  { label: 'Stochastic Oversold', types: ['stochastic_oversold'] },
-                                  { label: 'Stochastic Overbought', types: ['stochastic_overbought'] },
+                                  { label: 'RSI Oversold', types: ['rsi_oversold'], direction: 'bullish' },
+                                  { label: 'RSI Overbought', types: ['rsi_overbought'], direction: 'bearish' },
+                                  { label: 'RSI Bullish Divergence', types: ['rsi_bullish_divergence'], direction: 'bullish' },
+                                  { label: 'RSI Bearish Divergence', types: ['rsi_bearish_divergence'], direction: 'bearish' },
+                                  { label: 'Stochastic Oversold', types: ['stochastic_oversold'], direction: 'bullish' },
+                                  { label: 'Stochastic Overbought', types: ['stochastic_overbought'], direction: 'bearish' },
                                 ],
                               },
                               {
                                 title: '2. Candlestick Pattern at D',
                                 items: [
-                                  { label: 'Bullish Engulfing', types: ['bullish_engulfing'] },
-                                  { label: 'Bearish Engulfing', types: ['bearish_engulfing'] },
-                                  { label: 'Bullish Pin Bar', types: ['bullish_pin_bar'] },
-                                  { label: 'Bearish Pin Bar', types: ['bearish_pin_bar'] },
-                                  { label: 'Hammer', types: ['hammer'] },
-                                  { label: 'Shooting Star', types: ['shooting_star'] },
-                                  { label: 'Morning Star', types: ['morning_star'] },
-                                  { label: 'Evening Star', types: ['evening_star'] },
-                                  { label: 'Doji', types: ['doji'] },
+                                  { label: 'Bullish Engulfing', types: ['bullish_engulfing'], direction: 'bullish' },
+                                  { label: 'Bearish Engulfing', types: ['bearish_engulfing'], direction: 'bearish' },
+                                  { label: 'Bullish Pin Bar', types: ['bullish_pin_bar'], direction: 'bullish' },
+                                  { label: 'Bearish Pin Bar', types: ['bearish_pin_bar'], direction: 'bearish' },
+                                  { label: 'Hammer', types: ['hammer'], direction: 'bullish' },
+                                  { label: 'Shooting Star', types: ['shooting_star'], direction: 'bearish' },
+                                  { label: 'Morning Star', types: ['morning_star'], direction: 'bullish' },
+                                  { label: 'Evening Star', types: ['evening_star'], direction: 'bearish' },
+                                  { label: 'Doji', types: ['doji'], direction: 'both' },
                                 ],
                               },
                               {
                                 title: '3. Fibonacci Cluster',
                                 items: [
-                                  { label: 'Fib Cluster (same TF)', types: ['fib_cluster'] },
-                                  { label: 'Higher TF Fib', types: ['higher_tf_fib'] },
+                                  { label: 'Fib Cluster (same TF)', types: ['fib_cluster'], direction: 'both' },
+                                  { label: 'Higher TF Fib', types: ['higher_tf_fib'], direction: 'both' },
                                 ],
                               },
                               {
                                 title: '4. Support / Resistance from Higher TF',
                                 items: [
-                                  { label: 'Higher TF S/R Zone', types: ['higher_tf_support_zone', 'higher_tf_resistance_zone'] },
-                                  { label: 'Higher TF Trendline', types: ['higher_tf_support_trendline', 'higher_tf_resistance_trendline'] },
-                                  { label: 'S/R Zone (same TF)', types: ['support_zone', 'resistance_zone'] },
-                                  { label: 'Trendline (same TF)', types: ['support_trendline', 'resistance_trendline'] },
-                                  { label: 'Pivot Point', types: ['pivot_point'] },
-                                  { label: 'Round Level', types: ['round_level'] },
+                                  { label: 'Higher TF Support Zone', types: ['higher_tf_support_zone'], direction: 'bullish' },
+                                  { label: 'Higher TF Resistance Zone', types: ['higher_tf_resistance_zone'], direction: 'bearish' },
+                                  { label: 'Higher TF Support Trendline', types: ['higher_tf_support_trendline'], direction: 'bullish' },
+                                  { label: 'Higher TF Resistance Trendline', types: ['higher_tf_resistance_trendline'], direction: 'bearish' },
+                                  { label: 'Support Zone (same TF)', types: ['support_zone'], direction: 'bullish' },
+                                  { label: 'Resistance Zone (same TF)', types: ['resistance_zone'], direction: 'bearish' },
+                                  { label: 'Support Trendline (same TF)', types: ['support_trendline'], direction: 'bullish' },
+                                  { label: 'Resistance Trendline (same TF)', types: ['resistance_trendline'], direction: 'bearish' },
+                                  { label: 'Pivot Point', types: ['pivot_point'], direction: 'both' },
+                                  { label: 'Round Level', types: ['round_level'], direction: 'both' },
                                 ],
                               },
                               {
                                 title: '5. Volume Confirmation',
                                 items: [
-                                  { label: 'Volume Spike', types: ['volume_spike'] },
-                                  { label: 'Volume Dry-up', types: ['volume_dryup'] },
-                                  { label: 'Volume Profile (POC/VAH/VAL)', types: ['volume_profile'] },
-                                  { label: 'MACD Crossover', types: ['macd_bullish_crossover', 'macd_bearish_crossover'] },
-                                  { label: 'MACD Histogram Reversal', types: ['macd_histogram_reversal'] },
-                                  { label: 'MACD Divergence', types: ['macd_bullish_divergence', 'macd_bearish_divergence'] },
-                                  { label: 'OBV Divergence', types: ['obv_bullish_divergence', 'obv_bearish_divergence'] },
+                                  { label: 'Volume Spike', types: ['volume_spike'], direction: 'both' },
+                                  { label: 'Volume Dry-up', types: ['volume_dryup'], direction: 'both' },
+                                  { label: 'Volume Profile (POC/VAH/VAL)', types: ['volume_profile'], direction: 'both' },
+                                  { label: 'MACD Bullish Crossover', types: ['macd_bullish_crossover'], direction: 'bullish' },
+                                  { label: 'MACD Bearish Crossover', types: ['macd_bearish_crossover'], direction: 'bearish' },
+                                  { label: 'MACD Histogram Reversal', types: ['macd_histogram_reversal'], direction: 'both' },
+                                  { label: 'MACD Bullish Divergence', types: ['macd_bullish_divergence'], direction: 'bullish' },
+                                  { label: 'MACD Bearish Divergence', types: ['macd_bearish_divergence'], direction: 'bearish' },
+                                  { label: 'OBV Bullish Divergence', types: ['obv_bullish_divergence'], direction: 'bullish' },
+                                  { label: 'OBV Bearish Divergence', types: ['obv_bearish_divergence'], direction: 'bearish' },
                                 ],
                               },
                             ];
@@ -627,17 +647,24 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
                                 </div>
                                 <div className="confluences-list">
                                   {CATEGORIES.map((cat) => {
-                                    const catHits = cat.items.filter(item =>
-                                      item.types.some(t => cTypes.has(t))
+                                    const itemsVisible = cat.items.filter((item) => matchesDirection(item.direction));
+                                    if (itemsVisible.length === 0) return null;
+
+                                    const catHits = itemsVisible.filter((item) =>
+                                      item.types.some((t) => cTypes.has(t)),
                                     ).length;
                                     return (
                                       <div key={cat.title} className="confluence-category">
                                         <div className={`confluence-cat-title ${catHits > 0 ? 'has-hits' : ''}`}>
                                           {cat.title}
-                                          {catHits > 0 && <span className="cat-hits">{catHits}/{cat.items.length}</span>}
+                                          {catHits > 0 && (
+                                            <span className="cat-hits">
+                                              {catHits}/{itemsVisible.length}
+                                            </span>
+                                          )}
                                         </div>
                                         <div className="confluence-items">
-                                          {cat.items.map((item) => {
+                                          {itemsVisible.map((item) => {
                                             const match = getMatchedConfluence(item.types);
                                             const active = !!match;
                                             return (
