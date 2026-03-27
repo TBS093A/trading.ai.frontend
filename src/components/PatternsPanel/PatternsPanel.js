@@ -73,8 +73,13 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
   });
   // State for info tooltip visibility
   const [activeInfoTooltip, setActiveInfoTooltip] = useState(null);
-  /** Per-pattern, per-category: true = confluence category body is collapsed */
+  /**
+   * Per-pattern, per-category: stored true = collapsed, false = expanded.
+   * Absent key = collapsed (default).
+   */
   const [collapsedConfluenceCats, setCollapsedConfluenceCats] = useState({});
+  /** Per-pattern: true = pattern info body expanded */
+  const [expandedPatternInfoById, setExpandedPatternInfoById] = useState({});
   const { 
     harmonicPatterns, 
     selectedPattern, 
@@ -246,12 +251,22 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
     e.preventDefault();
     setCollapsedConfluenceCats((prev) => {
       const byPattern = prev[patternId] || {};
-      const collapsed = !!byPattern[categoryTitle];
+      const currentlyCollapsed = byPattern[categoryTitle] !== false;
+      const nextCollapsed = !currentlyCollapsed;
       return {
         ...prev,
-        [patternId]: { ...byPattern, [categoryTitle]: !collapsed },
+        [patternId]: { ...byPattern, [categoryTitle]: nextCollapsed },
       };
     });
+  }, []);
+
+  const togglePatternInfo = useCallback((e, patternId) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setExpandedPatternInfoById((prev) => ({
+      ...prev,
+      [patternId]: !prev[patternId],
+    }));
   }, []);
 
   const handleAlphaChange = useCallback((e) => {
@@ -506,23 +521,34 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
                           {/* Pattern guide (hardcoded descriptions by family) */}
                           {(() => {
                             const info = getPatternInfo(taData.pattern_type);
+                            const infoExpanded = !!expandedPatternInfoById[pattern.id];
                             return (
                               <div className="pattern-info-callout" role="note" lang="en">
-                                <div className="pattern-info-callout-header">
+                                <button
+                                  type="button"
+                                  className={`pattern-info-callout-toggle ${infoExpanded ? 'expanded' : ''}`}
+                                  onClick={(e) => togglePatternInfo(e, pattern.id)}
+                                  aria-expanded={infoExpanded}
+                                >
+                                  <span className="pattern-info-chevron" aria-hidden>
+                                    {infoExpanded ? '▾' : '▸'}
+                                  </span>
                                   <span className="pattern-info-icon" aria-hidden="true">ⓘ</span>
                                   <span className="pattern-info-callout-title">
                                     {info.displayName}
                                     <span className="pattern-info-structure">· {info.structure}</span>
                                   </span>
-                                </div>
-                                <div className="pattern-info-body">
-                                  <p className="pattern-info-lead">Purpose</p>
-                                  <p className="pattern-info-text">{info.purpose}</p>
-                                  <p className="pattern-info-lead">What it anticipates</p>
-                                  <p className="pattern-info-text">{info.prediction}</p>
-                                  <p className="pattern-info-lead">Transactional vs analytical</p>
-                                  <p className="pattern-info-text">{info.usage}</p>
-                                </div>
+                                </button>
+                                {infoExpanded && (
+                                  <div className="pattern-info-body">
+                                    <p className="pattern-info-lead">Purpose</p>
+                                    <p className="pattern-info-text">{info.purpose}</p>
+                                    <p className="pattern-info-lead">What it anticipates</p>
+                                    <p className="pattern-info-text">{info.prediction}</p>
+                                    <p className="pattern-info-lead">Transactional vs analytical</p>
+                                    <p className="pattern-info-text">{info.usage}</p>
+                                  </div>
+                                )}
                               </div>
                             );
                           })()}
@@ -693,7 +719,8 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
                                     const catHits = itemsVisible.filter((item) =>
                                       item.types.some((t) => cTypes.has(t)),
                                     ).length;
-                                    const isCatCollapsed = !!collapsedConfluenceCats[pattern.id]?.[cat.title];
+                                    const confByPattern = collapsedConfluenceCats[pattern.id] || {};
+                                    const isCatCollapsed = confByPattern[cat.title] !== false;
 
                                     return (
                                       <div key={cat.title} className="confluence-category">

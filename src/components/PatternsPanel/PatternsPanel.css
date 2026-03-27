@@ -676,22 +676,45 @@
   margin-bottom: var(--spacing-xs);
 }
 
-/* Pattern info callout (yellow guide, English) */
+/* Pattern info callout (solid darker yellow, English) */
 .pattern-info-callout {
-  background: linear-gradient(165deg, #fff9c4 0%, #ffeb3b 45%, #ffd54f 100%);
+  background: #b8960b;
   color: #0d0d0d;
-  border: 1px solid rgba(0, 0, 0, 0.14);
+  border: 1px solid rgba(0, 0, 0, 0.22);
   border-radius: 10px;
-  padding: 10px 12px;
+  padding: 8px 10px 10px;
   margin-bottom: var(--spacing-sm);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
 }
 
-.pattern-info-callout-header {
+.pattern-info-callout-toggle {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: 6px;
+  width: 100%;
+  margin: 0;
+  padding: 4px 2px;
+  text-align: left;
+  cursor: pointer;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  font-family: inherit;
+  color: inherit;
+  transition: background 0.12s;
+}
+
+.pattern-info-callout-toggle:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.pattern-info-chevron {
+  flex-shrink: 0;
+  width: 10px;
+  font-size: 0.55rem;
+  line-height: 1.4;
+  opacity: 0.85;
+  color: #000;
 }
 
 .pattern-info-icon {
@@ -717,7 +740,9 @@
 }
 
 .pattern-info-body {
-  padding-left: calc(1rem + 8px);
+  padding: 8px 2px 2px calc(10px + 6px + 1rem + 6px);
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+  margin-top: 4px;
 }
 
 .pattern-info-lead {
