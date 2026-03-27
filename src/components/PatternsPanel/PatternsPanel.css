@@ -676,6 +676,71 @@
   margin-bottom: var(--spacing-xs);
 }
 
+/* Pattern info callout (yellow guide, English) */
+.pattern-info-callout {
+  background: linear-gradient(165deg, #fff9c4 0%, #ffeb3b 45%, #ffd54f 100%);
+  color: #0d0d0d;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: var(--spacing-sm);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.pattern-info-callout-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.pattern-info-icon {
+  flex-shrink: 0;
+  font-size: 1rem;
+  line-height: 1;
+  color: #000;
+  margin-top: 1px;
+}
+
+.pattern-info-callout-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: #000;
+  letter-spacing: 0.02em;
+}
+
+.pattern-info-structure {
+  font-weight: 600;
+  opacity: 0.72;
+  margin-left: 4px;
+}
+
+.pattern-info-body {
+  padding-left: calc(1rem + 8px);
+}
+
+.pattern-info-lead {
+  font-size: 0.58rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #000;
+  margin: 8px 0 3px;
+}
+
+.pattern-info-lead:first-child {
+  margin-top: 0;
+}
+
+.pattern-info-text {
+  font-size: 0.65rem;
+  font-weight: 500;
+  line-height: 1.45;
+  color: #111;
+  margin: 0;
+}
+
 /* Strategy Section */
 .strategy-section {
   background: rgba(153, 69, 255, 0.05);
@@ -1375,17 +1440,48 @@
 }
 
 .confluence-cat-title {
+  font-family: inherit;
   font-size: 0.6rem;
   font-weight: 600;
   color: var(--text-muted);
-  padding: 2px 0 1px;
+  padding: 3px 2px 3px 0;
+  margin: 0;
+  width: 100%;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 4px;
+  text-align: left;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  border-radius: 2px;
+  transition: background 0.12s, color 0.12s;
+}
+
+.confluence-cat-title:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary);
 }
 
 .confluence-cat-title.has-hits {
   color: var(--text-secondary);
+}
+
+.confluence-cat-title.has-hits:hover {
+  color: var(--text-primary);
+}
+
+.confluence-cat-chevron {
+  flex-shrink: 0;
+  width: 10px;
+  font-size: 0.5rem;
+  opacity: 0.75;
+}
+
+.confluence-cat-title-text {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.25;
 }
 
 .cat-hits {

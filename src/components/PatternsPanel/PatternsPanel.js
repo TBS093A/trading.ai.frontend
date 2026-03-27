@@ -17,6 +17,7 @@ import {
 } from '../../store/slices/analysisSlice';
 import { togglePatternsPanel } from '../../store/slices/uiSlice';
 import './PatternsPanel.css';
+import { getPatternInfo } from './patternInfoDescriptions';
 
 // FE Group descriptions for info tooltips
 const FE_GROUP_INFO = {
@@ -72,6 +73,8 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
   });
   // State for info tooltip visibility
   const [activeInfoTooltip, setActiveInfoTooltip] = useState(null);
+  /** Per-pattern, per-category: true = confluence category body is collapsed */
+  const [collapsedConfluenceCats, setCollapsedConfluenceCats] = useState({});
   const { 
     harmonicPatterns, 
     selectedPattern, 
@@ -237,6 +240,19 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
     e.stopPropagation();
     dispatch(toggleExpandedPattern(patternId));
   }, [dispatch]);
+
+  const toggleConfluenceCategory = useCallback((e, patternId, categoryTitle) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setCollapsedConfluenceCats((prev) => {
+      const byPattern = prev[patternId] || {};
+      const collapsed = !!byPattern[categoryTitle];
+      return {
+        ...prev,
+        [patternId]: { ...byPattern, [categoryTitle]: !collapsed },
+      };
+    });
+  }, []);
 
   const handleAlphaChange = useCallback((e) => {
     dispatch(setUnselectedAlpha(parseFloat(e.target.value)));
@@ -487,6 +503,30 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
                       {/* Expanded Details */}
                       {isExpanded && (
                         <div className="pattern-details">
+                          {/* Pattern guide (hardcoded descriptions by family) */}
+                          {(() => {
+                            const info = getPatternInfo(taData.pattern_type);
+                            return (
+                              <div className="pattern-info-callout" role="note" lang="en">
+                                <div className="pattern-info-callout-header">
+                                  <span className="pattern-info-icon" aria-hidden="true">ⓘ</span>
+                                  <span className="pattern-info-callout-title">
+                                    {info.displayName}
+                                    <span className="pattern-info-structure">· {info.structure}</span>
+                                  </span>
+                                </div>
+                                <div className="pattern-info-body">
+                                  <p className="pattern-info-lead">Purpose</p>
+                                  <p className="pattern-info-text">{info.purpose}</p>
+                                  <p className="pattern-info-lead">What it anticipates</p>
+                                  <p className="pattern-info-text">{info.prediction}</p>
+                                  <p className="pattern-info-lead">Transactional vs analytical</p>
+                                  <p className="pattern-info-text">{info.usage}</p>
+                                </div>
+                              </div>
+                            );
+                          })()}
+
                           {/* Detection Strategy Info */}
                           <div className="details-section strategy-section">
                             <div className="details-title">Detection Strategy</div>
@@ -653,39 +693,51 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
                                     const catHits = itemsVisible.filter((item) =>
                                       item.types.some((t) => cTypes.has(t)),
                                     ).length;
+                                    const isCatCollapsed = !!collapsedConfluenceCats[pattern.id]?.[cat.title];
+
                                     return (
                                       <div key={cat.title} className="confluence-category">
-                                        <div className={`confluence-cat-title ${catHits > 0 ? 'has-hits' : ''}`}>
-                                          {cat.title}
+                                        <button
+                                          type="button"
+                                          className={`confluence-cat-title ${catHits > 0 ? 'has-hits' : ''} ${isCatCollapsed ? 'collapsed' : ''}`}
+                                          onClick={(e) => toggleConfluenceCategory(e, pattern.id, cat.title)}
+                                          aria-expanded={!isCatCollapsed}
+                                        >
+                                          <span className="confluence-cat-chevron" aria-hidden>
+                                            {isCatCollapsed ? '▸' : '▾'}
+                                          </span>
+                                          <span className="confluence-cat-title-text">{cat.title}</span>
                                           {catHits > 0 && (
                                             <span className="cat-hits">
                                               {catHits}/{itemsVisible.length}
                                             </span>
                                           )}
-                                        </div>
-                                        <div className="confluence-items">
-                                          {itemsVisible.map((item) => {
-                                            const match = getMatchedConfluence(item.types);
-                                            const active = !!match;
-                                            return (
-                                              <div
-                                                key={item.label}
-                                                className={`confluence-item ${active ? 'active' : 'inactive'}`}
-                                                title={active ? `Confidence: ${(match.confidence * 100).toFixed(0)}%` : 'Not detected'}
-                                              >
-                                                <span className={`confluence-dot ${active ? 'hit' : 'miss'}`}>
-                                                  {active ? '●' : '○'}
-                                                </span>
-                                                <span className="confluence-label">{item.label}</span>
-                                                {active && (
-                                                  <span className="confluence-conf">
-                                                    {(match.confidence * 100).toFixed(0)}%
+                                        </button>
+                                        {!isCatCollapsed && (
+                                          <div className="confluence-items">
+                                            {itemsVisible.map((item) => {
+                                              const match = getMatchedConfluence(item.types);
+                                              const active = !!match;
+                                              return (
+                                                <div
+                                                  key={item.label}
+                                                  className={`confluence-item ${active ? 'active' : 'inactive'}`}
+                                                  title={active ? `Confidence: ${(match.confidence * 100).toFixed(0)}%` : 'Not detected'}
+                                                >
+                                                  <span className={`confluence-dot ${active ? 'hit' : 'miss'}`}>
+                                                    {active ? '●' : '○'}
                                                   </span>
-                                                )}
-                                              </div>
-                                            );
-                                          })}
-                                        </div>
+                                                  <span className="confluence-label">{item.label}</span>
+                                                  {active && (
+                                                    <span className="confluence-conf">
+                                                      {(match.confidence * 100).toFixed(0)}%
+                                                    </span>
+                                                  )}
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+                                        )}
                                       </div>
                                     );
                                   })}
