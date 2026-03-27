@@ -1342,6 +1342,115 @@
   box-shadow: 0 0 6px rgba(153, 69, 255, 0.4);
 }
 
+/* ─── Confluences Section ─── */
+
+.confluences-section .details-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--accent-cyan);
+}
+
+.confluence-score {
+  font-size: 0.6rem;
+  font-weight: 500;
+  color: var(--accent-green);
+  background: rgba(0, 200, 120, 0.12);
+  padding: 1px 6px;
+  border-radius: 8px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.confluences-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.confluence-category {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.confluence-cat-title {
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 2px 0 1px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.confluence-cat-title.has-hits {
+  color: var(--text-secondary);
+}
+
+.cat-hits {
+  font-size: 0.55rem;
+  font-weight: 500;
+  color: var(--accent-green);
+  opacity: 0.8;
+}
+
+.confluence-items {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-left: 4px;
+}
+
+.confluence-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.6rem;
+  padding: 1px 0;
+  transition: opacity 0.15s;
+}
+
+.confluence-item.inactive {
+  opacity: 0.4;
+}
+
+.confluence-item.active {
+  opacity: 1;
+}
+
+.confluence-dot {
+  font-size: 0.5rem;
+  flex-shrink: 0;
+  width: 10px;
+  text-align: center;
+}
+
+.confluence-dot.hit {
+  color: #ffffff;
+}
+
+.confluence-dot.miss {
+  color: #ffffff;
+}
+
+.confluence-label {
+  color: var(--text-secondary);
+  flex: 1;
+}
+
+.confluence-item.active .confluence-label {
+  color: var(--text-primary);
+}
+
+.confluence-conf {
+  font-size: 0.55rem;
+  font-weight: 600;
+  color: var(--accent-green);
+  min-width: 28px;
+  text-align: right;
+}
+
 /* Responsive */
 @media (max-width: 1400px) {
   .patterns-panel.open {

@@ -548,6 +548,125 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
                             </div>
                           )}
 
+                          {/* Confluences */}
+                          {(() => {
+                            const conf = pattern.confluences_json;
+                            const cList = conf?.confluences || [];
+                            const cTypes = new Set(cList.map(c => c.type));
+
+                            const CATEGORIES = [
+                              {
+                                title: '1. RSI / Stochastic Divergence at D',
+                                items: [
+                                  { label: 'RSI Oversold', types: ['rsi_oversold'] },
+                                  { label: 'RSI Overbought', types: ['rsi_overbought'] },
+                                  { label: 'RSI Divergence', types: ['rsi_bullish_divergence', 'rsi_bearish_divergence'] },
+                                  { label: 'Stochastic Oversold', types: ['stochastic_oversold'] },
+                                  { label: 'Stochastic Overbought', types: ['stochastic_overbought'] },
+                                ],
+                              },
+                              {
+                                title: '2. Candlestick Pattern at D',
+                                items: [
+                                  { label: 'Bullish Engulfing', types: ['bullish_engulfing'] },
+                                  { label: 'Bearish Engulfing', types: ['bearish_engulfing'] },
+                                  { label: 'Bullish Pin Bar', types: ['bullish_pin_bar'] },
+                                  { label: 'Bearish Pin Bar', types: ['bearish_pin_bar'] },
+                                  { label: 'Hammer', types: ['hammer'] },
+                                  { label: 'Shooting Star', types: ['shooting_star'] },
+                                  { label: 'Morning Star', types: ['morning_star'] },
+                                  { label: 'Evening Star', types: ['evening_star'] },
+                                  { label: 'Doji', types: ['doji'] },
+                                ],
+                              },
+                              {
+                                title: '3. Fibonacci Cluster',
+                                items: [
+                                  { label: 'Fib Cluster (same TF)', types: ['fib_cluster'] },
+                                  { label: 'Higher TF Fib', types: ['higher_tf_fib'] },
+                                ],
+                              },
+                              {
+                                title: '4. Support / Resistance from Higher TF',
+                                items: [
+                                  { label: 'Higher TF S/R Zone', types: ['higher_tf_support_zone', 'higher_tf_resistance_zone'] },
+                                  { label: 'Higher TF Trendline', types: ['higher_tf_support_trendline', 'higher_tf_resistance_trendline'] },
+                                  { label: 'S/R Zone (same TF)', types: ['support_zone', 'resistance_zone'] },
+                                  { label: 'Trendline (same TF)', types: ['support_trendline', 'resistance_trendline'] },
+                                  { label: 'Pivot Point', types: ['pivot_point'] },
+                                  { label: 'Round Level', types: ['round_level'] },
+                                ],
+                              },
+                              {
+                                title: '5. Volume Confirmation',
+                                items: [
+                                  { label: 'Volume Spike', types: ['volume_spike'] },
+                                  { label: 'Volume Dry-up', types: ['volume_dryup'] },
+                                  { label: 'Volume Profile (POC/VAH/VAL)', types: ['volume_profile'] },
+                                  { label: 'MACD Crossover', types: ['macd_bullish_crossover', 'macd_bearish_crossover'] },
+                                  { label: 'MACD Histogram Reversal', types: ['macd_histogram_reversal'] },
+                                  { label: 'MACD Divergence', types: ['macd_bullish_divergence', 'macd_bearish_divergence'] },
+                                  { label: 'OBV Divergence', types: ['obv_bullish_divergence', 'obv_bearish_divergence'] },
+                                ],
+                              },
+                            ];
+
+                            const getMatchedConfluence = (types) => {
+                              return cList.find(c => types.includes(c.type));
+                            };
+
+                            const totalScore = conf?.total_score || 0;
+
+                            return (
+                              <div className="details-section confluences-section">
+                                <div className="details-title">
+                                  Confluences
+                                  {totalScore > 0 && (
+                                    <span className="confluence-score">{totalScore} found</span>
+                                  )}
+                                </div>
+                                <div className="confluences-list">
+                                  {CATEGORIES.map((cat) => {
+                                    const catHits = cat.items.filter(item =>
+                                      item.types.some(t => cTypes.has(t))
+                                    ).length;
+                                    return (
+                                      <div key={cat.title} className="confluence-category">
+                                        <div className={`confluence-cat-title ${catHits > 0 ? 'has-hits' : ''}`}>
+                                          {cat.title}
+                                          {catHits > 0 && <span className="cat-hits">{catHits}/{cat.items.length}</span>}
+                                        </div>
+                                        <div className="confluence-items">
+                                          {cat.items.map((item) => {
+                                            const match = getMatchedConfluence(item.types);
+                                            const active = !!match;
+                                            return (
+                                              <div
+                                                key={item.label}
+                                                className={`confluence-item ${active ? 'active' : 'inactive'}`}
+                                                title={active ? `Confidence: ${(match.confidence * 100).toFixed(0)}%` : 'Not detected'}
+                                              >
+                                                <span className={`confluence-dot ${active ? 'hit' : 'miss'}`}>
+                                                  {active ? '●' : '○'}
+                                                </span>
+                                                <span className="confluence-label">{item.label}</span>
+                                                {active && (
+                                                  <span className="confluence-conf">
+                                                    {(match.confidence * 100).toFixed(0)}%
+                                                  </span>
+                                                )}
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          })()}
+
                           {/* Display Options */}
                           <div className="details-section">
                             <div className="details-title">Display on Chart</div>
