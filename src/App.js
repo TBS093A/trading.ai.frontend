@@ -3,7 +3,6 @@ import { useDispatch, useSelector } from 'react-redux';
 import Dashboard from './components/Dashboard/Dashboard';
 import Sidebar from './components/Sidebar/Sidebar';
 import PatternsPanel from './components/PatternsPanel/PatternsPanel';
-import PatternTooltip from './components/PatternTooltip/PatternTooltip';
 import Login from './components/Login/Login';
 import { fetchExchanges } from './store/slices/exchangesSlice';
 import { togglePatternsPanel, toggleSidebar } from './store/slices/uiSlice';
@@ -113,7 +112,6 @@ function App() {
           onCenterPattern={handleCenterPattern}
         />
       )}
-      <PatternTooltip />
     </div>
   );
 }

@@ -1,8 +1,7 @@
 import React, { useEffect, useRef, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { createChart, CrosshairMode } from 'lightweight-charts';
-import { setSelectedPattern, setHoveredPattern } from '../../store/slices/analysisSlice';
-import { showTooltip, hideTooltip } from '../../store/slices/uiSlice';
+import { setSelectedPattern } from '../../store/slices/analysisSlice';
 import { clearScaleReset } from '../../store/slices/chartSlice';
 import { calculateRSI, calculateMACD, calculateOBV } from '../../utils/indicators';
 import './TradingViewChart.css';
@@ -990,41 +989,9 @@ const TradingViewChart = forwardRef((props, ref) => {
     }
   }, [dispatch, harmonicPatterns]);
 
-  // Handle hover for tooltip + crosshair sync
   const handleCrosshairMove = useCallback((param) => {
     syncCrosshair(chartRef.current, param.time);
-
-    if (!param.point || harmonicPatterns.length === 0) {
-      dispatch(hideTooltip());
-      dispatch(setHoveredPattern(null));
-      return;
-    }
-
-    const hoverTime = param.time;
-    
-    // Find pattern near hover
-    const hoveredPattern = harmonicPatterns.find((pattern) => {
-      const { d_point_timestamp, x_point_timestamp } = pattern;
-      const dTime = d_point_timestamp / 1000;
-      const xTime = x_point_timestamp / 1000;
-      return hoverTime >= xTime && hoverTime <= dTime + 3600;
-    });
-
-    if (hoveredPattern) {
-      dispatch(setHoveredPattern(hoveredPattern));
-      dispatch(showTooltip({
-        position: { x: param.point.x, y: param.point.y },
-        content: {
-          patternType: hoveredPattern.ta_object_json.pattern_type,
-          isBullish: hoveredPattern.ta_object_json.is_bullish,
-          isFormed: hoveredPattern.ta_object_json.is_formed,
-        },
-      }));
-    } else {
-      dispatch(hideTooltip());
-      dispatch(setHoveredPattern(null));
-    }
-  }, [dispatch, harmonicPatterns, syncCrosshair]);
+  }, [syncCrosshair]);
 
   // Subscribe to chart events
   useEffect(() => {
