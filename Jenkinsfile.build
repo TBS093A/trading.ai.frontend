@@ -1,11 +1,15 @@
 /*
- * Build+push+deploy pipeline for trading-ai-frontend. Same shape as trading.ai.backend's
- * Jenkinsfile.build - see its header comment for the security-scan philosophy (non-blocking
- * first pass, reports as build artifacts, flip to hard-fail once you've reviewed a baseline).
+ * Build+push+deploy pipeline for trading-ai-frontend. See trading.ai.backend's Jenkinsfile.build
+ * header comment for the webhook-filtering, test/coverage, and PR-comment design notes - same
+ * shape here.
+ *
+ * Test & Coverage is safe to run blocking here (no catchError) - `react-scripts test --coverage`
+ * against zero test files just reports 0% and exits 0 (--passWithNoTests), nothing external to
+ * fail against. Once real tests exist this becomes a real gate for free.
  *
  * Credentials needed in Jenkins (already exist, shared with other pipelines):
  *   registry-credentials   (Username with password) - registry.00x097.com login
- *   git-gitea-tbs093a      (Username with password) - push access to cloud.config
+ *   git-gitea-tbs093a      (Username with password) - push access to cloud.config + PR comments
  */
 pipeline {
     agent {
@@ -16,8 +20,13 @@ pipeline {
 
     triggers {
         GenericTrigger(
-            genericVariables: [],
-            token: 'trading-ai-frontend-build'
+            genericVariables: [
+                [key: 'action', value: '$.action'],
+                [key: 'pr_number', value: '$.number']
+            ],
+            token: 'trading-ai-frontend-build',
+            regexpFilterText: '$action',
+            regexpFilterExpression: '^(opened|synchronize|reopened|)$'
         )
     }
 
@@ -25,6 +34,21 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scm
+            }
+        }
+
+        stage('Test & Coverage') {
+            steps {
+                sh '''
+                    set -euo pipefail
+                    docker run --rm -v "$WORKSPACE:/src" -w /src node:24.12.0-bookworm \
+                        bash -c "npm ci && CI=true npm test -- --coverage --watchAll=false --passWithNoTests"
+                '''
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'coverage/**', allowEmptyArchive: true
+                }
             }
         }
 
@@ -117,6 +141,9 @@ pipeline {
         }
 
         stage('Bump cloud.config manifest') {
+            when {
+                expression { return !env.pr_number?.trim() }
+            }
             steps {
                 withCredentials([
                     usernamePassword(
@@ -152,6 +179,9 @@ pipeline {
         }
 
         stage('DAST - OWASP ZAP baseline') {
+            when {
+                expression { return !env.pr_number?.trim() }
+            }
             steps {
                 catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
                     sh '''
@@ -171,6 +201,31 @@ pipeline {
             post {
                 always {
                     archiveArtifacts artifacts: 'zap-out/**', allowEmptyArchive: true
+                }
+            }
+        }
+
+        stage('PR comment') {
+            when {
+                expression { return env.pr_number?.trim() }
+            }
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'git-gitea-tbs093a',
+                        usernameVariable: 'GIT_USERNAME',
+                        passwordVariable: 'GIT_TOKEN'
+                    )
+                ]) {
+                    sh '''
+                        set -euo pipefail
+                        python3 build-pr-comment.py > pr-comment-body.json
+                        curl -s -X POST \
+                            -H "Authorization: token ${GIT_TOKEN}" \
+                            -H "Content-Type: application/json" \
+                            -d @pr-comment-body.json \
+                            "https://git.00x097.com/api/v1/repos/tbs093a/trading.ai.frontend/issues/${pr_number}/comments"
+                    '''
                 }
             }
         }
