@@ -1,10 +1,7 @@
 /*
- * Build+push+deploy pipeline for trading-ai-frontend - first CI this repo has ever had (it was
- * only ever deployed via the old trading.ai.backend/k8s.manifests/deploy.sh path before). Builds
- * the image (REACT_APP_API_URL baked in at build time, see Dockerfile), tags it with the commit
- * SHA, pushes to the self-hosted registry, then bumps that tag into cloud.config's
- * kubernetes/apps/trading-ai-frontend/manifest.yaml and pushes - ArgoCD (selfHeal: true) rolls it
- * out on its own.
+ * Build+push+deploy pipeline for trading-ai-frontend. Same shape as trading.ai.backend's
+ * Jenkinsfile.build - see its header comment for the security-scan philosophy (non-blocking
+ * first pass, reports as build artifacts, flip to hard-fail once you've reviewed a baseline).
  *
  * Credentials needed in Jenkins (already exist, shared with other pipelines):
  *   registry-credentials   (Username with password) - registry.00x097.com login
@@ -31,6 +28,41 @@ pipeline {
             }
         }
 
+        stage('SAST - Semgrep') {
+            steps {
+                catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+                    sh '''
+                        set -euo pipefail
+                        docker run --rm -v "$WORKSPACE:/src" semgrep/semgrep \
+                            semgrep scan --config=auto --json --output=/src/semgrep-report.json /src
+                    '''
+                }
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'semgrep-report.json', allowEmptyArchive: true
+                }
+            }
+        }
+
+        stage('SCA - dependencies (Trivy fs)') {
+            steps {
+                catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+                    sh '''
+                        set -euo pipefail
+                        docker run --rm -v "$WORKSPACE:/src" aquasec/trivy fs \
+                            --format json --output /src/trivy-fs-report.json \
+                            --severity HIGH,CRITICAL /src
+                    '''
+                }
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'trivy-fs-report.json', allowEmptyArchive: true
+                }
+            }
+        }
+
         stage('Build & push image') {
             steps {
                 withCredentials([
@@ -49,6 +81,37 @@ pipeline {
                         docker push registry.00x097.com/trading-ai-frontend:${GIT_COMMIT}
                         docker logout registry.00x097.com
                     '''
+                }
+            }
+        }
+
+        stage('SCA - image (Trivy image)') {
+            steps {
+                catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+                    withCredentials([
+                        usernamePassword(
+                            credentialsId: 'registry-credentials',
+                            usernameVariable: 'REGISTRY_USER',
+                            passwordVariable: 'REGISTRY_PASS'
+                        )
+                    ]) {
+                        sh '''
+                            set -euo pipefail
+                            docker run --rm \
+                                --env TRIVY_USERNAME="$REGISTRY_USER" \
+                                --env TRIVY_PASSWORD="$REGISTRY_PASS" \
+                                -v "$WORKSPACE:/out" \
+                                aquasec/trivy image \
+                                --format json --output /out/trivy-image-report.json \
+                                --severity HIGH,CRITICAL \
+                                registry.00x097.com/trading-ai-frontend:${GIT_COMMIT}
+                        '''
+                    }
+                }
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'trivy-image-report.json', allowEmptyArchive: true
                 }
             }
         }
@@ -85,6 +148,30 @@ pipeline {
                     '''
                 }
                 sh 'rm -rf .cloud-config-bump'
+            }
+        }
+
+        stage('DAST - OWASP ZAP baseline') {
+            steps {
+                catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+                    sh '''
+                        set -euo pipefail
+                        mkdir -p zap-out
+                        chmod 777 zap-out
+                        # Baseline = passive spider + passive scan only, no active attack payloads -
+                        # safe to run against the live production site. Do NOT swap this for
+                        # zap-full-scan.py against 00x097.com - that actively attacks the target,
+                        # only ever run that against a non-production/staging environment.
+                        docker run --rm -v "$WORKSPACE/zap-out:/zap/wrk:rw" zaproxy/zap-stable \
+                            zap-baseline.py -t https://00x097.com \
+                            -r zap-report.html -J zap-report.json || true
+                    '''
+                }
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'zap-out/**', allowEmptyArchive: true
+                }
             }
         }
     }
