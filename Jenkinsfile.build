@@ -1,0 +1,91 @@
+/*
+ * Build+push+deploy pipeline for trading-ai-frontend - first CI this repo has ever had (it was
+ * only ever deployed via the old trading.ai.backend/k8s.manifests/deploy.sh path before). Builds
+ * the image (REACT_APP_API_URL baked in at build time, see Dockerfile), tags it with the commit
+ * SHA, pushes to the self-hosted registry, then bumps that tag into cloud.config's
+ * kubernetes/apps/trading-ai-frontend/manifest.yaml and pushes - ArgoCD (selfHeal: true) rolls it
+ * out on its own.
+ *
+ * Credentials needed in Jenkins (already exist, shared with other pipelines):
+ *   registry-credentials   (Username with password) - registry.00x097.com login
+ *   git-gitea-tbs093a      (Username with password) - push access to cloud.config
+ */
+pipeline {
+    agent {
+        node {
+            label 'docker-builder && linux'
+        }
+    }
+
+    triggers {
+        GenericTrigger(
+            genericVariables: [],
+            token: 'trading-ai-frontend-build'
+        )
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Build & push image') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'registry-credentials',
+                        usernameVariable: 'REGISTRY_USER',
+                        passwordVariable: 'REGISTRY_PASS'
+                    )
+                ]) {
+                    sh '''
+                        set -euo pipefail
+                        docker build \
+                            --build-arg REACT_APP_API_URL=https://api.00x097.com \
+                            -t registry.00x097.com/trading-ai-frontend:${GIT_COMMIT} .
+                        echo "$REGISTRY_PASS" | docker login registry.00x097.com -u "$REGISTRY_USER" --password-stdin
+                        docker push registry.00x097.com/trading-ai-frontend:${GIT_COMMIT}
+                        docker logout registry.00x097.com
+                    '''
+                }
+            }
+        }
+
+        stage('Bump cloud.config manifest') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'git-gitea-tbs093a',
+                        usernameVariable: 'GIT_USERNAME',
+                        passwordVariable: 'GIT_TOKEN'
+                    )
+                ]) {
+                    sh '''
+                        set -euo pipefail
+                        rm -rf .cloud-config-bump
+                        git clone "https://${GIT_USERNAME}:${GIT_TOKEN}@git.00x097.com/tbs093a/cloud.config.git" .cloud-config-bump
+                        cd .cloud-config-bump
+
+                        yq eval -i '
+                          (.. | select(tag == "!!str" and test("registry.development.svc.cluster.local:5000/trading-ai-frontend:")))
+                          |= sub("registry.development.svc.cluster.local:5000/trading-ai-frontend:.*",
+                                 "registry.development.svc.cluster.local:5000/trading-ai-frontend:'"${GIT_COMMIT}"'")
+                        ' kubernetes/apps/trading-ai-frontend/manifest.yaml
+
+                        git config user.email "jenkins@00x097.com"
+                        git config user.name "Jenkins (trading-ai-frontend)"
+                        if git diff --quiet kubernetes/apps/trading-ai-frontend/; then
+                            echo "image tag unchanged, nothing to commit"
+                        else
+                            git commit -am "chore(trading-ai-frontend): deploy trading-ai-frontend@${GIT_COMMIT}"
+                            git push origin master
+                        fi
+                    '''
+                }
+                sh 'rm -rf .cloud-config-bump'
+            }
+        }
+    }
+}
