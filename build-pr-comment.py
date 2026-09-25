@@ -15,7 +15,12 @@ def safe(fn, *args):
 
 def coverage_percent(path):
     d = json.load(open(path))
-    return round(d["total"]["lines"]["pct"], 1)
+    pct = d["total"]["lines"]["pct"]
+    # Jest reports the string "Unknown" instead of a number when there's nothing to instrument
+    # (e.g. zero test files) - a real, expected state here today, not a parse failure.
+    if isinstance(pct, str):
+        return None
+    return round(pct, 1)
 
 
 def semgrep_findings(path):
