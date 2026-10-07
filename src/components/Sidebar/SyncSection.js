@@ -14,7 +14,6 @@ import './SyncSection.css';
 
 const SyncSection = () => {
   const dispatch = useDispatch();
-  const [isExpanded, setIsExpanded] = useState(false);
   const { activeSection, exchanges: exchangesSync, technical, bulk, activeTasks } = useSelector(
     (state) => state.sync
   );
@@ -224,496 +223,478 @@ const SyncSection = () => {
   };
 
   const activeTasksList = Object.entries(activeTasks);
-  const hasActiveTasks = activeTasksList.some(
-    ([_, task]) => task.status === 'PENDING' || task.status === 'STARTED'
-  );
 
   return (
     <div className="sync-section-wrapper">
-      {/* Main dropdown toggle */}
-      <button
-        className={`sync-dropdown-toggle ${isExpanded ? 'expanded' : ''} ${hasActiveTasks ? 'has-tasks' : ''}`}
-        onClick={() => setIsExpanded(!isExpanded)}
-      >
-        <span className="toggle-icon">⟳</span>
-        <span className="toggle-text">Synchronization</span>
-        {!isAdmin && <span className="admin-lock-icon" title="Wymaga uprawnień administratora">🔒</span>}
-        {hasActiveTasks && <span className="active-badge pulse" />}
-        <span className="expand-arrow">{isExpanded ? '▼' : '▶'}</span>
-      </button>
+      <div className="sync-dropdown-content">
+        {/* Admin restriction notice */}
+        {!isAdmin && (
+          <div className="admin-notice">
+            <span className="notice-icon">🔒</span>
+            <span className="notice-text">Operacje synchronizacji są dostępne tylko dla administratorów</span>
+          </div>
+        )}
 
-      {/* Expanded content */}
-      {isExpanded && (
-        <div className="sync-dropdown-content">
-          {/* Admin restriction notice */}
-          {!isAdmin && (
-            <div className="admin-notice">
-              <span className="notice-icon">🔒</span>
-              <span className="notice-text">Operacje synchronizacji są dostępne tylko dla administratorów</span>
-            </div>
-          )}
-
-          {/* Active tasks mini list */}
-          {activeTasksList.length > 0 && (
-            <div className="tasks-mini">
-              {activeTasksList.slice(0, 3).map(([taskId, task]) => (
-                <div key={taskId} className={`task-mini-item ${getStatusClass(task.status)}`}>
-                  <span className="task-icon">{getStatusIcon(task.status)}</span>
-                  <span className="task-name">
-                    {task.type === 'exchanges' && 'Exchanges'}
-                    {task.type === 'technical' && 'Analysis'}
-                    {task.type === 'bulk' && 'Bulk'}
-                  </span>
-                  <button
-                    className="task-dismiss"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      dispatch(removeTask(taskId));
-                    }}
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Sync Exchanges */}
-          <div className="sync-item">
-            <button
-              className={`sync-item-header ${activeSection === 'exchanges' ? 'active' : ''}`}
-              onClick={() => dispatch(setActiveSection(activeSection === 'exchanges' ? null : 'exchanges'))}
-            >
-              <span className="item-icon">⇋</span>
-              <span className="item-title">Exchanges</span>
-              <span className="item-arrow">{activeSection === 'exchanges' ? '−' : '+'}</span>
-            </button>
-
-            {activeSection === 'exchanges' && (
-              <div className="sync-item-content">
-                <label className="checkbox-row">
-                  <input
-                    type="checkbox"
-                    checked={exchangesParams.testMode}
-                    onChange={(e) => setExchangesParams({ testMode: e.target.checked })}
-                  />
-                  <span>Test Mode</span>
-                </label>
-
-                {exchangesSync.error && (
-                  <div className="error-msg">
-                    {exchangesSync.error}
-                    <button onClick={() => dispatch(clearSyncError('exchanges'))}>×</button>
-                  </div>
-                )}
-
+        {/* Active tasks mini list */}
+        {activeTasksList.length > 0 && (
+          <div className="tasks-mini">
+            {activeTasksList.slice(0, 3).map(([taskId, task]) => (
+              <div key={taskId} className={`task-mini-item ${getStatusClass(task.status)}`}>
+                <span className="task-icon">{getStatusIcon(task.status)}</span>
+                <span className="task-name">
+                  {task.type === 'exchanges' && 'Exchanges'}
+                  {task.type === 'technical' && 'Analysis'}
+                  {task.type === 'bulk' && 'Bulk'}
+                </span>
                 <button
-                  className="sync-action-btn"
-                  onClick={handleSyncExchanges}
-                  disabled={exchangesSync.loading || !isAdmin}
-                  title={!isAdmin ? 'Wymaga uprawnień administratora' : ''}
+                  className="task-dismiss"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    dispatch(removeTask(taskId));
+                  }}
                 >
-                  {exchangesSync.loading ? '⟳ Syncing...' : '⟳ Sync'}
+                  ×
                 </button>
               </div>
-            )}
+            ))}
           </div>
+        )}
 
-          {/* Sync Technical Analysis */}
-          <div className="sync-item">
-            <button
-              className={`sync-item-header ${activeSection === 'technical' ? 'active' : ''}`}
-              onClick={() => dispatch(setActiveSection(activeSection === 'technical' ? null : 'technical'))}
-            >
-              <span className="item-icon">📊</span>
-              <span className="item-title">Technical Analysis</span>
-              <span className="item-arrow">{activeSection === 'technical' ? '−' : '+'}</span>
-            </button>
+        {/* Sync Exchanges */}
+        <div className="sync-item">
+          <button
+            className={`sync-item-header ${activeSection === 'exchanges' ? 'active' : ''}`}
+            onClick={() => dispatch(setActiveSection(activeSection === 'exchanges' ? null : 'exchanges'))}
+          >
+            <span className="item-icon">⇋</span>
+            <span className="item-title">Exchanges</span>
+            <span className="item-arrow">{activeSection === 'exchanges' ? '−' : '+'}</span>
+          </button>
 
-            {activeSection === 'technical' && (
-              <div className="sync-item-content">
-                <div className="param-row">
-                  <label>
-                    Limit:
-                    <input
-                      type="number"
-                      value={technicalParams.limit}
-                      onChange={(e) =>
-                        setTechnicalParams({
-                          ...technicalParams,
-                          limit: Math.min(1000, Math.max(1, parseInt(e.target.value) || 50)),
-                        })
-                      }
-                      min={1}
-                      max={1000}
-                    />
-                  </label>
-                  <label>
-                    Offset:
-                    <input
-                      type="number"
-                      value={technicalParams.offset}
-                      onChange={(e) =>
-                        setTechnicalParams({
-                          ...technicalParams,
-                          offset: Math.max(0, parseInt(e.target.value) || 0),
-                        })
-                      }
-                      min={0}
-                    />
-                  </label>
+          {activeSection === 'exchanges' && (
+            <div className="sync-item-content">
+              <label className="checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={exchangesParams.testMode}
+                  onChange={(e) => setExchangesParams({ testMode: e.target.checked })}
+                />
+                <span>Test Mode</span>
+              </label>
+
+              {exchangesSync.error && (
+                <div className="error-msg">
+                  {exchangesSync.error}
+                  <button onClick={() => dispatch(clearSyncError('exchanges'))}>×</button>
                 </div>
+              )}
 
-                <label className="checkbox-row">
+              <button
+                className="sync-action-btn"
+                onClick={handleSyncExchanges}
+                disabled={exchangesSync.loading || !isAdmin}
+                title={!isAdmin ? 'Wymaga uprawnień administratora' : ''}
+              >
+                {exchangesSync.loading ? '⟳ Syncing...' : '⟳ Sync'}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Sync Technical Analysis */}
+        <div className="sync-item">
+          <button
+            className={`sync-item-header ${activeSection === 'technical' ? 'active' : ''}`}
+            onClick={() => dispatch(setActiveSection(activeSection === 'technical' ? null : 'technical'))}
+          >
+            <span className="item-icon">📊</span>
+            <span className="item-title">Technical Analysis</span>
+            <span className="item-arrow">{activeSection === 'technical' ? '−' : '+'}</span>
+          </button>
+
+          {activeSection === 'technical' && (
+            <div className="sync-item-content">
+              <div className="param-row">
+                <label>
+                  Limit:
                   <input
-                    type="checkbox"
-                    checked={technicalParams.testMode}
+                    type="number"
+                    value={technicalParams.limit}
                     onChange={(e) =>
-                      setTechnicalParams({ ...technicalParams, testMode: e.target.checked })
+                      setTechnicalParams({
+                        ...technicalParams,
+                        limit: Math.min(1000, Math.max(1, parseInt(e.target.value) || 50)),
+                      })
                     }
+                    min={1}
+                    max={1000}
                   />
-                  <span>Test Mode</span>
                 </label>
-
-                {technical.error && (
-                  <div className="error-msg">
-                    {technical.error}
-                    <button onClick={() => dispatch(clearSyncError('technical'))}>×</button>
-                  </div>
-                )}
-
-                <button
-                  className="sync-action-btn"
-                  onClick={handleSyncTechnical}
-                  disabled={technical.loading || !isAdmin}
-                  title={!isAdmin ? 'Wymaga uprawnień administratora' : ''}
-                >
-                  {technical.loading ? '⟳ Analyzing...' : '📊 Run Analysis'}
-                </button>
+                <label>
+                  Offset:
+                  <input
+                    type="number"
+                    value={technicalParams.offset}
+                    onChange={(e) =>
+                      setTechnicalParams({
+                        ...technicalParams,
+                        offset: Math.max(0, parseInt(e.target.value) || 0),
+                      })
+                    }
+                    min={0}
+                  />
+                </label>
               </div>
-            )}
-          </div>
 
-          {/* Bulk Assets Sync */}
-          <div className="sync-item">
-            <button
-              className={`sync-item-header ${activeSection === 'bulk' ? 'active' : ''}`}
-              onClick={() => dispatch(setActiveSection(activeSection === 'bulk' ? null : 'bulk'))}
-            >
-              <span className="item-icon">📦</span>
-              <span className="item-title">Bulk Sync</span>
-              <span className="item-arrow">{activeSection === 'bulk' ? '−' : '+'}</span>
-            </button>
+              <label className="checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={technicalParams.testMode}
+                  onChange={(e) =>
+                    setTechnicalParams({ ...technicalParams, testMode: e.target.checked })
+                  }
+                />
+                <span>Test Mode</span>
+              </label>
 
-            {activeSection === 'bulk' && (
-              <div className="sync-item-content">
-                {/* Exchange selector for bulk */}
+              {technical.error && (
+                <div className="error-msg">
+                  {technical.error}
+                  <button onClick={() => dispatch(clearSyncError('technical'))}>×</button>
+                </div>
+              )}
+
+              <button
+                className="sync-action-btn"
+                onClick={handleSyncTechnical}
+                disabled={technical.loading || !isAdmin}
+                title={!isAdmin ? 'Wymaga uprawnień administratora' : ''}
+              >
+                {technical.loading ? '⟳ Analyzing...' : '📊 Run Analysis'}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Bulk Assets Sync */}
+        <div className="sync-item">
+          <button
+            className={`sync-item-header ${activeSection === 'bulk' ? 'active' : ''}`}
+            onClick={() => dispatch(setActiveSection(activeSection === 'bulk' ? null : 'bulk'))}
+          >
+            <span className="item-icon">📦</span>
+            <span className="item-title">Bulk Sync</span>
+            <span className="item-arrow">{activeSection === 'bulk' ? '−' : '+'}</span>
+          </button>
+
+          {activeSection === 'bulk' && (
+            <div className="sync-item-content">
+              {/* Exchange selector for bulk */}
+              <div className="bulk-filter-group">
+                <label className="filter-label">
+                  <span className="filter-icon">⬡</span>
+                  Exchange
+                </label>
+                <select
+                  className="bulk-exchange-select"
+                  value={bulkExchangeId}
+                  onChange={(e) => setBulkExchangeId(e.target.value)}
+                >
+                  <option value="">-- Select exchange --</option>
+                  {exchangesList.map((ex) => (
+                    <option key={ex.id} value={ex.id}>
+                      {ex.display_name || ex.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Search bar for assets */}
+              {bulkExchangeId && (
                 <div className="bulk-filter-group">
                   <label className="filter-label">
-                    <span className="filter-icon">⬡</span>
-                    Exchange
+                    <span className="filter-icon">⌕</span>
+                    Search asset
                   </label>
-                  <select
-                    className="bulk-exchange-select"
-                    value={bulkExchangeId}
-                    onChange={(e) => setBulkExchangeId(e.target.value)}
-                  >
-                    <option value="">-- Select exchange --</option>
-                    {exchangesList.map((ex) => (
-                      <option key={ex.id} value={ex.id}>
-                        {ex.display_name || ex.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Search bar for assets */}
-                {bulkExchangeId && (
-                  <div className="bulk-filter-group">
-                    <label className="filter-label">
-                      <span className="filter-icon">⌕</span>
-                      Search asset
-                    </label>
-                    <div className="bulk-search-wrapper">
-                      <input
-                        type="text"
-                        className="bulk-search-input"
-                        placeholder="e.g. BTC, ETH, USDT..."
-                        value={bulkSearchTerm}
-                        onChange={(e) => setBulkSearchTerm(e.target.value)}
-                      />
-                      {bulkSearchTerm && (
-                        <button
-                          className="bulk-search-clear"
-                          onClick={() => setBulkSearchTerm('')}
-                        >
-                          ×
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {!bulkExchangeId ? (
-                  <div className="info-msg">Select exchange to see assets</div>
-                ) : bulkAssetsLoading ? (
-                  <div className="info-msg">
-                    <span className="loading-spinner">⟳</span> Loading assets...
-                  </div>
-                ) : bulkAssets.length === 0 ? (
-                  <div className="info-msg">No assets for selected exchange</div>
-                ) : (
-                  <>
-                    <div className="bulk-header">
-                      <span className="selected-count">
-                        Selected: {selectedAssetIds.size}
-                        {bulkSearchTerm && ` (visible: ${filteredBulkAssets.length}/${bulkAssets.length})`}
-                        {!bulkSearchTerm && ` / ${bulkAssets.length}`}
-                      </span>
-                      <button className="select-all-btn" onClick={toggleSelectAll}>
-                        {allFilteredSelected ? 'Deselect visible' : 'Select visible'}
-                      </button>
-                    </div>
-
-                    <div className="asset-checkboxes">
-                      {filteredBulkAssets.length === 0 ? (
-                        <div className="no-results">No results for "{bulkSearchTerm}"</div>
-                      ) : (
-                        filteredBulkAssets.map((asset) => (
-                          <label key={asset.id} className="asset-checkbox">
-                            <input
-                              type="checkbox"
-                              checked={selectedAssetIds.has(asset.id)}
-                              onChange={() => toggleAssetSelection(asset.id)}
-                            />
-                            <span className="asset-name">
-                              {asset.full_name ? (
-                                <>{asset.full_name} <span className="ticker-hint">({asset.asset})</span><span className="quote">/{asset.quote}</span></>
-                              ) : (
-                                <>{asset.asset}<span className="quote">/{asset.quote}</span></>
-                              )}
-                            </span>
-                          </label>
-                        ))
-                      )}
-                    </div>
-
-                    <label className="checkbox-row">
-                      <input
-                        type="checkbox"
-                        checked={bulkTestMode}
-                        onChange={(e) => setBulkTestMode(e.target.checked)}
-                      />
-                      <span>Test Mode</span>
-                    </label>
-
-                    {bulk.error && (
-                      <div className="error-msg">
-                        {bulk.error}
-                        <button onClick={() => dispatch(clearSyncError('bulk'))}>×</button>
-                      </div>
-                    )}
-
-                    {bulk.lastTask && (
-                      <div className="last-task">
-                        Last: {bulk.lastTask.task_id?.slice(0, 8)}... ({bulk.lastTask.details?.assets_count} assets)
-                      </div>
-                    )}
-
-                    <button
-                      className="sync-action-btn accent"
-                      onClick={handleSyncBulk}
-                      disabled={bulk.loading || selectedAssetIds.size === 0 || !isAdmin}
-                      title={!isAdmin ? 'Wymaga uprawnień administratora' : ''}
-                    >
-                      {bulk.loading
-                        ? '⟳ Processing...'
-                        : `📦 Sync (${selectedAssetIds.size})`}
-                    </button>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Tasks List */}
-          <div className="sync-item">
-            <button
-              className={`sync-item-header ${activeSection === 'tasks' ? 'active' : ''}`}
-              onClick={() => dispatch(setActiveSection(activeSection === 'tasks' ? null : 'tasks'))}
-            >
-              <span className="item-icon">📋</span>
-              <span className="item-title">Tasks</span>
-              {serverTasks.length > 0 && (
-                <span className="task-count-badge">{serverTasks.length}</span>
-              )}
-              <span className="item-arrow">{activeSection === 'tasks' ? '−' : '+'}</span>
-            </button>
-
-            {activeSection === 'tasks' && (
-              <div className="sync-item-content">
-                <div className="tasks-header">
-                  <span className="tasks-title">Server Tasks</span>
-                  <button
-                    className="refresh-btn"
-                    onClick={fetchServerTasks}
-                    disabled={tasksLoading}
-                    title="Refresh tasks"
-                  >
-                    <span className={tasksLoading ? 'loading-spinner' : ''}>⟳</span>
-                  </button>
-                </div>
-
-                {tasksLoading && serverTasks.length === 0 ? (
-                  <div className="info-msg">
-                    <span className="loading-spinner">⟳</span> Loading tasks...
-                  </div>
-                ) : serverTasks.length === 0 ? (
-                  <div className="info-msg">No active tasks</div>
-                ) : (
-                  <div className="tasks-list">
-                    {serverTasks.map((task) => (
-                      <div key={task.task_id} className="task-item">
-                        <div
-                          className="task-item-header"
-                          onClick={() => {
-                            if (expandedTaskId === task.task_id) {
-                              setExpandedTaskId(null);
-                            } else {
-                              setExpandedTaskId(task.task_id);
-                              fetchTaskDetails(task.task_id);
-                            }
-                          }}
-                        >
-                          <span className={`task-status-dot ${getStatusClass(task.status)}`} />
-                          <span className="task-name-label">
-                            {task.task_name?.split('.').pop() || 'Unknown'}
-                          </span>
-                          <span className={`task-status-label ${getStatusClass(task.status)}`}>
-                            {task.status}
-                          </span>
-                          <span className="task-expand-arrow">
-                            {expandedTaskId === task.task_id ? '▼' : '▶'}
-                          </span>
-                        </div>
-
-                        {expandedTaskId === task.task_id && (
-                          <div className="task-item-details">
-                            <div className="task-detail-row">
-                              <span className="detail-label">Task ID:</span>
-                              <span className="detail-value mono">{task.task_id.slice(0, 12)}...</span>
-                            </div>
-                            {task.worker && (
-                              <div className="task-detail-row">
-                                <span className="detail-label">Worker:</span>
-                                <span className="detail-value">{task.worker}</span>
-                              </div>
-                            )}
-                            {taskDetails[task.task_id]?.result && (
-                              <div className="task-detail-row">
-                                <span className="detail-label">Result:</span>
-                                <span className="detail-value">
-                                  {JSON.stringify(taskDetails[task.task_id].result).slice(0, 50)}...
-                                </span>
-                              </div>
-                            )}
-                            {(task.status === 'RUNNING' || task.status === 'PENDING') && isAdmin && (
-                              <button
-                                className="cancel-task-btn"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleCancelTask(task.task_id);
-                                }}
-                              >
-                                ✕ Cancel Task
-                              </button>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Health Check */}
-          <div className="sync-item">
-            <button
-              className={`sync-item-header ${activeSection === 'health' ? 'active' : ''}`}
-              onClick={() => dispatch(setActiveSection(activeSection === 'health' ? null : 'health'))}
-            >
-              <span className="item-icon">💓</span>
-              <span className="item-title">Health Check</span>
-              {healthData && (
-                <span className={`health-indicator ${healthData.overall_healthy ? 'healthy' : 'unhealthy'}`}>
-                  {healthData.overall_healthy ? '●' : '○'}
-                </span>
-              )}
-              <span className="item-arrow">{activeSection === 'health' ? '−' : '+'}</span>
-            </button>
-
-            {activeSection === 'health' && (
-              <div className="sync-item-content">
-                <div className="tasks-header">
-                  <span className="tasks-title">System Health</span>
-                  <button
-                    className="refresh-btn"
-                    onClick={fetchHealthCheck}
-                    disabled={healthLoading}
-                    title="Refresh health check"
-                  >
-                    <span className={healthLoading ? 'loading-spinner' : ''}>⟳</span>
-                  </button>
-                </div>
-
-                {healthLoading && !healthData ? (
-                  <div className="info-msg">
-                    <span className="loading-spinner">⟳</span> Checking health...
-                  </div>
-                ) : !healthData ? (
-                  <div className="info-msg">Click refresh to check health</div>
-                ) : (
-                  <div className="health-list">
-                    <div className={`health-overall ${healthData.overall_healthy ? 'healthy' : 'unhealthy'}`}>
-                      <span className="health-overall-icon">
-                        {healthData.overall_healthy ? '✓' : '✗'}
-                      </span>
-                      <span className="health-overall-text">
-                        {healthData.overall_healthy ? 'All Systems Operational' : 'Issues Detected'}
-                      </span>
-                    </div>
-
-                    {healthData.components && Object.entries(healthData.components).map(([name, component]) => (
-                      <div 
-                        key={name} 
-                        className={`health-component ${component.healthy ? 'healthy' : 'unhealthy'}`}
+                  <div className="bulk-search-wrapper">
+                    <input
+                      type="text"
+                      className="bulk-search-input"
+                      placeholder="e.g. BTC, ETH, USDT..."
+                      value={bulkSearchTerm}
+                      onChange={(e) => setBulkSearchTerm(e.target.value)}
+                    />
+                    {bulkSearchTerm && (
+                      <button
+                        className="bulk-search-clear"
+                        onClick={() => setBulkSearchTerm('')}
                       >
-                        <div className="health-component-header">
-                          <span className={`health-dot ${component.healthy ? 'healthy' : 'unhealthy'}`} />
-                          <span className="health-component-name">{name}</span>
-                          <span className={`health-component-status ${component.healthy ? 'healthy' : 'unhealthy'}`}>
-                            {component.healthy ? 'OK' : 'Error'}
-                          </span>
-                        </div>
-                        <div className="health-component-message">
-                          {component.message}
-                        </div>
-                        {component.error && (
-                          <div className="health-component-error">
-                            {component.error}
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                        ×
+                      </button>
+                    )}
                   </div>
-                )}
-              </div>
-            )}
-          </div>
+                </div>
+              )}
+
+              {!bulkExchangeId ? (
+                <div className="info-msg">Select exchange to see assets</div>
+              ) : bulkAssetsLoading ? (
+                <div className="info-msg">
+                  <span className="loading-spinner">⟳</span> Loading assets...
+                </div>
+              ) : bulkAssets.length === 0 ? (
+                <div className="info-msg">No assets for selected exchange</div>
+              ) : (
+                <>
+                  <div className="bulk-header">
+                    <span className="selected-count">
+                      Selected: {selectedAssetIds.size}
+                      {bulkSearchTerm && ` (visible: ${filteredBulkAssets.length}/${bulkAssets.length})`}
+                      {!bulkSearchTerm && ` / ${bulkAssets.length}`}
+                    </span>
+                    <button className="select-all-btn" onClick={toggleSelectAll}>
+                      {allFilteredSelected ? 'Deselect visible' : 'Select visible'}
+                    </button>
+                  </div>
+
+                  <div className="asset-checkboxes">
+                    {filteredBulkAssets.length === 0 ? (
+                      <div className="no-results">No results for "{bulkSearchTerm}"</div>
+                    ) : (
+                      filteredBulkAssets.map((asset) => (
+                        <label key={asset.id} className="asset-checkbox">
+                          <input
+                            type="checkbox"
+                            checked={selectedAssetIds.has(asset.id)}
+                            onChange={() => toggleAssetSelection(asset.id)}
+                          />
+                          <span className="asset-name">
+                            {asset.full_name ? (
+                              <>{asset.full_name} <span className="ticker-hint">({asset.asset})</span><span className="quote">/{asset.quote}</span></>
+                            ) : (
+                              <>{asset.asset}<span className="quote">/{asset.quote}</span></>
+                            )}
+                          </span>
+                        </label>
+                      ))
+                    )}
+                  </div>
+
+                  <label className="checkbox-row">
+                    <input
+                      type="checkbox"
+                      checked={bulkTestMode}
+                      onChange={(e) => setBulkTestMode(e.target.checked)}
+                    />
+                    <span>Test Mode</span>
+                  </label>
+
+                  {bulk.error && (
+                    <div className="error-msg">
+                      {bulk.error}
+                      <button onClick={() => dispatch(clearSyncError('bulk'))}>×</button>
+                    </div>
+                  )}
+
+                  {bulk.lastTask && (
+                    <div className="last-task">
+                      Last: {bulk.lastTask.task_id?.slice(0, 8)}... ({bulk.lastTask.details?.assets_count} assets)
+                    </div>
+                  )}
+
+                  <button
+                    className="sync-action-btn accent"
+                    onClick={handleSyncBulk}
+                    disabled={bulk.loading || selectedAssetIds.size === 0 || !isAdmin}
+                    title={!isAdmin ? 'Wymaga uprawnień administratora' : ''}
+                  >
+                    {bulk.loading
+                      ? '⟳ Processing...'
+                      : `📦 Sync (${selectedAssetIds.size})`}
+                  </button>
+                </>
+              )}
+            </div>
+          )}
         </div>
-      )}
+
+        {/* Tasks List */}
+        <div className="sync-item">
+          <button
+            className={`sync-item-header ${activeSection === 'tasks' ? 'active' : ''}`}
+            onClick={() => dispatch(setActiveSection(activeSection === 'tasks' ? null : 'tasks'))}
+          >
+            <span className="item-icon">📋</span>
+            <span className="item-title">Tasks</span>
+            {serverTasks.length > 0 && (
+              <span className="task-count-badge">{serverTasks.length}</span>
+            )}
+            <span className="item-arrow">{activeSection === 'tasks' ? '−' : '+'}</span>
+          </button>
+
+          {activeSection === 'tasks' && (
+            <div className="sync-item-content">
+              <div className="tasks-header">
+                <span className="tasks-title">Server Tasks</span>
+                <button
+                  className="refresh-btn"
+                  onClick={fetchServerTasks}
+                  disabled={tasksLoading}
+                  title="Refresh tasks"
+                >
+                  <span className={tasksLoading ? 'loading-spinner' : ''}>⟳</span>
+                </button>
+              </div>
+
+              {tasksLoading && serverTasks.length === 0 ? (
+                <div className="info-msg">
+                  <span className="loading-spinner">⟳</span> Loading tasks...
+                </div>
+              ) : serverTasks.length === 0 ? (
+                <div className="info-msg">No active tasks</div>
+              ) : (
+                <div className="tasks-list">
+                  {serverTasks.map((task) => (
+                    <div key={task.task_id} className="task-item">
+                      <div
+                        className="task-item-header"
+                        onClick={() => {
+                          if (expandedTaskId === task.task_id) {
+                            setExpandedTaskId(null);
+                          } else {
+                            setExpandedTaskId(task.task_id);
+                            fetchTaskDetails(task.task_id);
+                          }
+                        }}
+                      >
+                        <span className={`task-status-dot ${getStatusClass(task.status)}`} />
+                        <span className="task-name-label">
+                          {task.task_name?.split('.').pop() || 'Unknown'}
+                        </span>
+                        <span className={`task-status-label ${getStatusClass(task.status)}`}>
+                          {task.status}
+                        </span>
+                        <span className="task-expand-arrow">
+                          {expandedTaskId === task.task_id ? '▼' : '▶'}
+                        </span>
+                      </div>
+
+                      {expandedTaskId === task.task_id && (
+                        <div className="task-item-details">
+                          <div className="task-detail-row">
+                            <span className="detail-label">Task ID:</span>
+                            <span className="detail-value mono">{task.task_id.slice(0, 12)}...</span>
+                          </div>
+                          {task.worker && (
+                            <div className="task-detail-row">
+                              <span className="detail-label">Worker:</span>
+                              <span className="detail-value">{task.worker}</span>
+                            </div>
+                          )}
+                          {taskDetails[task.task_id]?.result && (
+                            <div className="task-detail-row">
+                              <span className="detail-label">Result:</span>
+                              <span className="detail-value">
+                                {JSON.stringify(taskDetails[task.task_id].result).slice(0, 50)}...
+                              </span>
+                            </div>
+                          )}
+                          {(task.status === 'RUNNING' || task.status === 'PENDING') && isAdmin && (
+                            <button
+                              className="cancel-task-btn"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCancelTask(task.task_id);
+                              }}
+                            >
+                              ✕ Cancel Task
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Health Check */}
+        <div className="sync-item">
+          <button
+            className={`sync-item-header ${activeSection === 'health' ? 'active' : ''}`}
+            onClick={() => dispatch(setActiveSection(activeSection === 'health' ? null : 'health'))}
+          >
+            <span className="item-icon">💓</span>
+            <span className="item-title">Health Check</span>
+            {healthData && (
+              <span className={`health-indicator ${healthData.overall_healthy ? 'healthy' : 'unhealthy'}`}>
+                {healthData.overall_healthy ? '●' : '○'}
+              </span>
+            )}
+            <span className="item-arrow">{activeSection === 'health' ? '−' : '+'}</span>
+          </button>
+
+          {activeSection === 'health' && (
+            <div className="sync-item-content">
+              <div className="tasks-header">
+                <span className="tasks-title">System Health</span>
+                <button
+                  className="refresh-btn"
+                  onClick={fetchHealthCheck}
+                  disabled={healthLoading}
+                  title="Refresh health check"
+                >
+                  <span className={healthLoading ? 'loading-spinner' : ''}>⟳</span>
+                </button>
+              </div>
+
+              {healthLoading && !healthData ? (
+                <div className="info-msg">
+                  <span className="loading-spinner">⟳</span> Checking health...
+                </div>
+              ) : !healthData ? (
+                <div className="info-msg">Click refresh to check health</div>
+              ) : (
+                <div className="health-list">
+                  <div className={`health-overall ${healthData.overall_healthy ? 'healthy' : 'unhealthy'}`}>
+                    <span className="health-overall-icon">
+                      {healthData.overall_healthy ? '✓' : '✗'}
+                    </span>
+                    <span className="health-overall-text">
+                      {healthData.overall_healthy ? 'All Systems Operational' : 'Issues Detected'}
+                    </span>
+                  </div>
+
+                  {healthData.components && Object.entries(healthData.components).map(([name, component]) => (
+                    <div 
+                      key={name} 
+                      className={`health-component ${component.healthy ? 'healthy' : 'unhealthy'}`}
+                    >
+                      <div className="health-component-header">
+                        <span className={`health-dot ${component.healthy ? 'healthy' : 'unhealthy'}`} />
+                        <span className="health-component-name">{name}</span>
+                        <span className={`health-component-status ${component.healthy ? 'healthy' : 'unhealthy'}`}>
+                          {component.healthy ? 'OK' : 'Error'}
+                        </span>
+                      </div>
+                      <div className="health-component-message">
+                        {component.message}
+                      </div>
+                      {component.error && (
+                        <div className="health-component-error">
+                          {component.error}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

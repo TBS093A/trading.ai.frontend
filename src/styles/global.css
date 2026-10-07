@@ -63,9 +63,8 @@
   --transition-slow: 0.4s ease;
   
   /* Layout */
+  --rail-width: 52px;
   --sidebar-width: 280px;
-  --sidebar-collapsed: 60px;
-  --right-panel-width: 360px;
   --patterns-panel-width: 320px;
   --header-height: 56px;
 }
@@ -169,13 +168,6 @@ body::after {
   transition: flex var(--transition-normal);
   overflow: hidden;
   position: relative; /* For absolute positioned toggle buttons */
-}
-
-/* No longer using margins - panels are flex siblings */
-.main-content.sidebar-open,
-.main-content.panel-open,
-.main-content.patterns-panel-open {
-  /* These classes kept for compatibility but not needed for layout */
 }
 
 /* Typography */
@@ -423,43 +415,10 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: var(--radius-sm);
 }
 
-/* Sidebar Toggle Button - for opening sidebar when closed */
-.sidebar-panel-toggle {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  transform: translateY(-50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 12px 8px;
-  background: linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%);
-  border: 1px solid var(--accent-purple);
-  border-left: none;
-  border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
-  color: var(--accent-purple);
-  cursor: pointer;
-  z-index: 50;
-  transition: all var(--transition-fast);
-  box-shadow: 4px 0 20px rgba(153, 69, 255, 0.2);
-}
-
-.sidebar-panel-toggle:hover {
-  padding-left: 12px;
-  background: var(--bg-tertiary);
-  box-shadow: 4px 0 30px rgba(153, 69, 255, 0.4);
-}
-
-.sidebar-panel-toggle .toggle-icon {
-  font-size: 1.2rem;
-}
-
 /* Responsive */
 @media (max-width: 1200px) {
   :root {
     --sidebar-width: 240px;
-    --right-panel-width: 320px;
     --patterns-panel-width: 280px;
   }
 }
@@ -467,7 +426,6 @@ h1, h2, h3, h4, h5, h6 {
 @media (max-width: 768px) {
   :root {
     --sidebar-width: 280px;
-    --right-panel-width: 100%;
     --patterns-panel-width: 100%;
   }
   
@@ -480,7 +438,19 @@ h1, h2, h3, h4, h5, h6 {
     height: 100vh;
   }
   
-  .sidebar.open,
+  /* Sidebar panel overlays the chart next to the always-visible rail */
+  .sidebar.open {
+    position: fixed;
+    top: 0;
+    left: var(--rail-width);
+    right: 0;
+    bottom: 0;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    z-index: 200;
+  }
+
   .patterns-panel.open {
     position: fixed;
     top: 0;

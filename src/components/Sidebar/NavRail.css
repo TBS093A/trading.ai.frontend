@@ -1,0 +1,128 @@
+/* Nav rail - always-visible icon strip on the far left */
+.nav-rail {
+  width: var(--rail-width);
+  min-width: var(--rail-width);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) 0;
+  background: var(--bg-primary);
+  border-right: 1px solid var(--border-primary);
+  flex-shrink: 0;
+  z-index: 110;
+}
+
+.rail-logo {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--spacing-sm);
+  font-size: 1.4rem;
+  color: var(--accent-cyan);
+  text-shadow: 0 0 10px var(--accent-cyan);
+  user-select: none;
+}
+
+.rail-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  flex: 1;
+}
+
+.rail-btn {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.rail-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-tertiary);
+}
+
+.rail-btn.active {
+  color: var(--accent-cyan);
+  background: rgba(0, 240, 255, 0.08);
+  border-color: var(--border-accent);
+}
+
+/* Active indicator bar on the left edge */
+.rail-btn.active::before {
+  content: '';
+  position: absolute;
+  left: -5px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--accent-cyan);
+  box-shadow: var(--glow-cyan);
+}
+
+.rail-btn:focus-visible,
+.rail-avatar:focus-visible {
+  outline: 1px solid var(--accent-cyan);
+  outline-offset: 2px;
+}
+
+.rail-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.rail-pulse {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent-orange);
+  animation: railPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes railPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.3); }
+}
+
+.rail-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--accent-cyan-dim), var(--accent-purple));
+  border: 1px solid var(--border-secondary);
+  color: var(--bg-primary);
+  font-weight: 700;
+  cursor: pointer;
+  transition: box-shadow var(--transition-fast), border-color var(--transition-fast);
+}
+
+.rail-avatar:hover {
+  border-color: var(--accent-cyan);
+  box-shadow: var(--glow-cyan);
+}
+
+.rail-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}

@@ -1,27 +1,48 @@
 import { createSlice } from '@reduxjs/toolkit';
 
+const SIDEBAR_PANEL_KEY = 'ui.sidebarPanel';
+const SIDEBAR_PANELS = ['markets', 'saved', 'sync'];
+
+const loadSidebarPanel = () => {
+  try {
+    const stored = localStorage.getItem(SIDEBAR_PANEL_KEY);
+    if (stored === 'none') return null;
+    return SIDEBAR_PANELS.includes(stored) ? stored : 'markets';
+  } catch {
+    return 'markets';
+  }
+};
+
+const persistSidebarPanel = (panel) => {
+  try {
+    localStorage.setItem(SIDEBAR_PANEL_KEY, panel || 'none');
+  } catch {
+    // Storage unavailable (private mode etc.) - panel just won't be remembered
+  }
+};
+
 const uiSlice = createSlice({
   name: 'ui',
   initialState: {
-    sidebarOpen: true,
-    rightPanelOpen: false,
+    sidebarPanel: loadSidebarPanel(), // 'markets' | 'saved' | 'sync' | null (collapsed)
+    accountModalOpen: false,
     patternsPanelOpen: true, // Patterns list panel (always visible when patterns exist)
     theme: 'dark',
     tooltipPosition: null,
     tooltipContent: null,
   },
   reducers: {
-    toggleSidebar: (state) => {
-      state.sidebarOpen = !state.sidebarOpen;
+    // Clicking the active rail icon collapses the panel, any other icon switches to it
+    toggleSidebarPanel: (state, action) => {
+      state.sidebarPanel = state.sidebarPanel === action.payload ? null : action.payload;
+      persistSidebarPanel(state.sidebarPanel);
     },
-    setSidebarOpen: (state, action) => {
-      state.sidebarOpen = action.payload;
+    setSidebarPanel: (state, action) => {
+      state.sidebarPanel = action.payload;
+      persistSidebarPanel(state.sidebarPanel);
     },
-    toggleRightPanel: (state) => {
-      state.rightPanelOpen = !state.rightPanelOpen;
-    },
-    setRightPanelOpen: (state, action) => {
-      state.rightPanelOpen = action.payload;
+    setAccountModalOpen: (state, action) => {
+      state.accountModalOpen = action.payload;
     },
     togglePatternsPanel: (state) => {
       state.patternsPanelOpen = !state.patternsPanelOpen;
@@ -44,10 +65,9 @@ const uiSlice = createSlice({
 });
 
 export const {
-  toggleSidebar,
-  setSidebarOpen,
-  toggleRightPanel,
-  setRightPanelOpen,
+  toggleSidebarPanel,
+  setSidebarPanel,
+  setAccountModalOpen,
   togglePatternsPanel,
   setPatternsPanelOpen,
   setTheme,
@@ -55,4 +75,3 @@ export const {
   hideTooltip,
 } = uiSlice.actions;
 export default uiSlice.reducer;
-
