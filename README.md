@@ -162,6 +162,30 @@ src/
 | Accent Purple | #9945ff | `--accent-purple` |
 | Background | #060810 | `--bg-primary` |
 
+## CI/CD and supply chain
+
+Every change goes through `Jenkinsfile.build` (Jenkins, same model as the terraform pipelines in `cloud.config`):
+
+```
+PR -> PRE-MERGE gate -> merge -> POST-MERGE -> RELEASE -> production
+```
+
+- **PRE-MERGE** (every PR, required status `jenkins/pre-merge` on `main`): gitleaks, lint, unit tests, coverage threshold,
+  Semgrep, Trivy (dependencies, then the built image - scanned before it is ever pushed). The gate scripts come
+  from `main`, not from the PR under test. Results land in a `jenkins-bot` comment on the PR.
+- **POST-MERGE** (only for a `main` commit that is the merge of a PR with a passing gate): push by digest,
+  CycloneDX SBOM, cosign signature verified against [`cosign.pub`](cosign.pub).
+- **RELEASE**: image tag bumped in `cloud.config` (ArgoCD), rollout + smoke test, automatic rollback by reverting
+  the bump, OWASP ZAP baseline. Progress goes to a comment on the merged PR.
+
+Verify a deployed image yourself:
+
+```bash
+cosign verify --key cosign.pub --insecure-ignore-tlog=true registry.00x097.com/trading-ai-frontend@sha256:<digest>
+```
+
+(`--insecure-ignore-tlog`: signatures are not uploaded to the public Rekor log - private registry.)
+
 ## License
 
 MIT
