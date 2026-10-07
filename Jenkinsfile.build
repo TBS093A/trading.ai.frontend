@@ -109,8 +109,11 @@ pipeline {
                 [key: 'push_ref', value: '$.ref', defaultValue: '']
             ],
             tokenCredentialId: 'trading-ai-frontend-build-webhook-token',
-            regexpFilterText: '$action',
-            regexpFilterExpression: '^(opened|synchronized|reopened|)$'
+            // Builds only PR opened/synchronized/reopened and pushes to main. Tag pushes and pushes to
+            // other branches used to start a full build each (a history rewrite pushing master + 2
+            // tags queued three) - feature branches are covered by their PR build anyway.
+            regexpFilterText: '$action|$push_ref',
+            regexpFilterExpression: '^((opened|synchronized|reopened)\\|.*|\\|refs/heads/main)$'
         )
     }
 
