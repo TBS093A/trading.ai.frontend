@@ -35,6 +35,9 @@
  *   trading-ai-frontend-build-webhook-token (Secret text) - Generic Webhook Trigger token; the Gitea
  *                          webhook URL must use the same value (.../generic-webhook-trigger/invoke?token=...)
  *   registry-credentials   (Username with password) - registry.00x097.com login
+ *   kubeconfig-trading-ai-deployer (Secret file) - kubeconfig of the least-privilege SA
+ *                          development/jenkins-trading-ai-deployer (cloud.config ci-rbac/), used by the
+ *                          RELEASE rollout/egress checks instead of the agent's cluster-admin kubeconfig
  *   git-gitea-tbs093a      (Username with password) - checkout of PR heads
  *   git-gitea-jenkins-bot  (Username with password) - PR comments, commit statuses and the
  *                          cloud.config image-tag bump / rollback commits
@@ -601,32 +604,35 @@ pipeline {
             steps {
                 script {
                     try {
-                        sh """
-                            set -euo pipefail
-                            export KUBECONFIG="/home/jenkins/.kube/config"
-                            NS=frontend-apps
-                            WANT="${CLUSTER_IMAGE}:\${BUILD_SHA}"
+                        // Least-privilege SA (cloud.config ci-rbac/jenkins-trading-ai-deployer.yml), not the
+                        // agent's cluster-admin kubeconfig: read rollout status + exec in backend-apps only.
+                        withCredentials([file(credentialsId: 'kubeconfig-trading-ai-deployer', variable: 'KUBECONFIG')]) {
+                            sh """
+                                set -euo pipefail
+                                NS=frontend-apps
+                                WANT="${CLUSTER_IMAGE}:\${BUILD_SHA}"
 
-                            # ArgoCD applies the cloud.config commit asynchronously - wait until the
-                            # Deployment spec actually carries the new tag before checking rollout.
-                            current=""
-                            for i in \$(seq 1 60); do
-                                current=\$(kubectl -n "\$NS" get deployment trading-ai-frontend-web \\
-                                    -o jsonpath='{.spec.template.spec.containers[*].image}')
-                                [ "\$current" = "\$WANT" ] && break
-                                sleep 10
-                            done
-                            if [ "\$current" != "\$WANT" ]; then
-                                echo "ArgoCD did not apply \$WANT within 10 minutes (current: \$current)"
-                                exit 1
-                            fi
+                                # ArgoCD applies the cloud.config commit asynchronously - wait until the
+                                # Deployment spec actually carries the new tag before checking rollout.
+                                current=""
+                                for i in \$(seq 1 60); do
+                                    current=\$(kubectl -n "\$NS" get deployment trading-ai-frontend-web \\
+                                        -o jsonpath='{.spec.template.spec.containers[*].image}')
+                                    [ "\$current" = "\$WANT" ] && break
+                                    sleep 10
+                                done
+                                if [ "\$current" != "\$WANT" ]; then
+                                    echo "ArgoCD did not apply \$WANT within 10 minutes (current: \$current)"
+                                    exit 1
+                                fi
 
-                            kubectl -n "\$NS" rollout status deployment/trading-ai-frontend-web --timeout=10m
+                                kubectl -n "\$NS" rollout status deployment/trading-ai-frontend-web --timeout=10m
 
-                            # Smoke test through the public ingress: the SPA shell is served.
-                            page=\$(curl -fsS --retry 5 --retry-delay 6 --retry-all-errors --max-time 10 https://00x097.com/)
-                            echo "\$page" | grep -q '<div id="root">' || { echo "index.html has no React root"; exit 1; }
-                        """
+                                # Smoke test through the public ingress: the SPA shell is served.
+                                page=\$(curl -fsS --retry 5 --retry-delay 6 --retry-all-errors --max-time 10 https://00x097.com/)
+                                echo "\$page" | grep -q '<div id="root">' || { echo "index.html has no React root"; exit 1; }
+                            """
+                        }
                         sh 'python3 "$CI_DIR/ci-gate.py" result rollout 0 "rollout complete, smoke test OK"'
                     } catch (err) {
                         echo "Rollout verification failed: ${err} - rolling back"
