@@ -79,6 +79,9 @@
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border-primary);
   gap: var(--spacing-md);
+  /* Wrap instead of pushing the right-hand controls off screen on narrower layouts */
+  flex-wrap: wrap;
+  row-gap: var(--spacing-xs);
 }
 
 .header-left {
@@ -200,6 +203,7 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
+  margin-left: auto;
 }
 
 /* Save Analysis Button */

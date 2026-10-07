@@ -262,6 +262,14 @@ const analysisSlice = createSlice({
     clearAnalysisError: (state) => {
       state.error = null;
     },
+    // Add patterns found by an on-demand range scan, skipping ones already listed
+    mergeHarmonicPatterns: (state, action) => {
+      const known = new Set(state.harmonicPatterns.map((p) => p.id));
+      const added = action.payload.filter((p) => !known.has(p.id));
+      if (added.length > 0) {
+        state.harmonicPatterns = [...state.harmonicPatterns, ...added];
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -307,6 +315,7 @@ export const {
   setIndicator,
   clearAnalysis,
   clearAnalysisError,
+  mergeHarmonicPatterns,
 } = analysisSlice.actions;
 export default analysisSlice.reducer;
 

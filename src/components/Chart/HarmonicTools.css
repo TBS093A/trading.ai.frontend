@@ -1,0 +1,170 @@
+/* On-demand harmonics tools over the main chart */
+.main-chart-area {
+  position: relative;
+  flex: 1;
+  min-height: 400px;
+  display: flex;
+}
+
+.main-chart-area .trading-chart {
+  min-height: 0;
+}
+
+.placing-points {
+  cursor: crosshair;
+}
+
+.range-select-overlay {
+  position: absolute;
+  inset: 0;
+  right: 70px; /* leave the price scale usable */
+  z-index: 6;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.range-select-band,
+.scan-band {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+
+.range-select-band {
+  background: rgba(0, 240, 255, 0.12);
+  border-left: 1px solid var(--accent-cyan);
+  border-right: 1px solid var(--accent-cyan);
+}
+
+.scan-band {
+  z-index: 2;
+  background: rgba(153, 69, 255, 0.06);
+  border-left: 1px dashed rgba(153, 69, 255, 0.5);
+  border-right: 1px dashed rgba(153, 69, 255, 0.5);
+}
+
+.scan-band.failed {
+  background: rgba(255, 51, 102, 0.05);
+  border-color: rgba(255, 51, 102, 0.4);
+}
+
+.harmonics-hud {
+  position: absolute;
+  top: var(--spacing-sm);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 7;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  max-width: calc(100% - 160px);
+  pointer-events: none;
+}
+
+.hud-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 8px;
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-sm);
+  background: rgba(6, 8, 16, 0.9);
+  color: var(--text-secondary);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  pointer-events: auto;
+}
+
+.hud-chip.computing { border-color: rgba(153, 69, 255, 0.5); color: var(--text-primary); }
+.hud-chip.complete { border-color: rgba(0, 255, 136, 0.4); }
+.hud-chip.failed { border-color: rgba(255, 51, 102, 0.5); color: var(--accent-red); }
+.hud-chip.hint { border-color: var(--border-accent); color: var(--accent-cyan); }
+
+.hud-muted { color: var(--text-muted); }
+
+.hud-spinner {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+}
+
+.hud-btn {
+  padding: 1px 6px;
+  background: transparent;
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 0.65rem;
+  cursor: pointer;
+}
+
+.hud-btn:hover:not(:disabled) { color: var(--text-primary); border-color: var(--accent-cyan); }
+.hud-btn:disabled { opacity: 0.4; cursor: default; }
+.hud-btn.icon { border: none; font-size: 0.9rem; line-height: 1; padding: 0 2px; }
+
+/* Manual XABCD card */
+.manual-card {
+  position: absolute;
+  top: 44px; /* below the scan status chips */
+  right: 80px;
+  z-index: 7;
+  width: 270px;
+  padding: var(--spacing-sm);
+  border: 1px solid rgba(255, 204, 0, 0.4);
+  border-radius: var(--radius-md);
+  background: rgba(6, 8, 16, 0.94);
+  color: var(--text-secondary);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.manual-card-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.manual-title {
+  flex: 1;
+  color: #ffcc00;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.manual-hint strong { color: #ffcc00; }
+.manual-error { color: var(--accent-red); }
+
+.manual-verdict {
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+}
+
+.manual-verdict.match { background: rgba(0, 255, 136, 0.1); color: var(--accent-green); }
+.manual-verdict.miss { background: rgba(255, 51, 102, 0.1); color: var(--accent-red); }
+
+.manual-checks {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.manual-checks td { padding: 1px 4px 1px 0; }
+.manual-checks tr.ok td:last-child { color: var(--accent-green); }
+.manual-checks tr.bad td:last-child { color: var(--accent-red); }
+
+.manual-targets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  color: var(--text-primary);
+}
+
+@media (max-width: 768px) {
+  .manual-card { right: var(--spacing-sm); left: var(--spacing-sm); width: auto; top: auto; bottom: var(--spacing-sm); }
+  .harmonics-hud { max-width: calc(100% - 16px); }
+}

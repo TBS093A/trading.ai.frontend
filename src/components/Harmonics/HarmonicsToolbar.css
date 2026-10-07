@@ -1,0 +1,7 @@
+/* Reuses the indicator button styles (.controls-label, .controls-buttons, .indicator-btn) */
+.harmonics-toolbar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
