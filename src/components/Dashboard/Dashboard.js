@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, forwardRef, useImperat
 import { useDispatch, useSelector, useStore } from 'react-redux';
 import TradingViewChart from '../Chart/TradingViewChart';
 import IndicatorControls from '../IndicatorControls/IndicatorControls';
+import HarmonicsToolbar from '../Harmonics/HarmonicsToolbar';
 import SaveAnalysisModal from './SaveAnalysisModal';
 import { fetchKlines, fetchPatternCounts, setInterval } from '../../store/slices/chartSlice';
 import { fetchTechnicalAnalysis, clearAnalysis } from '../../store/slices/analysisSlice';
@@ -135,6 +136,7 @@ const Dashboard = forwardRef((props, ref) => {
         </div>
 
         <div className="header-right">
+          <HarmonicsToolbar />
           <IndicatorControls />
           <button
             className={`save-analysis-btn ${isEditMode ? 'edit-mode' : ''}`}

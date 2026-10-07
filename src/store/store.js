@@ -7,6 +7,7 @@ import uiReducer from './slices/uiSlice';
 import syncReducer from './slices/syncSlice';
 import authReducer from './slices/authSlice';
 import savedAnalysisReducer from './slices/savedAnalysisSlice';
+import harmonicsReducer from './slices/harmonicsSlice';
 
 export const store = configureStore({
   reducer: {
@@ -18,6 +19,7 @@ export const store = configureStore({
     sync: syncReducer,
     auth: authReducer,
     savedAnalysis: savedAnalysisReducer,
+    harmonics: harmonicsReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

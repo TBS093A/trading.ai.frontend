@@ -246,6 +246,24 @@ const api = {
     }),
 
   // ==================
+  // HARMONICS (on-demand range scan, manual XABCD validation)
+  // ==================
+  // 200 "complete" | 202 "computing" (poll after retry_after_ms) | 200 "failed"
+  getHarmonics: (assetId, interval, startTime = null, endTime = null) =>
+    axiosInstance.get(`/harmonics/${assetId}/${interval}`, {
+      params: {
+        ...(startTime != null && { start_time: startTime }),
+        ...(endTime != null && { end_time: endTime }),
+      },
+    }),
+
+  validateHarmonic: (points, fibTolerance = null) =>
+    axiosInstance.post('/harmonics/validate', {
+      points,
+      ...(fibTolerance != null && { fib_tolerance: fibTolerance }),
+    }),
+
+  // ==================
   // TECHNICAL ANALYSIS
   // ==================
   getTechnicalAnalysis: (assetId, interval, startTimestamp = null, endTimestamp = null, limit = 100) =>

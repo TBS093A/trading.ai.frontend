@@ -4,6 +4,7 @@ import { createChart, CrosshairMode } from 'lightweight-charts';
 import { setSelectedPattern } from '../../store/slices/analysisSlice';
 import { clearScaleReset, fetchOlderKlines } from '../../store/slices/chartSlice';
 import { calculateRSI, calculateMACD, calculateOBV } from '../../utils/indicators';
+import HarmonicTools from './HarmonicTools';
 import './TradingViewChart.css';
 
 // Start fetching older candles when fewer than this many bars are left of the viewport
@@ -991,6 +992,8 @@ const TradingViewChart = forwardRef((props, ref) => {
   // Handle pattern click
   const handleChartClick = useCallback((param) => {
     if (!param.point || harmonicPatterns.length === 0) return;
+    // Clicks place points while drawing a manual XABCD
+    if (store.getState().harmonics.manual.active) return;
 
     const clickTime = param.time;
     
@@ -1003,7 +1006,7 @@ const TradingViewChart = forwardRef((props, ref) => {
     if (clickedPattern) {
       dispatch(setSelectedPattern(clickedPattern));
     }
-  }, [dispatch, harmonicPatterns]);
+  }, [dispatch, store, harmonicPatterns]);
 
   const handleCrosshairMove = useCallback((param) => {
     syncCrosshair(chartRef.current, param.time);
@@ -1041,10 +1044,13 @@ const TradingViewChart = forwardRef((props, ref) => {
 
   return (
     <div className="trading-chart-wrapper">
-      <div ref={chartContainerRef} className="trading-chart" />
-      {historyLoading && (
-        <div className="history-loading" role="status">Loading history…</div>
-      )}
+      <div className="main-chart-area">
+        <div ref={chartContainerRef} className="trading-chart" />
+        {historyLoading && (
+          <div className="history-loading" role="status">Loading history…</div>
+        )}
+        <HarmonicTools chartRef={chartRef} seriesRef={candlestickSeriesRef} />
+      </div>
       
       {/* RSI Chart */}
       {indicators.rsi && klines.length > 0 && (
