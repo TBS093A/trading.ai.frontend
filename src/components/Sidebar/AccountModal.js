@@ -14,16 +14,11 @@ import {
   selectAuthLoading,
   selectAuthError,
 } from '../../store/slices/authSlice';
-import { setSelectedExchange } from '../../store/slices/exchangesSlice';
-import { clearAssets } from '../../store/slices/assetsSlice';
-import { clearChart } from '../../store/slices/chartSlice';
-import { clearAnalysis } from '../../store/slices/analysisSlice';
-import SyncSection from './SyncSection';
-import SavedAnalysisSection from './SavedAnalysisSection';
+import { setAccountModalOpen } from '../../store/slices/uiSlice';
 import { validatePassword, sanitizeString, clearCsrfToken } from '../../utils/security';
-import './UserSection.css';
+import './AccountModal.css';
 
-const UserSection = () => {
+const AccountModal = () => {
   const dispatch = useDispatch();
   const user = useSelector(selectUser);
   const isAdmin = useSelector(selectIsAdmin);
@@ -35,9 +30,8 @@ const UserSection = () => {
   const profileUpdateLoading = useSelector((state) => state.auth.profileUpdateLoading);
   const avatarLoading = useSelector((state) => state.auth.avatarLoading);
 
-  const { list: exchanges, selectedExchange, loading: exchangesLoading } = useSelector((state) => state.exchanges);
+  const isOpen = useSelector((state) => state.ui.accountModalOpen);
 
-  const [isExpanded, setIsExpanded] = useState(false);
   const [activeSection, setActiveSection] = useState(null);
 
   // Form states
@@ -75,16 +69,20 @@ const UserSection = () => {
     }
   }, [passwordChangeSuccess, dispatch]);
 
-  const handleExchangeChange = useCallback((e) => {
-    const exchangeId = parseInt(e.target.value);
-    const exchange = exchanges.find((ex) => ex.id === exchangeId);
-    if (exchange) {
-      dispatch(setSelectedExchange(exchange));
-      dispatch(clearAssets());
-      dispatch(clearChart());
-      dispatch(clearAnalysis());
-    }
-  }, [dispatch, exchanges]);
+  const handleClose = useCallback(() => {
+    setActiveSection(null);
+    dispatch(setAccountModalOpen(false));
+  }, [dispatch]);
+
+  // Close on Escape
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') handleClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, handleClose]);
 
   const handleLogout = () => {
     clearCsrfToken(); // Clear CSRF token on logout
@@ -125,108 +123,55 @@ const UserSection = () => {
   const passwordsMatch = newPassword === confirmPassword;
   const isPasswordValid = passwordValidation.isValid;
 
+  if (!isOpen) return null;
+
   return (
-    <div className="user-section-wrapper">
-      {/* Main dropdown toggle */}
-      <button
-        className={`user-dropdown-toggle ${isExpanded ? 'expanded' : ''}`}
-        onClick={() => setIsExpanded(!isExpanded)}
+    <div className="account-modal-overlay" onClick={handleClose}>
+      <div
+        className="account-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Ustawienia konta"
+        onClick={(e) => e.stopPropagation()}
       >
-        <div className="user-avatar-mini">
-          {avatar ? (
-            <img src={`data:image/jpeg;base64,${avatar}`} alt="Avatar" />
-          ) : (
-            <span className="avatar-placeholder">
-              {user?.username?.charAt(0).toUpperCase() || '?'}
-            </span>
-          )}
-        </div>
-        <div className="user-info-mini">
-          <span className="user-name">{user?.username || 'Użytkownik'}</span>
-          <span className={`user-role ${isAdmin ? 'admin' : 'user'}`}>
-            {isAdmin ? 'Administrator' : 'Użytkownik'}
-          </span>
-        </div>
-        <span className="expand-arrow">{isExpanded ? '▼' : '▶'}</span>
-      </button>
-
-      {/* Expanded content */}
-      {isExpanded && (
-        <div className="user-dropdown-content">
-          {/* Exchange Selector */}
-          <div className="user-item exchange-item">
-            <div className="user-item-header exchange-header">
-              <span className="item-icon">⬡</span>
-              <span className="item-title">Exchange</span>
-            </div>
-            <div className="user-item-content exchange-content">
-              <select
-                className="user-exchange-select"
-                value={selectedExchange?.id || ''}
-                onChange={handleExchangeChange}
-                disabled={exchangesLoading}
-              >
-                {exchanges.map((exchange) => (
-                  <option key={exchange.id} value={exchange.id}>
-                    {exchange.display_name || exchange.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Synchronization Section */}
-          <SyncSection />
-
-          {/* Saved Analyses Section */}
-          <SavedAnalysisSection onClose={() => setIsExpanded(false)} />
-
-          {/* Avatar Section */}
-          <div className="user-item">
-            <button
-              className={`user-item-header ${activeSection === 'avatar' ? 'active' : ''}`}
-              onClick={() => setActiveSection(activeSection === 'avatar' ? null : 'avatar')}
-            >
-              <span className="item-icon">◉</span>
-              <span className="item-title">Avatar</span>
-              <span className="item-arrow">{activeSection === 'avatar' ? '−' : '+'}</span>
-            </button>
-
-            {activeSection === 'avatar' && (
-              <div className="user-item-content">
-                <div className="avatar-preview-container">
-                  <div 
-                    className="avatar-preview"
-                    onClick={handleAvatarClick}
-                    title="Kliknij aby zmienić avatar"
-                  >
-                    {avatarLoading ? (
-                      <span className="avatar-loading">⟳</span>
-                    ) : avatar ? (
-                      <img src={`data:image/jpeg;base64,${avatar}`} alt="Avatar" />
-                    ) : (
-                      <span className="avatar-placeholder-large">
-                        {user?.username?.charAt(0).toUpperCase() || '?'}
-                      </span>
-                    )}
-                    <div className="avatar-overlay">
-                      <span>📷</span>
-                    </div>
-                  </div>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/gif,image/webp"
-                    onChange={handleAvatarChange}
-                    style={{ display: 'none' }}
-                  />
-                </div>
-                <p className="avatar-hint">Kliknij na avatar aby wgrać nowe zdjęcie</p>
-                <p className="avatar-formats">JPG, PNG, GIF, WebP (max 5MB)</p>
-              </div>
+        <div className="account-modal-header">
+          <div
+            className="avatar-preview"
+            onClick={handleAvatarClick}
+            title="Kliknij aby zmienić avatar (JPG, PNG, GIF, WebP, max 5MB)"
+          >
+            {avatarLoading ? (
+              <span className="avatar-loading">⟳</span>
+            ) : avatar ? (
+              <img src={`data:image/jpeg;base64,${avatar}`} alt="Avatar" />
+            ) : (
+              <span className="avatar-placeholder-large">
+                {user?.username?.charAt(0).toUpperCase() || '?'}
+              </span>
             )}
+            <div className="avatar-overlay">
+              <span>📷</span>
+            </div>
           </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            onChange={handleAvatarChange}
+            style={{ display: 'none' }}
+          />
+          <div className="account-identity">
+            <span className="user-name">{user?.username || 'Użytkownik'}</span>
+            <span className={`user-role ${isAdmin ? 'admin' : 'user'}`}>
+              {isAdmin ? 'Administrator' : 'Użytkownik'}
+            </span>
+          </div>
+          <button className="account-modal-close" onClick={handleClose} aria-label="Zamknij">
+            ×
+          </button>
+        </div>
 
+        <div className="account-modal-body">
           {/* Username Section */}
           <div className="user-item">
             <button
@@ -365,23 +310,21 @@ const UserSection = () => {
               </div>
             )}
           </div>
-
-          {/* Logout */}
-          <div className="user-item logout-item">
-            <button
-              className="user-item-header logout-btn"
-              onClick={handleLogout}
-              disabled={loading}
-            >
-              <span className="item-icon">⎋</span>
-              <span className="item-title">{loading ? 'Wylogowywanie...' : 'Wyloguj się'}</span>
-            </button>
-          </div>
         </div>
-      )}
+
+        <div className="account-modal-footer">
+          <button
+            className="user-item-header logout-btn"
+            onClick={handleLogout}
+            disabled={loading}
+          >
+            <span className="item-icon">⎋</span>
+            <span className="item-title">{loading ? 'Wylogowywanie...' : 'Wyloguj się'}</span>
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
 
-export default UserSection;
-
+export default AccountModal;

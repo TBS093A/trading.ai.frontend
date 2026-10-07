@@ -1,83 +1,19 @@
 /* ============================================
    SAVED ANALYSIS SECTION STYLES
-   Dark red theme - expandable/scrollable like assets
+   Dark red theme - fills the sidebar panel, list scrolls
    ============================================ */
 
 .saved-analysis-section {
-  overflow: hidden;
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  min-height: 0;
-  flex: 0 0 auto;
-  transition: flex var(--transition-fast);
-  max-height: none;
-}
-
-.saved-analysis-section.section-expanded {
-  flex: 1 1 0;
-  max-height: 350px;
-}
-
-.saved-analysis-section.section-collapsed {
-  flex: 0 0 auto;
-}
-
-/* Collapsible header button */
-.saved-analysis-section .section-label.collapsible {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-sm) var(--spacing-md);
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid rgba(139, 0, 0, 0.2);
-  color: var(--text-secondary);
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.saved-analysis-section .section-label.collapsible:hover {
-  background: rgba(139, 0, 0, 0.1);
-  color: var(--text-primary);
-}
-
-.saved-analysis-section .section-label.collapsible.expanded {
-  border-bottom-color: rgba(139, 0, 0, 0.3);
-}
-
-.saved-analysis-section .section-icon {
-  font-size: 0.9rem;
-  color: #8b0000;
-}
-
-.saved-analysis-section .section-title {
-  flex: 1;
-  text-align: left;
-}
-
-.saved-analysis-section .count-badge {
-  background: rgba(139, 0, 0, 0.2);
-  color: #dc3545;
-  padding: 2px 6px;
-  border-radius: 8px;
-  font-size: 0.65rem;
-  font-weight: 500;
-}
-
-.saved-analysis-section .collapse-arrow {
-  font-size: 0.6rem;
-  color: var(--text-muted);
-  transition: transform var(--transition-fast);
+  overflow: hidden;
 }
 
 /* Search Bar */
 .saved-analysis-search {
-  padding: var(--spacing-xs) var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
   border-bottom: 1px solid rgba(139, 0, 0, 0.1);
 }
 

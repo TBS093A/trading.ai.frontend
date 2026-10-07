@@ -40,7 +40,7 @@ import {
 } from '../../store/slices/analysisSlice';
 import './SavedAnalysisSection.css';
 
-const SavedAnalysisSection = ({ onClose }) => {
+const SavedAnalysisSection = () => {
   const dispatch = useDispatch();
   const analyses = useSelector(selectSavedAnalyses);
   const totalCount = useSelector(selectTotalCount);
@@ -54,7 +54,6 @@ const SavedAnalysisSection = ({ onClose }) => {
   const editingAnalysisId = useSelector(selectEditingAnalysisId);
 
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
-  const [isExpanded, setIsExpanded] = useState(false);
   const [expandedItemId, setExpandedItemId] = useState(null);
   const [editingDescriptionId, setEditingDescriptionId] = useState(null);
   const [editedDescription, setEditedDescription] = useState('');
@@ -167,22 +166,17 @@ const SavedAnalysisSection = ({ onClose }) => {
     }
   }, [dispatch]);
 
-  // Obsługa kliknięcia w ikonę oka - załaduj i przywróć stan (zamyka panel)
+  // Obsługa kliknięcia w ikonę oka - załaduj i przywróć stan
   const handleLoadAnalysis = useCallback(async (analysisId, e) => {
     e?.stopPropagation();
     try {
       await restoreAnalysisState(analysisId);
-      
-      // Zamknij panel po załadowaniu
-      if (onClose) {
-        onClose();
-      }
     } catch (err) {
       console.error('Failed to load analysis:', err);
     }
-  }, [restoreAnalysisState, onClose]);
+  }, [restoreAnalysisState]);
 
-  // Włącz tryb edycji - Save button będzie updateował tę analizę (NIE zamyka panelu)
+  // Włącz tryb edycji - Save button będzie updateował tę analizę
   const handleEnterEditMode = useCallback(async (analysisId, e) => {
     e?.stopPropagation();
     try {
@@ -269,222 +263,207 @@ const SavedAnalysisSection = ({ onClose }) => {
   };
 
   return (
-    <div className={`saved-analysis-section ${isExpanded ? 'section-expanded' : 'section-collapsed'}`}>
-      {/* Collapsible Header */}
-      <button
-        className={`section-label collapsible ${isExpanded ? 'expanded' : ''}`}
-        onClick={() => setIsExpanded(!isExpanded)}
-      >
-        <span className="section-icon">💾</span>
-        <span className="section-title">Saved Analyses</span>
-        <span className="count-badge">{filteredAnalyses.length}</span>
-        <span className="collapse-arrow">{isExpanded ? '▼' : '▶'}</span>
-      </button>
+    <div className="saved-analysis-section">
+      {/* Search Bar */}
+      <div className="saved-analysis-search">
+        <div className="search-input-wrapper">
+          <input
+            type="text"
+            className="input search-input"
+            placeholder="Search analyses..."
+            value={searchTerm}
+            onChange={handleSearchChange}
+          />
+          {searchTerm && (
+            <button
+              className="search-clear-btn"
+              onClick={handleClearSearch}
+            >
+              ×
+            </button>
+          )}
+          <span className="search-icon">⌕</span>
+        </div>
+      </div>
 
-      {isExpanded && (
-        <>
-          {/* Search Bar */}
-          <div className="saved-analysis-search">
-            <div className="search-input-wrapper">
-              <input
-                type="text"
-                className="input search-input"
-                placeholder="Search analyses..."
-                value={searchTerm}
-                onChange={handleSearchChange}
-              />
-              {searchTerm && (
-                <button
-                  className="search-clear-btn"
-                  onClick={handleClearSearch}
-                >
-                  ×
-                </button>
-              )}
-              <span className="search-icon">⌕</span>
-            </div>
-          </div>
+      {/* Edit Mode Indicator */}
+      {editingAnalysisId && (
+        <div className="edit-mode-indicator">
+          <span className="edit-icon">✏️</span>
+          <span>Tryb edycji aktywny</span>
+          <button 
+            className="exit-edit-btn"
+            onClick={() => dispatch(clearEditingAnalysis())}
+            title="Wyłącz tryb edycji"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
-          {/* Edit Mode Indicator */}
-          {editingAnalysisId && (
-            <div className="edit-mode-indicator">
-              <span className="edit-icon">✏️</span>
-              <span>Tryb edycji aktywny</span>
-              <button 
-                className="exit-edit-btn"
-                onClick={() => dispatch(clearEditingAnalysis())}
-                title="Wyłącz tryb edycji"
+      {/* Error message */}
+      {error && (
+        <div className="saved-analysis-error">
+          <span>{typeof error === 'string' ? error : 'Wystąpił błąd'}</span>
+          <button onClick={() => dispatch(clearError())}>×</button>
+        </div>
+      )}
+
+      {/* Success message */}
+      {lastSuccess && (lastSuccess.type === 'delete' || lastSuccess.type === 'update') && (
+        <div className="saved-analysis-success">
+          <span className="success-icon">✓</span>
+          {lastSuccess.message}
+        </div>
+      )}
+
+      {/* Loading state */}
+      {loading && (
+        <div className="saved-analysis-loading">
+          <span className="loading-spinner">⟳</span>
+          <span>Ładowanie...</span>
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!loading && filteredAnalyses.length === 0 && (
+        <div className="saved-analysis-empty">
+          <span className="empty-icon">📊</span>
+          <span>{searchTerm ? 'Brak wyników' : 'Brak zapisanych analiz'}</span>
+          {!searchTerm && (
+            <span className="empty-hint">
+              Użyj przycisku "Save" na wykresie aby zapisać aktualny widok
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Analyses list */}
+      {!loading && filteredAnalyses.length > 0 && (
+        <div className="saved-analysis-list">
+          {filteredAnalyses.map((analysis) => (
+            <div
+              key={analysis.id}
+              className={`saved-analysis-item ${loadingAnalysisId === analysis.id ? 'loading' : ''} ${expandedItemId === analysis.id ? 'item-expanded' : ''} ${editingAnalysisId === analysis.id ? 'editing' : ''}`}
+            >
+              {/* Main row - clickable to expand */}
+              <div 
+                className="analysis-main-row"
+                onClick={() => handleToggleExpand(analysis.id)}
               >
-                ×
-              </button>
-            </div>
-          )}
+                <div className="analysis-info">
+                  <div className="analysis-name">
+                    <span className="expand-indicator">
+                      {expandedItemId === analysis.id ? '▼' : '▶'}
+                    </span>
+                    {analysis.name}
+                    {analysis.description && <span className="has-description-dot">•</span>}
+                  </div>
+                  <div className="analysis-meta">
+                    <span className="meta-asset">
+                      {analysis.asset_name || 'Unknown'}/{analysis.quote_name || '?'}
+                    </span>
+                    <span className="meta-separator">•</span>
+                    <span className="meta-interval">{analysis.interval}</span>
+                    {analysis.exchange_name && (
+                      <>
+                        <span className="meta-separator">•</span>
+                        <span className="meta-exchange">{analysis.exchange_name}</span>
+                      </>
+                    )}
+                  </div>
+                  <div className="analysis-date">
+                    {formatDate(analysis.updated_at)}
+                  </div>
+                </div>
 
-          {/* Error message */}
-          {error && (
-            <div className="saved-analysis-error">
-              <span>{typeof error === 'string' ? error : 'Wystąpił błąd'}</span>
-              <button onClick={() => dispatch(clearError())}>×</button>
-            </div>
-          )}
+                {/* Action buttons */}
+                <div className="analysis-actions">
+                  {/* Edit mode button */}
+                  <button
+                    className={`action-btn edit-btn ${editingAnalysisId === analysis.id ? 'active' : ''}`}
+                    onClick={(e) => handleEnterEditMode(analysis.id, e)}
+                    title="Edytuj widok (Save będzie aktualizować)"
+                  >
+                    ✏️
+                  </button>
+                  
+                  {/* Load/View button */}
+                  <button
+                    className="action-btn view-btn"
+                    onClick={(e) => handleLoadAnalysis(analysis.id, e)}
+                    disabled={loadingAnalysisId === analysis.id}
+                    title="Pokaż na wykresie"
+                  >
+                    {loadingAnalysisId === analysis.id ? '⟳' : '👁️'}
+                  </button>
 
-          {/* Success message */}
-          {lastSuccess && (lastSuccess.type === 'delete' || lastSuccess.type === 'update') && (
-            <div className="saved-analysis-success">
-              <span className="success-icon">✓</span>
-              {lastSuccess.message}
-            </div>
-          )}
+                  {/* Delete button */}
+                  <button
+                    className={`action-btn delete-btn ${confirmDeleteId === analysis.id ? 'confirm' : ''}`}
+                    onClick={(e) => handleDelete(analysis.id, e)}
+                    disabled={deleting}
+                    title={confirmDeleteId === analysis.id ? 'Kliknij ponownie aby potwierdzić' : 'Usuń analizę'}
+                  >
+                    {confirmDeleteId === analysis.id ? '⚠️' : '🗑️'}
+                  </button>
+                </div>
+              </div>
 
-          {/* Loading state */}
-          {loading && (
-            <div className="saved-analysis-loading">
-              <span className="loading-spinner">⟳</span>
-              <span>Ładowanie...</span>
-            </div>
-          )}
-
-          {/* Empty state */}
-          {!loading && filteredAnalyses.length === 0 && (
-            <div className="saved-analysis-empty">
-              <span className="empty-icon">📊</span>
-              <span>{searchTerm ? 'Brak wyników' : 'Brak zapisanych analiz'}</span>
-              {!searchTerm && (
-                <span className="empty-hint">
-                  Użyj przycisku "Save" na wykresie aby zapisać aktualny widok
-                </span>
+              {/* Expanded content - description */}
+              {expandedItemId === analysis.id && (
+                <div className="analysis-expanded-content">
+                  <div className="description-section">
+                    <div className="description-header">
+                      <span className="description-label">Opis:</span>
+                      {editingDescriptionId !== analysis.id && (
+                        <button
+                          className="edit-description-btn"
+                          onClick={(e) => handleStartEditDescription(analysis, e)}
+                          title="Edytuj opis"
+                        >
+                          ✏️
+                        </button>
+                      )}
+                    </div>
+                    
+                    {editingDescriptionId === analysis.id ? (
+                      <div className="description-edit">
+                        <textarea
+                          value={editedDescription}
+                          onChange={(e) => setEditedDescription(e.target.value)}
+                          placeholder="Dodaj opis..."
+                          maxLength={1000}
+                          rows={3}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                        <div className="description-edit-actions">
+                          <button
+                            className="save-desc-btn"
+                            onClick={(e) => handleSaveDescription(analysis.id, e)}
+                            disabled={updating}
+                          >
+                            {updating ? '⟳' : '✓'} Zapisz
+                          </button>
+                          <button
+                            className="cancel-desc-btn"
+                            onClick={handleCancelEditDescription}
+                          >
+                            ✕ Anuluj
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="description-text">
+                        {analysis.description || <span className="no-description">Brak opisu</span>}
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
-          )}
-
-          {/* Analyses list */}
-          {!loading && filteredAnalyses.length > 0 && (
-            <div className="saved-analysis-list">
-              {filteredAnalyses.map((analysis) => (
-                <div
-                  key={analysis.id}
-                  className={`saved-analysis-item ${loadingAnalysisId === analysis.id ? 'loading' : ''} ${expandedItemId === analysis.id ? 'item-expanded' : ''} ${editingAnalysisId === analysis.id ? 'editing' : ''}`}
-                >
-                  {/* Main row - clickable to expand */}
-                  <div 
-                    className="analysis-main-row"
-                    onClick={() => handleToggleExpand(analysis.id)}
-                  >
-                    <div className="analysis-info">
-                      <div className="analysis-name">
-                        <span className="expand-indicator">
-                          {expandedItemId === analysis.id ? '▼' : '▶'}
-                        </span>
-                        {analysis.name}
-                        {analysis.description && <span className="has-description-dot">•</span>}
-                      </div>
-                      <div className="analysis-meta">
-                        <span className="meta-asset">
-                          {analysis.asset_name || 'Unknown'}/{analysis.quote_name || '?'}
-                        </span>
-                        <span className="meta-separator">•</span>
-                        <span className="meta-interval">{analysis.interval}</span>
-                        {analysis.exchange_name && (
-                          <>
-                            <span className="meta-separator">•</span>
-                            <span className="meta-exchange">{analysis.exchange_name}</span>
-                          </>
-                        )}
-                      </div>
-                      <div className="analysis-date">
-                        {formatDate(analysis.updated_at)}
-                      </div>
-                    </div>
-
-                    {/* Action buttons */}
-                    <div className="analysis-actions">
-                      {/* Edit mode button */}
-                      <button
-                        className={`action-btn edit-btn ${editingAnalysisId === analysis.id ? 'active' : ''}`}
-                        onClick={(e) => handleEnterEditMode(analysis.id, e)}
-                        title="Edytuj widok (Save będzie aktualizować)"
-                      >
-                        ✏️
-                      </button>
-                      
-                      {/* Load/View button */}
-                      <button
-                        className="action-btn view-btn"
-                        onClick={(e) => handleLoadAnalysis(analysis.id, e)}
-                        disabled={loadingAnalysisId === analysis.id}
-                        title="Pokaż na wykresie"
-                      >
-                        {loadingAnalysisId === analysis.id ? '⟳' : '👁️'}
-                      </button>
-
-                      {/* Delete button */}
-                      <button
-                        className={`action-btn delete-btn ${confirmDeleteId === analysis.id ? 'confirm' : ''}`}
-                        onClick={(e) => handleDelete(analysis.id, e)}
-                        disabled={deleting}
-                        title={confirmDeleteId === analysis.id ? 'Kliknij ponownie aby potwierdzić' : 'Usuń analizę'}
-                      >
-                        {confirmDeleteId === analysis.id ? '⚠️' : '🗑️'}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Expanded content - description */}
-                  {expandedItemId === analysis.id && (
-                    <div className="analysis-expanded-content">
-                      <div className="description-section">
-                        <div className="description-header">
-                          <span className="description-label">Opis:</span>
-                          {editingDescriptionId !== analysis.id && (
-                            <button
-                              className="edit-description-btn"
-                              onClick={(e) => handleStartEditDescription(analysis, e)}
-                              title="Edytuj opis"
-                            >
-                              ✏️
-                            </button>
-                          )}
-                        </div>
-                        
-                        {editingDescriptionId === analysis.id ? (
-                          <div className="description-edit">
-                            <textarea
-                              value={editedDescription}
-                              onChange={(e) => setEditedDescription(e.target.value)}
-                              placeholder="Dodaj opis..."
-                              maxLength={1000}
-                              rows={3}
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                            <div className="description-edit-actions">
-                              <button
-                                className="save-desc-btn"
-                                onClick={(e) => handleSaveDescription(analysis.id, e)}
-                                disabled={updating}
-                              >
-                                {updating ? '⟳' : '✓'} Zapisz
-                              </button>
-                              <button
-                                className="cancel-desc-btn"
-                                onClick={handleCancelEditDescription}
-                              >
-                                ✕ Anuluj
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="description-text">
-                            {analysis.description || <span className="no-description">Brak opisu</span>}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </>
+          ))}
+        </div>
       )}
     </div>
   );

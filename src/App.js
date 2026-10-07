@@ -1,11 +1,13 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import Dashboard from './components/Dashboard/Dashboard';
+import NavRail from './components/Sidebar/NavRail';
 import Sidebar from './components/Sidebar/Sidebar';
+import AccountModal from './components/Sidebar/AccountModal';
 import PatternsPanel from './components/PatternsPanel/PatternsPanel';
 import Login from './components/Login/Login';
 import { fetchExchanges } from './store/slices/exchangesSlice';
-import { togglePatternsPanel, toggleSidebar } from './store/slices/uiSlice';
+import { togglePatternsPanel } from './store/slices/uiSlice';
 import { 
   verifySession, 
   resetAuth,
@@ -17,7 +19,7 @@ import './styles/global.css';
 function App() {
   const dispatch = useDispatch();
   const dashboardRef = useRef(null);
-  const { sidebarOpen, patternsPanelOpen } = useSelector((state) => state.ui);
+  const { patternsPanelOpen } = useSelector((state) => state.ui);
   const { harmonicPatterns } = useSelector((state) => state.analysis);
   
   // Auth state
@@ -79,21 +81,11 @@ function App() {
   // Show main dashboard
   return (
     <div className="app">
-      <Sidebar isOpen={sidebarOpen} />
-      <main className={`main-content ${sidebarOpen ? 'sidebar-open' : ''} ${showPatternsPanel && patternsPanelOpen ? 'patterns-panel-open' : ''}`}>
+      <NavRail />
+      <Sidebar />
+      <main className="main-content">
         <Dashboard ref={dashboardRef} />
-        
-        {/* Toggle button to open sidebar when closed */}
-        {!sidebarOpen && (
-          <button 
-            className="sidebar-panel-toggle"
-            onClick={() => dispatch(toggleSidebar())}
-            title="Open Sidebar"
-          >
-            <span className="toggle-icon">☰</span>
-          </button>
-        )}
-        
+
         {/* Toggle button to open patterns panel when closed (and patterns exist) */}
         {showPatternsPanel && !patternsPanelOpen && (
           <button 
@@ -112,6 +104,7 @@ function App() {
           onCenterPattern={handleCenterPattern}
         />
       )}
+      <AccountModal />
     </div>
   );
 }
