@@ -33,9 +33,9 @@ def isPullRequest() {
     return env.pr_number?.trim() as boolean
 }
 
-// Pushes to branches other than master must not deploy; manual runs (no ref) are master runs.
+// Pushes to branches other than main (this repo's default branch, not master) must not deploy; manual runs (no ref) are main runs.
 def isPostMerge() {
-    return !isPullRequest() && (!env.push_ref?.trim() || env.push_ref == 'refs/heads/master')
+    return !isPullRequest() && (!env.push_ref?.trim() || env.push_ref == 'refs/heads/main')
 }
 
 def setCommitStatus(String state, String description) {
@@ -130,7 +130,7 @@ pipeline {
                     env.BUILD_SHA = sh(script: 'git rev-parse HEAD', returnStdout: true).trim()
                     env.FAIL_SEVERITIES = params.FAIL_ON_HIGH ? 'CRITICAL,HIGH' : 'CRITICAL'
                     env.MIN_COVERAGE = params.MIN_COVERAGE ?: '0'
-                    currentBuild.description = "${isPullRequest() ? "PR #${env.pr_number}" : 'master'} @ ${env.BUILD_SHA.take(8)}"
+                    currentBuild.description = "${isPullRequest() ? "PR #${env.pr_number}" : 'main'} @ ${env.BUILD_SHA.take(8)}"
                 }
                 // Report files from a previous build in this reused workspace must not leak into
                 // this run's gates or PR comment.
@@ -583,7 +583,7 @@ pipeline {
         // docker-builder-000 has one shared disk across every job here. Each run pulls
         // node:24.12.0-bookworm, semgrep/semgrep, aquasec/trivy, gitleaks and zaproxy/zap-stable on top of the
         // per-commit-tagged app image it builds (never :latest, never reused) - left unmanaged this
-        // fills the disk in short order. On master the tag is in the registry by now, on PR builds
+        // fills the disk in short order. On main the tag is in the registry by now, on PR builds
         // it was never pushed, so removing the local copy loses nothing. cleanup runs after every
         // other post condition; `|| true` throughout because a build that failed early may not
         // have reached later stages. (Only one post section is allowed in declarative pipelines.)
