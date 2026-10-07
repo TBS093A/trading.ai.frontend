@@ -15,7 +15,13 @@ ENV GENERATE_SOURCEMAP=false
 
 RUN npm run build
 
-FROM nginxinc/nginx-unprivileged:1.27-alpine
+# 1.27-alpine mial 2 CRITICAL (openssl) w Trivy. apk upgrade dociaga poprawki Alpine wydane po
+# zbudowaniu obrazu bazowego; obraz bazowy dziala jako uid 101, wiec upgrade jako root i powrot.
+FROM nginxinc/nginx-unprivileged:1.29-alpine
+
+USER root
+RUN apk upgrade --no-cache
+USER 101
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/build /usr/share/nginx/html
