@@ -233,10 +233,13 @@ const api = {
   // ==================
   // KLINES
   // ==================
+  // compact=true: backends that support it send [[open_time, o, h, l, c, v], ...] (with `fields`);
+  // older ones ignore the param and send objects - chartSlice normalizes both
   getKlines: (assetId, interval, limit = 500, startTime = null, endTime = null) =>
     axiosInstance.get(`/exchanges/klines/${assetId}/${interval}`, {
       params: {
         limit,
+        compact: true,
         ...(startTime && { start_time: startTime }),
         ...(endTime && { end_time: endTime }),
       },

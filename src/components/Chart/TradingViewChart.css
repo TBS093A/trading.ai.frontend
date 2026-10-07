@@ -6,6 +6,23 @@
   width: 100%;
   background: var(--bg-primary);
   overflow: hidden;
+  position: relative;
+}
+
+/* Small badge while an older page of candles is being fetched */
+.history-loading {
+  position: absolute;
+  top: var(--spacing-sm);
+  left: var(--spacing-sm);
+  z-index: 5;
+  padding: 2px 8px;
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-sm);
+  background: rgba(6, 8, 16, 0.85);
+  color: var(--text-secondary);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  pointer-events: none;
 }
 
 .trading-chart {

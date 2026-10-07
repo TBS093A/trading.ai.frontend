@@ -22,6 +22,8 @@ export const store = configureStore({
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: false,
+      // Dev-only check walks the whole state on every action; tens of thousands of candles make it crawl
+      immutableCheck: { ignoredPaths: ['chart.klines'] },
     }),
 });
 

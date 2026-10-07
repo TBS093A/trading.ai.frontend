@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch, useSelector, useStore } from 'react-redux';
 import TradingViewChart from '../Chart/TradingViewChart';
 import IndicatorControls from '../IndicatorControls/IndicatorControls';
 import SaveAnalysisModal from './SaveAnalysisModal';
@@ -21,7 +21,8 @@ const Dashboard = forwardRef((props, ref) => {
   const dispatch = useDispatch();
   const { selectedAsset } = useSelector((state) => state.assets);
   const { selectedExchange } = useSelector((state) => state.exchanges);
-  const { klines, interval, availableIntervals, patternCounts, loading: chartLoading, asset, quote, full_name } = useSelector((state) => state.chart);
+  const store = useStore();
+  const { datasetId, interval, availableIntervals, patternCounts, loading: chartLoading, asset, quote, full_name } = useSelector((state) => state.chart);
   const { loading: analysisLoading } = useSelector((state) => state.analysis);
   const editingAnalysisId = useSelector(selectEditingAnalysisId);
   const isEditMode = !!editingAnalysisId;
@@ -40,20 +41,21 @@ const Dashboard = forwardRef((props, ref) => {
     }
   }, [dispatch, selectedAsset]);
 
-  // Fetch technical analysis after klines are loaded
+  // Fetch technical analysis once per loaded dataset (asset + interval).
+  // Keyed on datasetId, not klines, so history pages loaded while scrolling don't refetch it.
   useEffect(() => {
-    if (selectedAsset && klines.length > 0 && interval) {
-      const startTimestamp = klines[0]?.open_time;
-      const endTimestamp = klines[klines.length - 1]?.open_time;
-      
+    const state = store.getState();
+    const { klines, interval: datasetInterval } = state.chart;
+    const asset = state.assets.selectedAsset;
+    if (datasetId > 0 && asset && klines.length > 0 && datasetInterval) {
       dispatch(fetchTechnicalAnalysis({
-        assetId: selectedAsset.id,
-        interval,
-        startTimestamp,
-        endTimestamp,
+        assetId: asset.id,
+        interval: datasetInterval,
+        startTimestamp: klines[0].open_time,
+        endTimestamp: klines[klines.length - 1].open_time,
       }));
     }
-  }, [dispatch, selectedAsset, klines, interval]);
+  }, [dispatch, store, datasetId]);
 
   const handleIntervalChange = useCallback((newInterval) => {
     dispatch(setInterval(newInterval));
