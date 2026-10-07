@@ -1,10 +1,13 @@
 import React, { useEffect, useRef, useCallback, useImperativeHandle, forwardRef } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch, useSelector, useStore } from 'react-redux';
 import { createChart, CrosshairMode } from 'lightweight-charts';
 import { setSelectedPattern } from '../../store/slices/analysisSlice';
-import { clearScaleReset } from '../../store/slices/chartSlice';
+import { clearScaleReset, fetchOlderKlines } from '../../store/slices/chartSlice';
 import { calculateRSI, calculateMACD, calculateOBV } from '../../utils/indicators';
 import './TradingViewChart.css';
+
+// Start fetching older candles when fewer than this many bars are left of the viewport
+const HISTORY_PREFETCH_BARS = 100;
 
 // Helper function to convert hex color to rgba with alpha
 const hexToRgba = (hex, alpha = 1) => {
@@ -18,6 +21,7 @@ const hexToRgba = (hex, alpha = 1) => {
 
 const TradingViewChart = forwardRef((props, ref) => {
   const dispatch = useDispatch();
+  const store = useStore();
   const chartContainerRef = useRef(null);
   const chartRef = useRef(null);
   const candlestickSeriesRef = useRef(null);
@@ -31,12 +35,14 @@ const TradingViewChart = forwardRef((props, ref) => {
   const indicatorChartsRef = useRef([]);
   const isSyncingRef = useRef(false); // Prevent infinite sync loops
 
-  const { klines, asset, quote, interval: currentInterval, shouldResetScale } = useSelector((state) => state.chart);
+  const { klines, datasetId, historyLoading, interval: currentInterval, shouldResetScale } = useSelector((state) => state.chart);
   const { selectedAsset } = useSelector((state) => state.assets);
   const { harmonicPatterns, selectedPattern, expandedPatternId, unselectedAlpha, patternDisplayOptions, globalPatternDisplay, indicators, sharedPatternData } = useSelector((state) => state.analysis);
 
   // Track asset ID to reset chart when asset changes
   const prevAssetIdRef = useRef(null);
+  // Dataset currently drawn - a new one is fitted to the screen, history pages are not
+  const renderedDatasetIdRef = useRef(null);
 
   // Helper to get display options for a pattern
   const getPatternOptions = useCallback((patternId) => {
@@ -114,6 +120,13 @@ const TradingViewChart = forwardRef((props, ref) => {
     }
   }, []);
 
+  // Bring a freshly (re)filled indicator pane to the main chart's viewport
+  const alignToMain = useCallback((chart) => {
+    const range = chartRef.current?.timeScale().getVisibleRange();
+    if (!range) return;
+    try { chart.timeScale().setVisibleRange(range); } catch (e) {}
+  }, []);
+
   // Sync crosshair position across all charts
   const syncCrosshair = useCallback((sourceChart, time) => {
     if (isSyncingCrosshairRef.current) return;
@@ -148,35 +161,20 @@ const TradingViewChart = forwardRef((props, ref) => {
     }
   }, []);
 
-  // Convert klines to chart data format
-  const convertKlinesToCandlestickData = useCallback((klines) => {
-    return klines.map((k) => ({
-      time: k.open_time / 1000, // Convert to seconds
-      open: parseFloat(k.open),
-      high: parseFloat(k.high),
-      low: parseFloat(k.low),
-      close: parseFloat(k.close),
+  // Request the page of candles before the oldest loaded one when the viewport nears the left edge.
+  // Reads the store directly so the chart subscription never has to be re-created.
+  const maybeLoadHistory = useCallback((logicalRange) => {
+    if (!logicalRange || logicalRange.from > HISTORY_PREFETCH_BARS) return;
+    const { chart: chartState, assets } = store.getState();
+    const { klines: loaded, datasetId: currentDatasetId, interval } = chartState;
+    if (!assets.selectedAsset || loaded.length === 0) return;
+    dispatch(fetchOlderKlines({
+      assetId: assets.selectedAsset.id,
+      interval,
+      endTime: loaded[0].open_time - 1,
+      datasetId: currentDatasetId,
     }));
-  }, []);
-
-  const convertKlinesToVolumeData = useCallback((klines) => {
-    return klines.map((k) => ({
-      time: k.open_time / 1000,
-      value: parseFloat(k.volume),
-      color: globalPatternDisplay.monochromaticMode
-        ? (parseFloat(k.close) >= parseFloat(k.open) ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.25)')
-        : (parseFloat(k.close) >= parseFloat(k.open) ? 'rgba(0, 255, 136, 0.5)' : 'rgba(255, 51, 102, 0.5)'),
-    }));
-  }, [globalPatternDisplay.monochromaticMode]);
-
-  // Create timestamp to index map for pattern drawing
-  const createTimestampMap = useCallback((klines) => {
-    const map = new Map();
-    klines.forEach((k, index) => {
-      map.set(k.open_time, index);
-    });
-    return map;
-  }, []);
+  }, [dispatch, store]);
 
   // Initialize chart
   useEffect(() => {
@@ -252,10 +250,10 @@ const TradingViewChart = forwardRef((props, ref) => {
     });
 
     // Resize observer
+    // Resize keeps the current viewport - fitting here would squeeze all loaded history onto screen
     const resizeObserver = new ResizeObserver((entries) => {
       const { width, height } = entries[0].contentRect;
       chart.applyOptions({ width, height });
-      chart.timeScale().fitContent();
     });
     resizeObserver.observe(chartContainerRef.current);
 
@@ -265,7 +263,15 @@ const TradingViewChart = forwardRef((props, ref) => {
     };
   }, []);
 
-  // Update candlestick and volume colors based on monochromatic mode
+  // Lazy-load history while scrolling/zooming towards the oldest candle
+  useEffect(() => {
+    const timeScale = chartRef.current?.timeScale();
+    if (!timeScale) return undefined;
+    timeScale.subscribeVisibleLogicalRangeChange(maybeLoadHistory);
+    return () => timeScale.unsubscribeVisibleLogicalRangeChange(maybeLoadHistory);
+  }, [maybeLoadHistory]);
+
+  // Candle colors based on monochromatic mode
   useEffect(() => {
     if (!candlestickSeriesRef.current) return;
 
@@ -290,48 +296,58 @@ const TradingViewChart = forwardRef((props, ref) => {
         wickDownColor: '#ff3366',
       });
     }
+  }, [globalPatternDisplay.monochromaticMode]);
 
-    // Update volume colors if volume data is available
-    if (volumeSeriesRef.current && klines.length > 0) {
-      const volumeData = klines.map((k) => ({
-        time: k.open_time / 1000,
-        value: parseFloat(k.volume),
-        color: globalPatternDisplay.monochromaticMode
-          ? (parseFloat(k.close) >= parseFloat(k.open) ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.25)')
-          : (parseFloat(k.close) >= parseFloat(k.open) ? 'rgba(0, 255, 136, 0.5)' : 'rgba(255, 51, 102, 0.5)'),
-      }));
-      volumeSeriesRef.current.setData(volumeData);
-    }
-  }, [globalPatternDisplay.monochromaticMode, klines]);
-
-  // Update chart data and reset scale when asset changes
+  // Candles: a new dataset is fitted to the screen; a prepended history page keeps the viewport
+  // (lightweight-charts anchors the view to the latest bar, so setData with older bars doesn't jump)
   useEffect(() => {
     if (!candlestickSeriesRef.current || klines.length === 0) return;
 
-    const currentAssetId = selectedAsset?.id;
-    const assetChanged = prevAssetIdRef.current !== null && prevAssetIdRef.current !== currentAssetId;
-    prevAssetIdRef.current = currentAssetId;
+    candlestickSeriesRef.current.setData(klines.map((k) => ({
+      time: k.open_time / 1000,
+      open: k.open,
+      high: k.high,
+      low: k.low,
+      close: k.close,
+    })));
 
-    const candlestickData = convertKlinesToCandlestickData(klines);
-    const volumeData = convertKlinesToVolumeData(klines);
+    if (renderedDatasetIdRef.current !== datasetId) {
+      renderedDatasetIdRef.current = datasetId;
 
-    candlestickSeriesRef.current.setData(candlestickData);
-    if (volumeSeriesRef.current && indicators.volume) {
-      volumeSeriesRef.current.setData(volumeData);
-    }
+      const currentAssetId = selectedAsset?.id;
+      const assetChanged = prevAssetIdRef.current !== null && prevAssetIdRef.current !== currentAssetId;
+      prevAssetIdRef.current = currentAssetId;
 
-    // Always fit content, but also reset price scale when asset changes
-    if (chartRef.current) {
-      chartRef.current.timeScale().fitContent();
-      
+      chartRef.current?.timeScale().fitContent();
       // Reset price scale to auto-fit the new data
       if (assetChanged) {
-        chartRef.current.priceScale('right').applyOptions({
-          autoScale: true,
-        });
+        chartRef.current?.priceScale('right').applyOptions({ autoScale: true });
       }
     }
-  }, [klines, selectedAsset, convertKlinesToCandlestickData, convertKlinesToVolumeData, indicators.volume]);
+
+    // The viewport may still be near the left edge after a short page - keep loading
+    maybeLoadHistory(chartRef.current?.timeScale().getVisibleLogicalRange());
+  }, [klines, datasetId, selectedAsset, maybeLoadHistory]);
+
+  // Volume bars (colors follow monochromatic mode)
+  useEffect(() => {
+    if (!volumeSeriesRef.current || klines.length === 0) return;
+    const mono = globalPatternDisplay.monochromaticMode;
+    volumeSeriesRef.current.setData(klines.map((k) => {
+      const up = k.close >= k.open;
+      return {
+        time: k.open_time / 1000,
+        value: k.volume,
+        color: mono
+          ? (up ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.25)')
+          : (up ? 'rgba(0, 255, 136, 0.5)' : 'rgba(255, 51, 102, 0.5)'),
+      };
+    }));
+  }, [klines, globalPatternDisplay.monochromaticMode]);
+
+  useEffect(() => {
+    volumeSeriesRef.current?.applyOptions({ visible: indicators.volume });
+  }, [indicators.volume]);
 
   // Force scale reset when triggered (e.g., when loading saved analysis)
   useEffect(() => {
@@ -504,7 +520,7 @@ const TradingViewChart = forwardRef((props, ref) => {
     return () => {
       patternMarkersRef.current = [];
     };
-  }, [harmonicPatterns, klines, selectedPattern, expandedPatternId, unselectedAlpha, globalPatternDisplay.showPointLevelLines, globalPatternDisplay.monochromaticMode, globalPatternDisplay.lineDisplayStyle, globalPatternDisplay.showUnselectedLabels]);
+  }, [harmonicPatterns, datasetId, selectedPattern, expandedPatternId, unselectedAlpha, globalPatternDisplay.showPointLevelLines, globalPatternDisplay.monochromaticMode, globalPatternDisplay.lineDisplayStyle, globalPatternDisplay.showUnselectedLabels]);
 
   // Draw pattern shapes - main legs (X-A, A-B, B-C, C-D) and closing lines (X-B, B-D)
   useEffect(() => {
@@ -1026,11 +1042,15 @@ const TradingViewChart = forwardRef((props, ref) => {
   return (
     <div className="trading-chart-wrapper">
       <div ref={chartContainerRef} className="trading-chart" />
+      {historyLoading && (
+        <div className="history-loading" role="status">Loading history…</div>
+      )}
       
       {/* RSI Chart */}
       {indicators.rsi && klines.length > 0 && (
         <RSIIndicator 
-          klines={klines} 
+          klines={klines}
+          alignToMain={alignToMain} 
           onChartReady={registerIndicatorChart}
           onChartDestroy={unregisterIndicatorChart}
           syncTimeRange={syncTimeRange}
@@ -1042,6 +1062,7 @@ const TradingViewChart = forwardRef((props, ref) => {
       {indicators.macd && klines.length > 0 && (
         <MACDIndicator 
           klines={klines}
+          alignToMain={alignToMain}
           onChartReady={registerIndicatorChart}
           onChartDestroy={unregisterIndicatorChart}
           syncTimeRange={syncTimeRange}
@@ -1053,6 +1074,7 @@ const TradingViewChart = forwardRef((props, ref) => {
       {indicators.obv && klines.length > 0 && (
         <OBVIndicator 
           klines={klines}
+          alignToMain={alignToMain}
           onChartReady={registerIndicatorChart}
           onChartDestroy={unregisterIndicatorChart}
           syncTimeRange={syncTimeRange}
@@ -1063,42 +1085,52 @@ const TradingViewChart = forwardRef((props, ref) => {
   );
 });
 
-// RSI Indicator Component
-const RSIIndicator = ({ klines, onChartReady, onChartDestroy, syncTimeRange, syncCrosshair }) => {
+// Shared setup for indicator panes: the chart is created once and kept in sync with the main
+// chart; `addSeries` creates the pane's series and returns them, `primary` one registers for sync.
+// Data is pushed separately with setData, so new candles never rebuild the chart.
+const useIndicatorChart = ({ height, scaleMargins, addSeries, onChartReady, onChartDestroy, syncTimeRange, syncCrosshair }) => {
   const containerRef = useRef(null);
   const chartRef = useRef(null);
+  const seriesRef = useRef(null);
+  // Pane layout and series are fixed per indicator - read once at creation
+  const setupRef = useRef({ height, scaleMargins, addSeries });
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!containerRef.current) return undefined;
 
+    const setup = setupRef.current;
     const chart = createChart(containerRef.current, {
-      height: 100,
+      height: setup.height,
       layout: { background: { type: 'solid', color: '#060810' }, textColor: '#8b949e' },
       grid: { vertLines: { color: 'rgba(255,255,255,0.03)' }, horzLines: { color: 'rgba(255,255,255,0.03)' } },
-      rightPriceScale: { borderColor: '#21262d', scaleMargins: { top: 0.08, bottom: 0.08 } },
+      rightPriceScale: { borderColor: '#21262d', scaleMargins: setup.scaleMargins },
       timeScale: { visible: false, borderColor: '#21262d' },
       handleScroll: { vertTouchDrag: false },
     });
+
     chartRef.current = chart;
+    const series = setup.addSeries(chart);
+    seriesRef.current = series;
+    onChartReady?.(chart, series.primary);
 
-    const rsiData = calculateRSI(klines);
-    const series = chart.addLineSeries({
-      color: '#9945ff',
-      lineWidth: 2,
-      priceScaleId: 'right',
-      autoscaleInfoProvider: () => ({
-        priceRange: { minValue: 0, maxValue: 100 },
-      }),
-    });
-    series.setData(rsiData);
-
-    series.createPriceLine({ price: 70, color: '#ff3366', lineWidth: 1, lineStyle: 2 });
-    series.createPriceLine({ price: 30, color: '#00ff88', lineWidth: 1, lineStyle: 2 });
-
-    onChartReady?.(chart, series);
+    // Only push this pane's range to the others while the user drives it (drag/wheel/touch).
+    // Range changes from its own setData would otherwise yank the main chart to the latest bars.
+    const container = containerRef.current;
+    let userDriving = false;
+    let wheelTimer = null;
+    const startDriving = () => { userDriving = true; };
+    const stopDriving = () => { userDriving = false; };
+    const onWheel = () => {
+      userDriving = true;
+      clearTimeout(wheelTimer);
+      wheelTimer = setTimeout(stopDriving, 200);
+    };
+    container.addEventListener('pointerdown', startDriving);
+    window.addEventListener('pointerup', stopDriving);
+    container.addEventListener('wheel', onWheel, { passive: true });
 
     const handleTimeRangeChange = (range) => {
-      if (range) syncTimeRange?.(chart, range);
+      if (range && userDriving) syncTimeRange?.(chart, range);
     };
     chart.timeScale().subscribeVisibleTimeRangeChange(handleTimeRangeChange);
 
@@ -1115,12 +1147,48 @@ const RSIIndicator = ({ klines, onChartReady, onChartDestroy, syncTimeRange, syn
 
     return () => {
       resizeObserver.disconnect();
+      clearTimeout(wheelTimer);
+      container.removeEventListener('pointerdown', startDriving);
+      window.removeEventListener('pointerup', stopDriving);
+      container.removeEventListener('wheel', onWheel);
       chart.timeScale().unsubscribeVisibleTimeRangeChange(handleTimeRangeChange);
       chart.unsubscribeCrosshairMove(handleCrosshair);
       onChartDestroy?.(chart);
+      seriesRef.current = null;
+      chartRef.current = null;
       chart.remove();
     };
-  }, [klines, onChartReady, onChartDestroy, syncTimeRange, syncCrosshair]);
+  }, [onChartReady, onChartDestroy, syncTimeRange, syncCrosshair]);
+
+  return { containerRef, chartRef, seriesRef };
+};
+
+// RSI Indicator Component
+const RSIIndicator = ({ klines, alignToMain, ...syncProps }) => {
+  const { containerRef, chartRef, seriesRef } = useIndicatorChart({
+    ...syncProps,
+    height: 100,
+    scaleMargins: { top: 0.08, bottom: 0.08 },
+    addSeries: (chart) => {
+      const primary = chart.addLineSeries({
+        color: '#9945ff',
+        lineWidth: 2,
+        priceScaleId: 'right',
+        autoscaleInfoProvider: () => ({
+          priceRange: { minValue: 0, maxValue: 100 },
+        }),
+      });
+      primary.createPriceLine({ price: 70, color: '#ff3366', lineWidth: 1, lineStyle: 2 });
+      primary.createPriceLine({ price: 30, color: '#00ff88', lineWidth: 1, lineStyle: 2 });
+      return { primary };
+    },
+  });
+
+  useEffect(() => {
+    if (!seriesRef.current) return;
+    seriesRef.current.primary.setData(calculateRSI(klines));
+    alignToMain(chartRef.current);
+  }, [klines, seriesRef, chartRef, alignToMain]);
 
   return (
     <div className="indicator-chart">
@@ -1131,63 +1199,29 @@ const RSIIndicator = ({ klines, onChartReady, onChartDestroy, syncTimeRange, syn
 };
 
 // MACD Indicator Component
-const MACDIndicator = ({ klines, onChartReady, onChartDestroy, syncTimeRange, syncCrosshair }) => {
-  const containerRef = useRef(null);
-  const chartRef = useRef(null);
+const MACDIndicator = ({ klines, alignToMain, ...syncProps }) => {
+  const { containerRef, chartRef, seriesRef } = useIndicatorChart({
+    ...syncProps,
+    height: 100,
+    scaleMargins: { top: 0.1, bottom: 0.1 },
+    addSeries: (chart) => ({
+      primary: chart.addLineSeries({ color: '#00f0ff', lineWidth: 2 }),
+      signal: chart.addLineSeries({ color: '#ff9933', lineWidth: 2 }),
+      histogram: chart.addHistogramSeries({ color: '#00ff88' }),
+    }),
+  });
 
   useEffect(() => {
-    if (!containerRef.current) return;
-
-    const chart = createChart(containerRef.current, {
-      height: 100,
-      layout: { background: { type: 'solid', color: '#060810' }, textColor: '#8b949e' },
-      grid: { vertLines: { color: 'rgba(255,255,255,0.03)' }, horzLines: { color: 'rgba(255,255,255,0.03)' } },
-      rightPriceScale: { borderColor: '#21262d', scaleMargins: { top: 0.1, bottom: 0.1 } },
-      timeScale: { visible: false, borderColor: '#21262d' },
-      handleScroll: { vertTouchDrag: false },
-    });
-    chartRef.current = chart;
-
+    if (!seriesRef.current) return;
     const { macdLine, signalLine, histogram } = calculateMACD(klines);
-
-    const macdSeries = chart.addLineSeries({ color: '#00f0ff', lineWidth: 2 });
-    macdSeries.setData(macdLine);
-
-    const signalSeries = chart.addLineSeries({ color: '#ff9933', lineWidth: 2 });
-    signalSeries.setData(signalLine);
-
-    const histSeries = chart.addHistogramSeries({ color: '#00ff88' });
-    histSeries.setData(histogram.map(h => ({
+    seriesRef.current.primary.setData(macdLine);
+    seriesRef.current.signal.setData(signalLine);
+    seriesRef.current.histogram.setData(histogram.map(h => ({
       ...h,
       color: h.value >= 0 ? '#00ff88' : '#ff3366'
     })));
-
-    onChartReady?.(chart, macdSeries);
-
-    const handleTimeRangeChange = (range) => {
-      if (range) syncTimeRange?.(chart, range);
-    };
-    chart.timeScale().subscribeVisibleTimeRangeChange(handleTimeRangeChange);
-
-    const handleCrosshair = (param) => {
-      syncCrosshair?.(chart, param.time);
-    };
-    chart.subscribeCrosshairMove(handleCrosshair);
-
-    const resizeObserver = new ResizeObserver((entries) => {
-      const { width } = entries[0].contentRect;
-      chart.applyOptions({ width });
-    });
-    resizeObserver.observe(containerRef.current);
-
-    return () => {
-      resizeObserver.disconnect();
-      chart.timeScale().unsubscribeVisibleTimeRangeChange(handleTimeRangeChange);
-      chart.unsubscribeCrosshairMove(handleCrosshair);
-      onChartDestroy?.(chart);
-      chart.remove();
-    };
-  }, [klines, onChartReady, onChartDestroy, syncTimeRange, syncCrosshair]);
+    alignToMain(chartRef.current);
+  }, [klines, seriesRef, chartRef, alignToMain]);
 
   return (
     <div className="indicator-chart">
@@ -1198,53 +1232,21 @@ const MACDIndicator = ({ klines, onChartReady, onChartDestroy, syncTimeRange, sy
 };
 
 // OBV Indicator Component
-const OBVIndicator = ({ klines, onChartReady, onChartDestroy, syncTimeRange, syncCrosshair }) => {
-  const containerRef = useRef(null);
-  const chartRef = useRef(null);
+const OBVIndicator = ({ klines, alignToMain, ...syncProps }) => {
+  const { containerRef, chartRef, seriesRef } = useIndicatorChart({
+    ...syncProps,
+    height: 80,
+    scaleMargins: { top: 0.1, bottom: 0.1 },
+    addSeries: (chart) => ({
+      primary: chart.addLineSeries({ color: '#ffcc00', lineWidth: 2 }),
+    }),
+  });
 
   useEffect(() => {
-    if (!containerRef.current) return;
-
-    const chart = createChart(containerRef.current, {
-      height: 80,
-      layout: { background: { type: 'solid', color: '#060810' }, textColor: '#8b949e' },
-      grid: { vertLines: { color: 'rgba(255,255,255,0.03)' }, horzLines: { color: 'rgba(255,255,255,0.03)' } },
-      rightPriceScale: { borderColor: '#21262d', scaleMargins: { top: 0.1, bottom: 0.1 } },
-      timeScale: { visible: false, borderColor: '#21262d' },
-      handleScroll: { vertTouchDrag: false },
-    });
-    chartRef.current = chart;
-
-    const obvData = calculateOBV(klines);
-    const series = chart.addLineSeries({ color: '#ffcc00', lineWidth: 2 });
-    series.setData(obvData);
-
-    onChartReady?.(chart, series);
-
-    const handleTimeRangeChange = (range) => {
-      if (range) syncTimeRange?.(chart, range);
-    };
-    chart.timeScale().subscribeVisibleTimeRangeChange(handleTimeRangeChange);
-
-    const handleCrosshair = (param) => {
-      syncCrosshair?.(chart, param.time);
-    };
-    chart.subscribeCrosshairMove(handleCrosshair);
-
-    const resizeObserver = new ResizeObserver((entries) => {
-      const { width } = entries[0].contentRect;
-      chart.applyOptions({ width });
-    });
-    resizeObserver.observe(containerRef.current);
-
-    return () => {
-      resizeObserver.disconnect();
-      chart.timeScale().unsubscribeVisibleTimeRangeChange(handleTimeRangeChange);
-      chart.unsubscribeCrosshairMove(handleCrosshair);
-      onChartDestroy?.(chart);
-      chart.remove();
-    };
-  }, [klines, onChartReady, onChartDestroy, syncTimeRange, syncCrosshair]);
+    if (!seriesRef.current) return;
+    seriesRef.current.primary.setData(calculateOBV(klines));
+    alignToMain(chartRef.current);
+  }, [klines, seriesRef, chartRef, alignToMain]);
 
   return (
     <div className="indicator-chart">
