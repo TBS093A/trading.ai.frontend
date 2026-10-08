@@ -84,7 +84,7 @@ test('alert settings save and show the 422 detail', async () => {
   expect(store.getState().alerts.settings.error).toBe('email_enabled requires an e-mail address');
 });
 
-test('test e-mail: success, and status codes explained when there is no detail', async () => {
+test('e-mail check: success, and status codes explained when there is no detail', async () => {
   const store = makeStore();
   api.sendTestAlert.mockResolvedValueOnce({ data: { sent_to: 'a@b.c' } });
   await store.dispatch(sendTestAlert());
