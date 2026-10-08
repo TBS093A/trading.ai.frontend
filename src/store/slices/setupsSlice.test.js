@@ -7,6 +7,9 @@ import setupsReducer, {
   fetchChartSetups,
   setShowSetupsOnChart,
   toggleGroupBy,
+  toggleSetupStatus,
+  soloSetupStatus,
+  SETUP_STATUSES,
 } from './setupsSlice';
 
 jest.mock('../../services/api', () => ({
@@ -65,4 +68,21 @@ test('chart setups are requested for the asset/interval and cleared on a new dat
   await store.dispatch(fetchChartSetups({ assetId: 4, interval: '1h' }));
   store.dispatch(setShowSetupsOnChart(false));
   expect(store.getState().setups.chart.setups).toEqual([]);
+});
+
+test('status filter toggles, solos and is remembered', () => {
+  localStorage.removeItem('setups.hiddenStatuses');
+  const store = makeStore();
+  store.dispatch(toggleSetupStatus('invalidated'));
+  expect(store.getState().setups.hiddenStatuses).toEqual(['invalidated']);
+  expect(JSON.parse(localStorage.getItem('setups.hiddenStatuses'))).toEqual(['invalidated']);
+
+  store.dispatch(soloSetupStatus('waiting'));
+  expect(store.getState().setups.hiddenStatuses).toEqual(SETUP_STATUSES.filter((st) => st !== 'waiting'));
+  // Soloing the same status again shows everything
+  store.dispatch(soloSetupStatus('waiting'));
+  expect(store.getState().setups.hiddenStatuses).toEqual([]);
+
+  store.dispatch(toggleSetupStatus('loss'));
+  expect(JSON.parse(localStorage.getItem('setups.hiddenStatuses'))).toEqual(['loss']);
 });
