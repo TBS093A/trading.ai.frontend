@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useState } from 'react';
+import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { 
   setSelectedPattern, 
@@ -16,8 +16,20 @@ import {
   toggleShowUnselectedLabels,
 } from '../../store/slices/analysisSlice';
 import { togglePatternsPanel } from '../../store/slices/uiSlice';
-import './PatternsPanel.css';
+import { compareByStrength, strengthTint, StrengthBadge, StrengthSection } from './PatternStrength';
 import { getPatternInfo } from './patternInfoDescriptions';
+import './PatternsPanel.css';
+
+const SORT_KEY = 'patterns.sort';
+const loadSortMode = () => {
+  try {
+    return localStorage.getItem(SORT_KEY) === 'strength' ? 'strength' : 'newest';
+  } catch {
+    return 'newest';
+  }
+};
+
+const dPointTime = (p) => p.ta_object_json?.points?.D?.timestamp || p.d_point_timestamp || 0;
 
 // FE Group descriptions for info tooltips
 const FE_GROUP_INFO = {
@@ -62,6 +74,11 @@ const FE_GROUP_INFO = {
 const PatternsPanel = ({ isOpen, onCenterPattern }) => {
   const dispatch = useDispatch();
   const [isSettingsExpanded, setIsSettingsExpanded] = useState(false);
+  // 'newest' (D point, newest first) | 'strength' (score, strongest first) - remembered per browser
+  const [sortMode, setSortMode] = useState(loadSortMode);
+  useEffect(() => {
+    try { localStorage.setItem(SORT_KEY, sortMode); } catch { /* not remembered */ }
+  }, [sortMode]);
   // State for collapsed FE groups - only ABC and BCD expanded by default
   const [collapsedFEGroups, setCollapsedFEGroups] = useState({
     'XA': true,
@@ -182,7 +199,7 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
     return options.showInternalFibo || options.showExternalFibo || options.showFiboFE || options.showTPPRZSL;
   }, [getPatternOptions]);
 
-  // Group patterns by interval and sort by D point timestamp (newest first)
+  // Group patterns by interval and sort by D point timestamp (newest first) or by strength
   const groupedPatterns = useMemo(() => {
     if (!harmonicPatterns || harmonicPatterns.length === 0) return {};
 
@@ -196,13 +213,11 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
       groups[interval].push(pattern);
     });
 
-    // Sort each group by D point timestamp (newest first)
+    // Sort each group by D point timestamp (newest first), or strongest first
     Object.keys(groups).forEach((interval) => {
-      groups[interval].sort((a, b) => {
-        const aTime = a.ta_object_json?.points?.D?.timestamp || a.d_point_timestamp || 0;
-        const bTime = b.ta_object_json?.points?.D?.timestamp || b.d_point_timestamp || 0;
-        return bTime - aTime;
-      });
+      groups[interval].sort((a, b) => (sortMode === 'strength'
+        ? compareByStrength(a, b, dPointTime)
+        : dPointTime(b) - dPointTime(a)));
     });
 
     // Sort interval keys (1m, 15m, 1h, 4h, 1d, etc.)
@@ -223,7 +238,7 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
       });
 
     return sortedGroups;
-  }, [harmonicPatterns]);
+  }, [harmonicPatterns, sortMode]);
 
   const totalPatterns = useMemo(() => {
     return harmonicPatterns?.length || 0;
@@ -451,6 +466,24 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
         )}
       </div>
 
+      {/* Sort order */}
+      {totalPatterns > 0 && (
+        <div className="patterns-sort" role="radiogroup" aria-label="Sort patterns">
+          <span className="patterns-sort-label">Sort</span>
+          {[['newest', 'Newest'], ['strength', 'Strength']].map(([mode, label]) => (
+            <button
+              key={mode}
+              role="radio"
+              aria-checked={sortMode === mode}
+              className={`patterns-sort-btn ${sortMode === mode ? 'active' : ''}`}
+              onClick={() => setSortMode(mode)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Patterns List */}
       <div className={`patterns-list ${globalPatternDisplay.monochromaticMode ? 'monochromatic' : ''}`}>
         {Object.keys(groupedPatterns).length === 0 ? (
@@ -480,11 +513,13 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
                   const confluenceCount = Array.isArray(confList)
                     ? confList.length
                     : (pattern.confluences_json?.total_score ?? 0);
+                  const tint = strengthTint(pattern.strength);
 
                   return (
                     <div 
                       key={pattern.id} 
-                      className={`pattern-item ${isExpanded ? 'expanded' : ''} ${isSelected ? 'selected' : ''} ${hasActiveOptions ? 'has-active-options' : ''}`}
+                      className={`pattern-item ${isExpanded ? 'expanded' : ''} ${isSelected ? 'selected' : ''} ${hasActiveOptions ? 'has-active-options' : ''} ${tint ? 'has-strength' : ''}`}
+                      style={tint ? { '--strength-tint': tint } : undefined}
                     >
                       {/* Pattern Header (clickable) */}
                       <div className="pattern-header">
@@ -505,6 +540,7 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
                           >
                             {confluenceCount}
                           </span>
+                          <StrengthBadge strength={pattern.strength} />
                           <span className="pattern-date">{formatTimestamp(dTimestamp)}</span>
                         </button>
                         <button 
@@ -597,6 +633,8 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
                           </div>
 
                           {/* Retraces (Fibonacci ratios) */}
+                          <StrengthSection strength={pattern.strength} />
+
                           {taData.retraces && (
                             <div className="details-section">
                               <div className="details-title">Retraces</div>
