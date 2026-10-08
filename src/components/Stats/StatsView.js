@@ -7,7 +7,13 @@ import {
   setStatsFilter,
   toggleGroupBy,
 } from '../../store/slices/setupsSlice';
+import { projectGroup } from '../../utils/tradeMath';
+import TradeCalculator, { useCalculatorSettings } from './TradeCalculator';
+import TradingGuide from './TradingGuide';
 import './StatsView.css';
+
+// Below this many trades a group's numbers are mostly noise
+const SMALL_SAMPLE_TRADES = 30;
 
 const INTERVAL_ORDER = ['1m', '5m', '15m', '30m', '1h', '4h', '1d', '1w', '1M'];
 
@@ -55,9 +61,20 @@ const OutcomeBreakdown = ({ g }) => {
   );
 };
 
+const fmtUsdSigned = (v) => (v == null ? '—' : `${v > 0 ? '+' : ''}${Math.round(v).toLocaleString()} $`);
+const fmtPctSigned = (v) => (v == null ? '' : `${v > 0 ? '+' : ''}${v.toFixed(1)}%`);
+
 const StatsView = () => {
   const dispatch = useDispatch();
   const { filters, stats, tracked } = useSelector((state) => state.setups);
+  const [calc, setCalc] = useCalculatorSettings();
+  const calcNumbers = {
+    capital: Number(calc.capital) || 0,
+    riskPct: Number(calc.riskPct) || 0,
+    feePct: Number(calc.feePct) || 0,
+    stopDistancePct: Number(calc.stopDistancePct) || 0,
+    horizon: Math.max(1, Number(calc.horizon) || 1),
+  };
 
   useEffect(() => {
     dispatch(fetchTrackedSetups());
@@ -173,6 +190,8 @@ const StatsView = () => {
         </label>
       </div>
 
+      <TradeCalculator settings={calc} onChange={setCalc} />
+
       {stats.error && <div className="stats-error">{stats.error}</div>}
 
       <div className={`stats-table-wrap ${stats.loading ? 'loading' : ''}`}>
@@ -190,14 +209,24 @@ const StatsView = () => {
                 <th title="Share of trades closed at TP1, with the 95% confidence interval">Win rate (95% CI)</th>
                 <th className="num" title="Share of trades that went on to reach TP2">TP2</th>
                 <th className="num" title="Share of setups where price reached the entry">Entry rate</th>
-                <th className="num" title="Expected result per trade in R (risk units)">Avg R</th>
+                <th className="num" title="Expected result per trade in R (risk units), before fees">Avg R</th>
+                <th className="num calc-col" title="Avg R minus round-trip fees from the calculator">Net R</th>
+                <th className="num calc-col" title="Expected result over the calculator horizon, after fees (linear, no compounding)">
+                  {calcNumbers.horizon} trades
+                </th>
+                <th className="num calc-col" title="Typical longest run of losses over the horizon and how much capital it costs">
+                  Losing streak
+                </th>
                 <th className="num" title="Average maximum favourable / adverse excursion in R">MFE / MAE</th>
                 <th>Outcomes</th>
               </tr>
             </thead>
             <tbody>
-              {groups.map((g) => (
-                <tr key={groupBy.map((k) => String(g[k])).join('|')}>
+              {groups.map((g) => {
+                const proj = projectGroup(g, calcNumbers);
+                const small = g.trades > 0 && g.trades < SMALL_SAMPLE_TRADES;
+                return (
+                <tr key={groupBy.map((k) => String(g[k])).join('|')} className={small ? 'small-sample' : ''}>
                   {groupBy.map((k) => (
                     <td key={k} className="group-cell">{groupLabel(k, g[k])}</td>
                   ))}
@@ -207,14 +236,37 @@ const StatsView = () => {
                   <td className="num">{pct(g.tp2_rate)}</td>
                   <td className="num">{pct(g.entry_rate)}</td>
                   <td className={`num avg-r ${g.avg_r > 0 ? 'pos' : g.avg_r < 0 ? 'neg' : ''}`}>{r(g.avg_r)}</td>
+                  <td className={`num avg-r calc-col ${proj.netR > 0 ? 'pos' : proj.netR < 0 ? 'neg' : ''}`}>
+                    {r(proj.netR)}
+                    {small && <span className="sample-flag" title={`Only ${g.trades} trades - treat as noise`}>!</span>}
+                  </td>
+                  <td className={`num calc-col ${proj.resultUsd > 0 ? 'pos' : proj.resultUsd < 0 ? 'neg' : ''}`}>
+                    {proj.resultPct != null && proj.resultPct <= -100 ? (
+                      <span title="A linear projection past -100% means the account would be wiped out first">
+                        −{Math.round(calcNumbers.capital).toLocaleString()} $ <span className="stats-muted">−100%</span>
+                      </span>
+                    ) : (
+                      <>{fmtUsdSigned(proj.resultUsd)} <span className="stats-muted">{fmtPctSigned(proj.resultPct)}</span></>
+                    )}
+                  </td>
+                  <td className="num calc-col">
+                    {proj.streak == null ? '—' : (
+                      <>
+                        {proj.streak}× <span className="neg">−{proj.streakDrawdownPct.toFixed(1)}%</span>
+                      </>
+                    )}
+                  </td>
                   <td className="num stats-muted">{r(g.avg_mfe_r)} / {r(g.avg_mae_r)}</td>
                   <td><OutcomeBreakdown g={g} /></td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         )}
       </div>
+
+      <TradingGuide />
 
       <details className="stats-method">
         <summary>How setups are simulated</summary>
