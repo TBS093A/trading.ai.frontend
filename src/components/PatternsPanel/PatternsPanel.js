@@ -17,6 +17,8 @@ import {
 } from '../../store/slices/analysisSlice';
 import { togglePatternsPanel } from '../../store/slices/uiSlice';
 import { compareByStrength, strengthTint, StrengthBadge, StrengthSection } from './PatternStrength';
+import { SetupBadge, SetupSection } from './PatternSetup';
+import ActiveSetups from './ActiveSetups';
 import { getPatternInfo } from './patternInfoDescriptions';
 import './PatternsPanel.css';
 
@@ -466,6 +468,9 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
         )}
       </div>
 
+      {/* Waiting / open setups for this asset and interval */}
+      <ActiveSetups onCenter={onCenterPattern} />
+
       {/* Sort order */}
       {totalPatterns > 0 && (
         <div className="patterns-sort" role="radiogroup" aria-label="Sort patterns">
@@ -532,7 +537,11 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
                             <span className={`pattern-direction ${taData.is_bullish ? 'bullish' : 'bearish'}`}>
                               {taData.is_bullish ? '▲' : '▼'}
                             </span>
-                            <span className="pattern-name">{taData.pattern_type || 'Unknown'}</span>
+                            <span className="pattern-name-block">
+                              <span className="pattern-name">{taData.pattern_type || 'Unknown'}</span>
+                              {/* Tracked setup status on its own line so the row keeps the name and date readable */}
+                              <SetupBadge setup={pattern.setup} />
+                            </span>
                           </div>
                           <span
                             className={`pattern-confluence-count ${confluenceCount > 0 ? 'has-confluences' : ''}`}
@@ -634,6 +643,7 @@ const PatternsPanel = ({ isOpen, onCenterPattern }) => {
 
                           {/* Retraces (Fibonacci ratios) */}
                           <StrengthSection strength={pattern.strength} />
+                          <SetupSection setup={pattern.setup} />
 
                           {taData.retraces && (
                             <div className="details-section">

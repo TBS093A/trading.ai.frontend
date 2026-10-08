@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useCallback } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch, useSelector, useStore } from 'react-redux';
 import Dashboard from './components/Dashboard/Dashboard';
 import NavRail from './components/Sidebar/NavRail';
 import Sidebar from './components/Sidebar/Sidebar';
@@ -15,13 +15,18 @@ import {
   selectIsAuthenticated, 
   selectSessionVerified 
 } from './store/slices/authSlice';
+import { parseDeepLink, applyDeepLink, clearDeepLinkFromUrl } from './utils/deepLink';
 import './styles/global.css';
 
 function App() {
   const dispatch = useDispatch();
+  const store = useStore();
   const dashboardRef = useRef(null);
+  // Link from an alert e-mail; applied once the user is signed in (also right after logging in)
+  const deepLinkRef = useRef(parseDeepLink(window.location.search, store.getState().chart.availableIntervals));
   const { patternsPanelOpen, mainView } = useSelector((state) => state.ui);
   const { harmonicPatterns } = useSelector((state) => state.analysis);
+  const activeSetupsCount = useSelector((state) => state.setups.active.list.length);
   
   // Auth state
   const isAuthenticated = useSelector(selectIsAuthenticated);
@@ -54,13 +59,21 @@ function App() {
     }
   }, [dispatch, isAuthenticated]);
 
+  useEffect(() => {
+    if (!isAuthenticated || !deepLinkRef.current) return;
+    const link = deepLinkRef.current;
+    deepLinkRef.current = null;
+    applyDeepLink(link, dispatch, store.getState).finally(clearDeepLinkFromUrl);
+  }, [isAuthenticated, dispatch, store]);
+
   // Callback to center chart on a pattern
   const handleCenterPattern = useCallback((pattern) => {
     dashboardRef.current?.centerOnPattern(pattern);
   }, []);
 
   // Show patterns panel only when there are patterns
-  const showPatternsPanel = harmonicPatterns && harmonicPatterns.length > 0;
+  // The panel also lists active setups, so show it when there are any even without patterns
+  const showPatternsPanel = (harmonicPatterns && harmonicPatterns.length > 0) || activeSetupsCount > 0;
 
   // Show loading spinner while verifying session
   if (!sessionVerified && localStorage.getItem('authToken')) {
