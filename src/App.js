@@ -4,7 +4,7 @@ import Dashboard from './components/Dashboard/Dashboard';
 import NavRail from './components/Sidebar/NavRail';
 import Sidebar from './components/Sidebar/Sidebar';
 import AccountModal from './components/Sidebar/AccountModal';
-import StatsView from './components/Stats/StatsView';
+import SetupsHub from './components/Stats/SetupsHub';
 import PatternsPanel from './components/PatternsPanel/PatternsPanel';
 import Login from './components/Login/Login';
 import { fetchExchanges } from './store/slices/exchangesSlice';
@@ -89,7 +89,7 @@ function App() {
         <div className={`main-view ${mainView === 'chart' ? '' : 'hidden'}`}>
           <Dashboard ref={dashboardRef} />
         </div>
-        {mainView === 'stats' && <StatsView />}
+        {mainView === 'stats' && <SetupsHub />}
 
         {/* Toggle button to open patterns panel when closed (and patterns exist) */}
         {mainView === 'chart' && showPatternsPanel && !patternsPanelOpen && (

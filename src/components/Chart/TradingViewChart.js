@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useCallback, useImperativeHandle, forwardRef 
 import { useDispatch, useSelector, useStore } from 'react-redux';
 import { createChart, CrosshairMode } from 'lightweight-charts';
 import { setSelectedPattern } from '../../store/slices/analysisSlice';
-import { clearScaleReset, fetchOlderKlines } from '../../store/slices/chartSlice';
+import { clearScaleReset, fetchOlderKlines, clearChartFocus } from '../../store/slices/chartSlice';
 import { calculateRSI, calculateMACD, calculateOBV } from '../../utils/indicators';
 import HarmonicTools from './HarmonicTools';
 import SetupsOverlay from './SetupsOverlay';
@@ -37,7 +37,7 @@ const TradingViewChart = forwardRef((props, ref) => {
   const indicatorChartsRef = useRef([]);
   const isSyncingRef = useRef(false); // Prevent infinite sync loops
 
-  const { klines, datasetId, historyLoading, interval: currentInterval, shouldResetScale } = useSelector((state) => state.chart);
+  const { klines, datasetId, historyLoading, hasMoreHistory, focusTime, interval: currentInterval, shouldResetScale } = useSelector((state) => state.chart);
   const { selectedAsset } = useSelector((state) => state.assets);
   const { harmonicPatterns, selectedPattern, expandedPatternId, unselectedAlpha, patternDisplayOptions, globalPatternDisplay, indicators, sharedPatternData } = useSelector((state) => state.analysis);
 
@@ -350,6 +350,33 @@ const TradingViewChart = forwardRef((props, ref) => {
   useEffect(() => {
     volumeSeriesRef.current?.applyOptions({ visible: indicators.volume });
   }, [indicators.volume]);
+
+  // Scroll to a requested candle (alert event). Older than the loaded data -> scroll to the
+  // oldest bar so lazy history loading kicks in, and retry when the next page arrives.
+  useEffect(() => {
+    const timeScale = chartRef.current?.timeScale();
+    if (focusTime == null || !timeScale || klines.length === 0) return;
+    // Wait for the requested asset/interval - the old dataset is still on screen right after the switch
+    const { chart: chartState, assets } = store.getState();
+    if (chartState.loading || assets.selectedAsset?.id !== focusTime.assetId || chartState.interval !== focusTime.interval) return;
+    const idx = klines.findIndex((k) => k.open_time >= focusTime.time);
+    if (idx > 0 || (idx === 0 && klines[0].open_time === focusTime.time)) {
+      // ~120 bars around the event, but never more than a few empty bars past the latest candle
+      const span = 60;
+      const to = Math.min(idx + span, klines.length - 1 + 5);
+      timeScale.setVisibleLogicalRange({ from: to - 2 * span, to });
+      dispatch(clearChartFocus());
+    } else if (idx === -1) {
+      // Newer than everything loaded - just show the latest candles
+      timeScale.scrollToRealTime();
+      dispatch(clearChartFocus());
+    } else if (!hasMoreHistory) {
+      timeScale.setVisibleLogicalRange({ from: 0, to: 120 });
+      dispatch(clearChartFocus());
+    } else if (!historyLoading) {
+      timeScale.setVisibleLogicalRange({ from: 0, to: 120 });
+    }
+  }, [focusTime, klines, datasetId, hasMoreHistory, historyLoading, dispatch, store]);
 
   // Force scale reset when triggered (e.g., when loading saved analysis)
   useEffect(() => {

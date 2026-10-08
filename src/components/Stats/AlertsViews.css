@@ -1,0 +1,271 @@
+/* Setups hub: tabs + the alerts / tracked-assets views (table and form styles come from StatsView.css) */
+.setups-hub {
+  flex: 1;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.setups-hub .stats-view {
+  height: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.hub-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 0 var(--spacing-lg);
+  border-bottom: 1px solid var(--border-primary);
+  background: var(--bg-secondary);
+  flex-shrink: 0;
+}
+
+.hub-tab {
+  padding: 12px 14px 10px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.hub-tab:hover { color: var(--text-primary); }
+
+.hub-tab.active {
+  color: var(--accent-cyan);
+  border-bottom-color: var(--accent-cyan);
+}
+
+.panel {
+  padding: var(--spacing-md);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.panel-head .panel-title { flex: 1; }
+
+.panel-title {
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+.input.compact {
+  width: auto;
+  min-width: 130px;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  font-size: 0.75rem;
+}
+
+.input.narrow { width: 120px; }
+
+.btn-small {
+  padding: 5px 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+}
+
+.btn-small:hover:not(:disabled) { color: var(--text-primary); border-color: var(--accent-cyan); }
+.btn-small:disabled { opacity: 0.4; cursor: default; }
+.btn-small.primary { border-color: var(--accent-cyan); color: var(--accent-cyan); }
+.btn-small.primary:hover:not(:disabled) { background: rgba(0, 240, 255, 0.1); }
+.btn-small.danger:hover:not(:disabled) { border-color: var(--accent-red); color: var(--accent-red); }
+.btn-small.danger.confirm { border-color: var(--accent-red); background: rgba(255, 51, 102, 0.15); color: var(--accent-red); }
+
+.notice {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 0.7rem;
+}
+
+.notice.ok { background: rgba(0, 255, 136, 0.1); color: var(--accent-green); }
+.notice.error { background: rgba(255, 51, 102, 0.1); color: var(--accent-red); white-space: normal; }
+
+.notice-dismiss {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.notice-block {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.notice-block.warn {
+  border: 1px solid rgba(255, 153, 51, 0.4);
+  background: rgba(255, 153, 51, 0.08);
+  color: var(--accent-orange);
+}
+
+/* Switch */
+.switch {
+  display: inline-flex;
+  cursor: pointer;
+}
+
+.switch.disabled { cursor: default; opacity: 0.6; }
+.switch input { position: absolute; opacity: 0; pointer-events: none; }
+
+.switch-track {
+  position: relative;
+  width: 34px;
+  height: 18px;
+  border-radius: 9px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-secondary);
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  transition: transform var(--transition-fast), background var(--transition-fast);
+}
+
+.switch input:checked + .switch-track { background: rgba(0, 240, 255, 0.15); border-color: var(--accent-cyan); }
+.switch input:checked + .switch-track .switch-thumb { transform: translateX(16px); background: var(--accent-cyan); }
+.switch input:focus-visible + .switch-track { outline: 1px solid var(--accent-cyan); outline-offset: 2px; }
+
+/* Tracked assets */
+.tracked-table td { vertical-align: middle; }
+.tracked-table tr.dirty td { background: rgba(255, 204, 0, 0.04); }
+.row-sub { font-weight: 400; font-size: 0.65rem; }
+
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.chip:disabled { cursor: default; opacity: 0.7; }
+
+.asset-search { position: relative; max-width: 420px; }
+
+.asset-search-results {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  max-height: 280px;
+  overflow-y: auto;
+  list-style: none;
+  padding: 4px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-card);
+}
+
+.asset-search-results li { font-size: 0.75rem; }
+.asset-search-results li.stats-muted { padding: 6px 8px; }
+
+.asset-search-results button {
+  width: 100%;
+  padding: 6px 8px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.asset-search-results button:hover:not(:disabled) { background: rgba(0, 240, 255, 0.08); }
+.asset-search-results button:disabled { cursor: default; opacity: 0.5; }
+
+.add-form,
+.alert-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--spacing-md);
+}
+
+.alert-form { flex-direction: column; flex-wrap: nowrap; align-items: stretch; }
+
+.add-picked {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-size: 0.8rem;
+}
+
+.add-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.78rem;
+}
+
+.alert-form .add-field .input[type="email"] { max-width: 360px; }
+
+.add-field.inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 6px 16px;
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.events-table .pos { color: var(--accent-green); }
+.events-table .neg { color: var(--accent-red); }
+.st.new { background: rgba(0, 240, 255, 0.08); color: var(--text-secondary); }

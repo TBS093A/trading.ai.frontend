@@ -98,6 +98,9 @@ const chartSlice = createSlice({
     klinesRequestId: null,
     hasMoreHistory: true,
     historyLoading: false,
+    // { time (open_time ms), assetId, interval } the chart should scroll to once that dataset is
+    // loaded and has the candle (e.g. from an alert event)
+    focusTime: null,
     asset: null,
     quote: null,
     full_name: null,
@@ -125,6 +128,12 @@ const chartSlice = createSlice({
     },
     clearChartError: (state) => {
       state.error = null;
+    },
+    focusChartAt: (state, action) => {
+      state.focusTime = action.payload;
+    },
+    clearChartFocus: (state) => {
+      state.focusTime = null;
     },
     triggerScaleReset: (state) => {
       state.shouldResetScale = true;
@@ -194,6 +203,14 @@ const chartSlice = createSlice({
   },
 });
 
-export const { setInterval, clearChart, clearChartError, triggerScaleReset, clearScaleReset } = chartSlice.actions;
+export const {
+  setInterval,
+  clearChart,
+  clearChartError,
+  triggerScaleReset,
+  clearScaleReset,
+  focusChartAt,
+  clearChartFocus,
+} = chartSlice.actions;
 export default chartSlice.reducer;
 
