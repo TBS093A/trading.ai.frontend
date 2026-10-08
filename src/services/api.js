@@ -257,6 +257,16 @@ const api = {
       },
     }),
 
+  // Setup performance (simulated trades on harmonic setups)
+  getHarmonicStats: (params = {}) =>
+    axiosInstance.get('/harmonics/stats', { params }),
+
+  getHarmonicSetups: (params = {}) =>
+    axiosInstance.get('/harmonics/setups', { params }),
+
+  getTrackedSetups: () =>
+    axiosInstance.get('/harmonics/setups/tracked'),
+
   validateHarmonic: (points, fibTolerance = null) =>
     axiosInstance.post('/harmonics/validate', {
       points,

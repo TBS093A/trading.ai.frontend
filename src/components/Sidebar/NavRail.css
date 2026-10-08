@@ -34,6 +34,13 @@
   flex: 1;
 }
 
+.rail-divider {
+  width: 24px;
+  height: 1px;
+  margin: var(--spacing-xs) auto;
+  background: var(--border-secondary);
+}
+
 .rail-btn {
   position: relative;
   width: 40px;

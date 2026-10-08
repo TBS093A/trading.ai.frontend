@@ -26,6 +26,7 @@ const uiSlice = createSlice({
   initialState: {
     sidebarPanel: loadSidebarPanel(), // 'markets' | 'saved' | 'sync' | null (collapsed)
     accountModalOpen: false,
+    mainView: 'chart', // 'chart' | 'stats'
     patternsPanelOpen: true, // Patterns list panel (always visible when patterns exist)
     theme: 'dark',
     tooltipPosition: null,
@@ -43,6 +44,9 @@ const uiSlice = createSlice({
     },
     setAccountModalOpen: (state, action) => {
       state.accountModalOpen = action.payload;
+    },
+    setMainView: (state, action) => {
+      state.mainView = action.payload;
     },
     togglePatternsPanel: (state) => {
       state.patternsPanelOpen = !state.patternsPanelOpen;
@@ -68,6 +72,7 @@ export const {
   toggleSidebarPanel,
   setSidebarPanel,
   setAccountModalOpen,
+  setMainView,
   togglePatternsPanel,
   setPatternsPanelOpen,
   setTheme,
