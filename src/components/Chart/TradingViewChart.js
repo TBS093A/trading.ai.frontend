@@ -5,6 +5,7 @@ import { setSelectedPattern } from '../../store/slices/analysisSlice';
 import { clearScaleReset, fetchOlderKlines } from '../../store/slices/chartSlice';
 import { calculateRSI, calculateMACD, calculateOBV } from '../../utils/indicators';
 import HarmonicTools from './HarmonicTools';
+import SetupsOverlay from './SetupsOverlay';
 import './TradingViewChart.css';
 
 // Start fetching older candles when fewer than this many bars are left of the viewport
@@ -1050,6 +1051,7 @@ const TradingViewChart = forwardRef((props, ref) => {
           <div className="history-loading" role="status">Loading history…</div>
         )}
         <HarmonicTools chartRef={chartRef} seriesRef={candlestickSeriesRef} />
+        <SetupsOverlay chartRef={chartRef} />
       </div>
       
       {/* RSI Chart */}

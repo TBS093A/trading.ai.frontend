@@ -1,0 +1,35 @@
+.setups-legend {
+  position: absolute;
+  left: var(--spacing-sm);
+  bottom: 36px;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  max-width: 60%;
+  padding: 3px 8px;
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-sm);
+  background: rgba(6, 8, 16, 0.85);
+  color: var(--text-secondary);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  pointer-events: none;
+}
+
+.setups-legend-title {
+  color: var(--text-primary);
+}
+
+.setups-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.setups-legend-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}

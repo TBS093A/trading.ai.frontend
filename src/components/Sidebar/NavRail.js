@@ -1,6 +1,6 @@
 import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { toggleSidebarPanel, setAccountModalOpen } from '../../store/slices/uiSlice';
+import { toggleSidebarPanel, setAccountModalOpen, setMainView } from '../../store/slices/uiSlice';
 import { selectUser, selectIsAdmin, selectAvatar } from '../../store/slices/authSlice';
 import './NavRail.css';
 
@@ -20,6 +20,7 @@ const RailButton = ({ icon, label, active, onClick, pulse }) => (
 const NavRail = () => {
   const dispatch = useDispatch();
   const sidebarPanel = useSelector((state) => state.ui.sidebarPanel);
+  const mainView = useSelector((state) => state.ui.mainView);
   const user = useSelector(selectUser);
   const isAdmin = useSelector(selectIsAdmin);
   const avatar = useSelector(selectAvatar);
@@ -57,6 +58,13 @@ const NavRail = () => {
             pulse={hasActiveTasks}
           />
         )}
+        <div className="rail-divider" />
+        <RailButton
+          icon="◔"
+          label="Setup performance"
+          active={mainView === 'stats'}
+          onClick={() => dispatch(setMainView(mainView === 'stats' ? 'chart' : 'stats'))}
+        />
       </div>
 
       <button
