@@ -18,10 +18,16 @@ const withAlpha = (hex, alpha) => {
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
 };
 
-// Where the simulated trade closed: TP1 for a win, SL for a loss, otherwise flat at entry
+// Where the simulated trade closed: TP1 for a win, SL for a loss. An expired trade closes at the
+// last candle's close, which isn't stored - derive it from R (risk = |entry - SL|) so the line
+// matches the reported result. Still-open trades are drawn flat at entry.
 const exitPrice = (s) => {
   if (s.status === 'win') return s.tp1;
   if (s.status === 'loss') return s.sl;
+  if (s.status === 'expired' && s.r_multiple != null && s.sl != null) {
+    const move = s.r_multiple * Math.abs(s.entry_price - s.sl);
+    return s.is_bullish ? s.entry_price + move : s.entry_price - move;
+  }
   return s.entry_price;
 };
 
