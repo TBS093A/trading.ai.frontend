@@ -278,3 +278,175 @@
   .stats-view { padding: var(--spacing-md); }
   .stats-control { min-width: 0; flex: 1 1 140px; }
 }
+
+/* Calculator */
+.calc {
+  padding: var(--spacing-md);
+  background: var(--bg-secondary);
+  border: 1px solid rgba(255, 204, 0, 0.25);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.calc-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--spacing-sm) var(--spacing-md);
+  font-size: 0.75rem;
+}
+
+.calc-title {
+  font-size: 0.9rem;
+  color: var(--accent-yellow);
+}
+
+.calc-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+}
+
+.calc-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 150px;
+  cursor: help;
+}
+
+.calc-input {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.calc-input .input {
+  padding-right: 64px;
+}
+
+.calc-suffix {
+  position: absolute;
+  right: 10px;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  pointer-events: none;
+}
+
+.calc-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px var(--spacing-lg);
+  color: var(--text-secondary);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+}
+
+.calc-summary strong {
+  color: var(--text-primary);
+}
+
+.stats-table th.calc-col,
+.stats-table td.calc-col {
+  background: rgba(255, 204, 0, 0.03);
+}
+
+.stats-table td.pos,
+.stats-table .pos { color: var(--accent-green); }
+.stats-table td.neg,
+.stats-table .neg { color: var(--accent-red); }
+
+.stats-table tr.small-sample td {
+  opacity: 0.6;
+}
+
+.sample-flag {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 0 4px;
+  border-radius: 2px;
+  background: rgba(255, 153, 51, 0.2);
+  color: var(--accent-orange);
+  font-weight: 700;
+  cursor: help;
+}
+
+/* Trading guide */
+.guide p,
+.guide-note {
+  margin-top: var(--spacing-sm);
+  line-height: 1.6;
+}
+
+.guide-note {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.guide h4 {
+  margin-top: var(--spacing-md);
+  color: var(--text-primary);
+  font-size: 0.82rem;
+}
+
+.guide-table {
+  margin-top: var(--spacing-sm);
+  border-collapse: collapse;
+  font-size: 0.75rem;
+}
+
+.guide-table th,
+.guide-table td {
+  padding: 5px 12px 5px 0;
+  border-bottom: 1px solid var(--border-primary);
+  text-align: left;
+}
+
+.guide-table th {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.guide .bull { color: var(--accent-green); }
+.guide .bear { color: var(--accent-red); }
+
+.guide-steps,
+.guide-list {
+  margin: var(--spacing-sm) 0 0 var(--spacing-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  line-height: 1.55;
+}
+
+.guide-steps ul {
+  margin: 4px 0 0 var(--spacing-lg);
+}
+
+.guide code {
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+}
+
+/* Status chips, same colors as the chart overlay */
+.st {
+  padding: 0 5px;
+  border-radius: 3px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.st.win { background: rgba(0, 255, 136, 0.12); color: #00ff88; }
+.st.loss { background: rgba(255, 51, 102, 0.12); color: #ff3366; }
+.st.open { background: rgba(0, 240, 255, 0.12); color: #00f0ff; }
+.st.waiting { background: rgba(255, 204, 0, 0.12); color: #ffcc00; }
+.st.expired { background: rgba(255, 153, 51, 0.12); color: #ff9933; }
+.st.no_entry { background: rgba(139, 148, 158, 0.15); color: #8b949e; }
+.st.invalidated { background: rgba(153, 69, 255, 0.15); color: #9945ff; }
