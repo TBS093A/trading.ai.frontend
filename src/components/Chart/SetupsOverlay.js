@@ -1,6 +1,12 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector, useStore } from 'react-redux';
-import { fetchChartSetups, MAX_CHART_SETUPS } from '../../store/slices/setupsSlice';
+import {
+  fetchChartSetups,
+  MAX_CHART_SETUPS,
+  SETUP_STATUSES,
+  toggleSetupStatus,
+  soloSetupStatus,
+} from '../../store/slices/setupsSlice';
 import './SetupsOverlay.css';
 
 export const SETUP_STATUS_COLORS = {
@@ -13,10 +19,30 @@ export const SETUP_STATUS_COLORS = {
   invalidated: '#9945ff',
 };
 
+const STATUS_HELP = {
+  win: 'Entered at the PRZ and reached TP1',
+  loss: 'Entered and hit SL first (TP and SL in one candle counts as SL)',
+  open: 'Trade is open right now',
+  waiting: 'PRZ known, price has not reached it yet',
+  expired: 'Entered, but neither TP nor SL within the time limit - closed at market',
+  no_entry: 'Price never reached the PRZ',
+  invalidated: 'Structure broke before entry',
+};
+
+const SL_COLOR = '#ff3366';
+const TP_COLOR = '#00ff88';
+// How far outside the PRZ (in px) the cursor still counts as "on" the setup
+const HOVER_PAD_PX = 6;
+const TOOLTIP_WIDTH = 230;
+
 const withAlpha = (hex, alpha) => {
   const n = parseInt(hex.slice(1), 16);
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
 };
+
+const fmtPrice = (v) => (v == null ? '—' : Number(v).toPrecision(6));
+const fmtR = (v) => (v == null ? '—' : `${v > 0 ? '+' : ''}${Number(v).toFixed(2)}R`);
+const fmtTime = (ms) => (ms ? new Date(ms).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : '—');
 
 // Where the simulated trade closed: TP1 for a win, SL for a loss. An expired trade closes at the
 // last candle's close, which isn't stored - derive it from R (risk = |entry - SL|) so the line
@@ -31,14 +57,19 @@ const exitPrice = (s) => {
   return s.entry_price;
 };
 
+// Until the setup resolved, or the last loaded candle while it is still live
+const endTime = (s, lastOpen) => Math.min(s.exit_time || lastOpen, lastOpen);
+
 /**
  * Tracked harmonic setups on the chart: X-A-B-C legs, the PRZ from creation until exit (or now),
- * and the simulated trade from entry to exit, colored by status.
+ * and the simulated trade from entry to exit, colored by status. The legend filters statuses;
+ * hovering a PRZ shows the setup's details and draws its SL/TP levels.
  */
-const SetupsOverlay = ({ chartRef }) => {
+const SetupsOverlay = ({ chartRef, seriesRef }) => {
   const dispatch = useDispatch();
   const store = useStore();
   const showOnChart = useSelector((state) => state.setups.showOnChart);
+  const hiddenStatuses = useSelector((state) => state.setups.hiddenStatuses);
   const { setups, loading, error } = useSelector((state) => state.setups.chart);
   const datasetId = useSelector((state) => state.chart.datasetId);
   const firstOpen = useSelector((state) => state.chart.klines[0]?.open_time);
@@ -46,6 +77,8 @@ const SetupsOverlay = ({ chartRef }) => {
     const { klines } = state.chart;
     return klines.length ? klines[klines.length - 1].open_time : undefined;
   });
+
+  const [hover, setHover] = useState(null); // { id, x, y }
 
   // Load setups for the dataset on screen
   useEffect(() => {
@@ -55,16 +88,26 @@ const SetupsOverlay = ({ chartRef }) => {
     dispatch(fetchChartSetups({ assetId: assets.selectedAsset.id, interval: chartState.interval }));
   }, [showOnChart, datasetId, dispatch, store]);
 
-  // Only setups for this asset/interval whose whole structure is inside the loaded candles
-  const drawable = useMemo(() => {
+  // Setups for this asset/interval whose whole structure is inside the loaded candles
+  const inRange = useMemo(() => {
     if (!showOnChart || firstOpen == null) return [];
     const { assets, chart: chartState } = store.getState();
     return setups
       .filter((s) => s.asset_id === assets.selectedAsset?.id && s.interval === chartState.interval)
-      .filter((s) => s.x_time >= firstOpen && s.created_time <= lastOpen)
-      .sort((a, b) => b.created_time - a.created_time)
-      .slice(0, MAX_CHART_SETUPS);
+      .filter((s) => s.x_time >= firstOpen && s.created_time <= lastOpen);
   }, [showOnChart, setups, firstOpen, lastOpen, store]);
+
+  const counts = useMemo(() => {
+    const c = {};
+    inRange.forEach((s) => { c[s.status] = (c[s.status] || 0) + 1; });
+    return c;
+  }, [inRange]);
+
+  // The status filter applies before the cap, so hiding statuses frees room for the others
+  const drawable = useMemo(() => inRange
+    .filter((s) => !hiddenStatuses.includes(s.status))
+    .sort((a, b) => b.created_time - a.created_time)
+    .slice(0, MAX_CHART_SETUPS), [inRange, hiddenStatuses]);
 
   useEffect(() => {
     const chart = chartRef.current;
@@ -93,7 +136,7 @@ const SetupsOverlay = ({ chartRef }) => {
       if (legs.length >= 2) add({ color: withAlpha(color, 0.55), lineWidth: 1 }, legs);
 
       // PRZ band edges, from when the setup was known until it resolved (or now)
-      const end = Math.min(s.exit_time || lastOpen, lastOpen);
+      const end = endTime(s, lastOpen);
       if (s.prz_min != null && s.prz_max != null && end > s.created_time) {
         [s.prz_min, s.prz_max].forEach((price) => add(
           { color: withAlpha(color, 0.8), lineWidth: 2 },
@@ -103,9 +146,8 @@ const SetupsOverlay = ({ chartRef }) => {
 
       // Simulated trade: entry -> exit
       if (s.entry_time && s.entry_price != null) {
-        const exitTime = Math.min(s.exit_time || lastOpen, lastOpen);
         const data = [{ time: s.entry_time / 1000, value: s.entry_price }];
-        if (exitTime > s.entry_time) data.push({ time: exitTime / 1000, value: exitPrice(s) });
+        if (end > s.entry_time) data.push({ time: end / 1000, value: exitPrice(s) });
         const markers = [{
           time: s.entry_time / 1000,
           position: s.is_bullish ? 'belowBar' : 'aboveBar',
@@ -129,21 +171,149 @@ const SetupsOverlay = ({ chartRef }) => {
     return () => series.forEach((line) => { try { chart.removeSeries(line); } catch (e) {} });
   }, [drawable, chartRef, lastOpen]);
 
+  // Hit-test the PRZ bands under the cursor; the narrowest (most specific) band wins
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart || drawable.length === 0) {
+      setHover(null);
+      return undefined;
+    }
+    const onMove = (param) => {
+      const series = seriesRef.current;
+      if (!param.point || param.logical == null || !series) {
+        setHover(null);
+        return;
+      }
+      const { klines } = store.getState().chart;
+      const idx = Math.round(param.logical);
+      if (idx < 0 || idx >= klines.length) {
+        setHover(null);
+        return;
+      }
+      const t = klines[idx].open_time;
+      const price = series.coordinateToPrice(param.point.y);
+      const pricePad = Math.abs(series.coordinateToPrice(param.point.y - HOVER_PAD_PX) - price);
+      if (price == null) {
+        setHover(null);
+        return;
+      }
+      let best = null;
+      drawable.forEach((s) => {
+        if (s.prz_min == null || t < s.created_time || t > endTime(s, lastOpen)) return;
+        if (price < s.prz_min - pricePad || price > s.prz_max + pricePad) return;
+        if (!best || (s.prz_max - s.prz_min) < (best.prz_max - best.prz_min)) best = s;
+      });
+      setHover(best ? { id: best.id, x: param.point.x, y: param.point.y } : null);
+    };
+    chart.subscribeCrosshairMove(onMove);
+    return () => {
+      chart.unsubscribeCrosshairMove(onMove);
+      setHover(null);
+    };
+  }, [drawable, chartRef, seriesRef, store, lastOpen]);
+
+  const hovered = hover ? drawable.find((s) => s.id === hover.id) : null;
+
+  // SL / TP1 / TP2 of the hovered setup, from entry (or creation) until it resolved
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart || !hovered) return undefined;
+    const from = (hovered.entry_time || hovered.created_time) / 1000;
+    const to = endTime(hovered, lastOpen) / 1000;
+    if (to <= from) return undefined;
+    const levels = [
+      [hovered.sl, SL_COLOR, 'SL'],
+      [hovered.tp1, TP_COLOR, 'TP1'],
+      [hovered.tp2, withAlpha(TP_COLOR, 0.6), 'TP2'],
+    ].filter(([price]) => price != null);
+    const series = levels.map(([price, color, title]) => {
+      const line = chart.addLineSeries({
+        color,
+        lineWidth: 2,
+        lineStyle: title === 'SL' ? 0 : 2,
+        priceLineVisible: false,
+        crosshairMarkerVisible: false,
+        lastValueVisible: true,
+        title,
+        autoscaleInfoProvider: () => null,
+      });
+      line.setData([{ time: from, value: price }, { time: to, value: price }]);
+      return line;
+    });
+    return () => series.forEach((line) => { try { chart.removeSeries(line); } catch (e) {} });
+  }, [hovered, chartRef, lastOpen]);
+
   if (!showOnChart) return null;
 
   const total = setups.length;
+  const container = chartRef.current?.chartElement();
+  const width = container?.clientWidth || 0;
+  const tooltipLeft = hover && hover.x + 16 + TOOLTIP_WIDTH > width ? hover.x - 16 - TOOLTIP_WIDTH : hover?.x + 16;
+
   return (
-    <div className="setups-legend">
-      <span className="setups-legend-title">
-        {loading ? 'Loading setups…' : error ? error : `Setups: ${drawable.length}${total > drawable.length ? ` of ${total}` : ''} shown`}
-      </span>
-      {!loading && !error && Object.entries(SETUP_STATUS_COLORS).map(([status, color]) => (
-        <span key={status} className="setups-legend-item">
-          <span className="setups-legend-dot" style={{ background: color }} />
-          {status.replace('_', ' ')}
+    <>
+      <div className="setups-legend">
+        <span className="setups-legend-title">
+          {loading ? 'Loading setups…' : error || `Setups: ${drawable.length} shown${total > drawable.length ? ` of ${total}` : ''}`}
         </span>
-      ))}
-    </div>
+        {!loading && !error && SETUP_STATUSES.map((status) => {
+          const hidden = hiddenStatuses.includes(status);
+          return (
+            <button
+              key={status}
+              className={`setups-legend-item ${hidden ? 'off' : ''}`}
+              onClick={() => dispatch(toggleSetupStatus(status))}
+              onDoubleClick={() => dispatch(soloSetupStatus(status))}
+              title={`${STATUS_HELP[status]}\nClick: show/hide · Double-click: show only this`}
+              aria-pressed={!hidden}
+            >
+              <span className="setups-legend-dot" style={{ background: SETUP_STATUS_COLORS[status] }} />
+              {status.replace('_', ' ')}
+              <span className="setups-legend-count">{counts[status] || 0}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {hovered && (
+        <div className="setup-tooltip" style={{ left: tooltipLeft, top: Math.max(8, hover.y - 20), width: TOOLTIP_WIDTH }}>
+          <div className="setup-tooltip-head">
+            <span className="setup-tooltip-name">{hovered.pattern_type}</span>
+            <span className={hovered.is_bullish ? 'bull' : 'bear'}>{hovered.is_bullish ? 'Long' : 'Short'}</span>
+            <span className="setup-tooltip-status" style={{ color: SETUP_STATUS_COLORS[hovered.status] }}>
+              {hovered.status.replace('_', ' ')}
+            </span>
+          </div>
+          <dl className="setup-tooltip-grid">
+            <dt>PRZ</dt><dd>{fmtPrice(hovered.prz_min)} – {fmtPrice(hovered.prz_max)}</dd>
+            <dt>Detected</dt><dd>{fmtTime(hovered.created_time)}</dd>
+            {hovered.entry_price != null && (
+              <>
+                <dt>Entry</dt><dd>{fmtPrice(hovered.entry_price)} · {fmtTime(hovered.entry_time)}</dd>
+                <dt className="sl">SL</dt><dd>{fmtPrice(hovered.sl)}</dd>
+                <dt className="tp">TP1</dt><dd>{fmtPrice(hovered.tp1)}</dd>
+                {hovered.tp2 != null && (<><dt className="tp">TP2</dt><dd>{fmtPrice(hovered.tp2)}{hovered.tp2_reached ? ' ✓' : ''}</dd></>)}
+              </>
+            )}
+            {hovered.exit_time && (<><dt>Closed</dt><dd>{fmtTime(hovered.exit_time)}</dd></>)}
+            {hovered.r_multiple != null && (
+              <>
+                <dt>Result</dt>
+                <dd className={hovered.r_multiple > 0 ? 'pos' : hovered.r_multiple < 0 ? 'neg' : ''}>{fmtR(hovered.r_multiple)}</dd>
+              </>
+            )}
+            {(hovered.mfe_r != null || hovered.mae_r != null) && (
+              <><dt>MFE / MAE</dt><dd>{fmtR(hovered.mfe_r)} / {fmtR(hovered.mae_r)}</dd></>
+            )}
+            {hovered.targets_source && (<><dt>Targets</dt><dd>{hovered.targets_source}</dd></>)}
+            {hovered.confluences_json?.total_score != null && (
+              <><dt>Confluence</dt><dd>{hovered.confluences_json.total_score}</dd></>
+            )}
+          </dl>
+          <div className="setup-tooltip-help">{STATUS_HELP[hovered.status]}</div>
+        </div>
+      )}
+    </>
   );
 };
 

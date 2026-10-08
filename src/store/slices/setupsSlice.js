@@ -14,6 +14,27 @@ export const GROUP_BY_OPTIONS = [
 // Setups drawn on the chart at most - each one is a handful of series
 export const MAX_CHART_SETUPS = 60;
 
+export const SETUP_STATUSES = ['win', 'loss', 'open', 'waiting', 'expired', 'no_entry', 'invalidated'];
+
+const HIDDEN_STATUSES_KEY = 'setups.hiddenStatuses';
+
+const loadHiddenStatuses = () => {
+  try {
+    const stored = JSON.parse(localStorage.getItem(HIDDEN_STATUSES_KEY));
+    return Array.isArray(stored) ? stored.filter((st) => SETUP_STATUSES.includes(st)) : [];
+  } catch {
+    return [];
+  }
+};
+
+const persistHiddenStatuses = (statuses) => {
+  try {
+    localStorage.setItem(HIDDEN_STATUSES_KEY, JSON.stringify(statuses));
+  } catch {
+    // Storage unavailable - the filter just won't be remembered
+  }
+};
+
 // Build the /harmonics/stats query from the UI filters, leaving out the "all" choices
 export const buildStatsParams = ({ groupBy, interval, assetId, direction, source, minTrades }) => {
   const params = { group_by: groupBy.join(',') };
@@ -80,6 +101,8 @@ const setupsSlice = createSlice({
     stats: { data: null, loading: false, error: null },
     tracked: { list: [], loading: false, error: null },
     showOnChart: false,
+    // Statuses switched off in the chart legend
+    hiddenStatuses: loadHiddenStatuses(),
     chart: initialChart,
   },
   reducers: {
@@ -95,6 +118,21 @@ const setupsSlice = createSlice({
       } else {
         state.filters.groupBy = [...current, key];
       }
+    },
+    toggleSetupStatus: (state, action) => {
+      const status = action.payload;
+      state.hiddenStatuses = state.hiddenStatuses.includes(status)
+        ? state.hiddenStatuses.filter((st) => st !== status)
+        : [...state.hiddenStatuses, status];
+      persistHiddenStatuses(state.hiddenStatuses);
+    },
+    // Show only this status, or everything again when it is already the only one shown
+    soloSetupStatus: (state, action) => {
+      const others = SETUP_STATUSES.filter((st) => st !== action.payload);
+      const alreadySolo = others.every((st) => state.hiddenStatuses.includes(st))
+        && !state.hiddenStatuses.includes(action.payload);
+      state.hiddenStatuses = alreadySolo ? [] : others;
+      persistHiddenStatuses(state.hiddenStatuses);
     },
     setShowSetupsOnChart: (state, action) => {
       state.showOnChart = action.payload;
@@ -146,5 +184,11 @@ const setupsSlice = createSlice({
   },
 });
 
-export const { setStatsFilter, toggleGroupBy, setShowSetupsOnChart } = setupsSlice.actions;
+export const {
+  setStatsFilter,
+  toggleGroupBy,
+  toggleSetupStatus,
+  soloSetupStatus,
+  setShowSetupsOnChart,
+} = setupsSlice.actions;
 export default setupsSlice.reducer;

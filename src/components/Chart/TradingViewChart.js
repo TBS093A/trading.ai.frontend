@@ -1051,7 +1051,7 @@ const TradingViewChart = forwardRef((props, ref) => {
           <div className="history-loading" role="status">Loading history…</div>
         )}
         <HarmonicTools chartRef={chartRef} seriesRef={candlestickSeriesRef} />
-        <SetupsOverlay chartRef={chartRef} />
+        <SetupsOverlay chartRef={chartRef} seriesRef={candlestickSeriesRef} />
       </div>
       
       {/* RSI Chart */}
