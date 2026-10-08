@@ -267,6 +267,10 @@ const api = {
   getTrackedSetups: () =>
     axiosInstance.get('/harmonics/setups/tracked'),
 
+  // Section counts for the sidebar (active / won / lost / junk)
+  getSetupSections: (params = {}) =>
+    axiosInstance.get('/harmonics/setups/sections', { params }),
+
   // Model behind pattern/setup `strength` (score percentile + p_win)
   getStrengthModel: () =>
     axiosInstance.get('/harmonics/strength/model'),

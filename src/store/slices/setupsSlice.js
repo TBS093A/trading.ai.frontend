@@ -98,6 +98,49 @@ export const fetchActiveSetups = createAsyncThunk(
   }
 );
 
+// Closed sections in the sidebar, paged with offset ("show more")
+export const SECTION_PAGE = 50;
+export const CLOSED_SECTIONS = ['won', 'lost', 'junk'];
+
+// Counts for the section headers
+export const fetchSetupSectionCounts = createAsyncThunk(
+  'setups/fetchSectionCounts',
+  async ({ assetId, interval }, { rejectWithValue }) => {
+    try {
+      const { data } = await api.getSetupSections({ asset_id: assetId, interval });
+      return { sections: data.sections || {}, byStatus: data.by_status || {}, key: `${assetId}:${interval}` };
+    } catch (error) {
+      return rejectWithValue(formatApiError(error, 'Failed to load setup counts'));
+    }
+  }
+);
+
+// One page of a closed section (won / lost / junk), newest exit first
+export const fetchSetupSection = createAsyncThunk(
+  'setups/fetchSection',
+  async ({ assetId, interval, section, offset = 0 }, { rejectWithValue }) => {
+    try {
+      const { data } = await api.getHarmonicSetups({ asset_id: assetId, interval, section, limit: SECTION_PAGE, offset });
+      return { setups: data.setups || [], key: `${assetId}:${interval}` };
+    } catch (error) {
+      return rejectWithValue(formatApiError(error, 'Failed to load setups'));
+    }
+  }
+);
+
+const SHOW_JUNK_KEY = 'setups.showJunk';
+const loadShowJunk = () => {
+  try { return localStorage.getItem(SHOW_JUNK_KEY) === 'true'; } catch { return false; }
+};
+
+const initialSectionList = { items: [], loading: false, error: null, hasMore: false, loaded: false };
+const initialSections = {
+  key: null,
+  counts: {}, // section -> count
+  byStatus: {},
+  lists: { won: initialSectionList, lost: initialSectionList, junk: initialSectionList },
+};
+
 const initialChart = { setups: [], loading: false, error: null, datasetId: null };
 const initialActive = { list: [], loading: false, error: null, key: null, fetchedAt: null };
 
@@ -116,6 +159,9 @@ const setupsSlice = createSlice({
     tracked: { list: [], loading: false, error: null },
     showOnChart: false,
     active: initialActive,
+    sections: initialSections,
+    // Expired / no-entry / invalidated section in the sidebar (off by default)
+    showJunk: loadShowJunk(),
     // Setup pinned on the chart (from the sidebar or an e-mail link): drawn bold with SL/TP
     highlightedId: null,
     // From an e-mail link: find the setup by pattern + X/C time once the overlay has loaded
@@ -152,6 +198,10 @@ const setupsSlice = createSlice({
         && !state.hiddenStatuses.includes(action.payload);
       state.hiddenStatuses = alreadySolo ? [] : others;
       persistHiddenStatuses(state.hiddenStatuses);
+    },
+    setShowJunk: (state, action) => {
+      state.showJunk = action.payload;
+      try { localStorage.setItem(SHOW_JUNK_KEY, String(action.payload)); } catch { /* not remembered */ }
     },
     highlightSetup: (state, action) => {
       state.highlightedId = action.payload;
@@ -227,6 +277,47 @@ const setupsSlice = createSlice({
         state.active.loading = false;
         state.active.error = action.payload;
       })
+      .addCase(fetchSetupSectionCounts.pending, (state, action) => {
+        const key = `${action.meta.arg.assetId}:${action.meta.arg.interval}`;
+        // New asset/interval: drop the old lists, they get reloaded when their section is open
+        if (state.sections.key !== key) state.sections = { ...initialSections, key };
+      })
+      .addCase(fetchSetupSectionCounts.fulfilled, (state, action) => {
+        if (action.payload.key !== state.sections.key) return;
+        state.sections.counts = Object.fromEntries(
+          Object.entries(action.payload.sections).map(([name, sec]) => [name, sec?.count ?? 0]),
+        );
+        state.sections.byStatus = action.payload.byStatus;
+      })
+      .addCase(fetchSetupSection.pending, (state, action) => {
+        const { assetId, interval, section, offset } = action.meta.arg;
+        const key = `${assetId}:${interval}`;
+        if (state.sections.key !== key) state.sections = { ...initialSections, key };
+        const list = state.sections.lists[section];
+        if (!list) return;
+        list.loading = true;
+        list.error = null;
+        if (!offset) list.items = [];
+      })
+      .addCase(fetchSetupSection.fulfilled, (state, action) => {
+        const { section, offset } = action.meta.arg;
+        if (action.payload.key !== state.sections.key) return;
+        const list = state.sections.lists[section];
+        if (!list) return;
+        const known = new Set(offset ? list.items.map((x) => x.id) : []);
+        list.items = [...(offset ? list.items : []), ...action.payload.setups.filter((x) => !known.has(x.id))];
+        list.loading = false;
+        list.loaded = true;
+        list.hasMore = action.payload.setups.length === SECTION_PAGE;
+      })
+      .addCase(fetchSetupSection.rejected, (state, action) => {
+        const { assetId, interval, section } = action.meta.arg;
+        if (`${assetId}:${interval}` !== state.sections.key) return;
+        const list = state.sections.lists[section];
+        if (!list) return;
+        list.loading = false;
+        list.error = action.payload;
+      })
       // Overlay and pinned setup belong to the asset/interval on screen
       .addCase(fetchKlines.fulfilled, (state) => {
         state.chart = initialChart;
@@ -235,6 +326,7 @@ const setupsSlice = createSlice({
       .addCase(clearChart, (state) => {
         state.chart = initialChart;
         state.active = initialActive;
+        state.sections = initialSections;
         state.highlightedId = null;
       });
   },
@@ -248,5 +340,6 @@ export const {
   setShowSetupsOnChart,
   highlightSetup,
   setHighlightQuery,
+  setShowJunk,
 } = setupsSlice.actions;
 export default setupsSlice.reducer;
