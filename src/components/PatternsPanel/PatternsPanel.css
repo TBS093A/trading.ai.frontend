@@ -1572,3 +1572,171 @@
   }
 }
 
+
+/* ── Pattern strength ─────────────────────────────── */
+/* Green tint over whatever background the item has (normal, expanded, selected, monochromatic) */
+.pattern-item.has-strength,
+.pattern-item.has-strength.expanded,
+.pattern-item.has-strength.selected,
+.patterns-list.monochromatic .pattern-item.has-strength {
+  background-image: linear-gradient(var(--strength-tint), var(--strength-tint));
+}
+
+/* Expanded details sit on a dark layer so muted text stays readable on strong tints;
+   the header row keeps the full green */
+.pattern-item.has-strength.expanded .pattern-details {
+  background-color: rgba(6, 8, 16, 0.72);
+}
+
+/* Muted header text gets lighter so it reads on the tint */
+.pattern-item.has-strength .pattern-date {
+  color: var(--text-secondary);
+}
+
+.pattern-strength-badge {
+  margin-right: var(--spacing-sm);
+  min-width: 1.6rem;
+  padding: 1px 5px;
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-align: center;
+  color: var(--accent-green);
+  background-color: rgba(6, 8, 16, 0.6);
+  background-image: linear-gradient(var(--strength-tint), var(--strength-tint));
+  border: 1px solid rgba(0, 255, 136, 0.35);
+}
+
+.pattern-strength-badge.none {
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--border-primary);
+  font-weight: 400;
+}
+
+.patterns-sort {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: var(--spacing-xs) var(--spacing-md);
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.patterns-sort-label {
+  margin-right: 4px;
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.patterns-sort-btn {
+  padding: 2px 8px;
+  background: transparent;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 0.65rem;
+  cursor: pointer;
+}
+
+.patterns-sort-btn:hover { color: var(--text-primary); }
+
+.patterns-sort-btn.active {
+  border-color: var(--accent-green);
+  color: var(--accent-green);
+  background: rgba(0, 255, 136, 0.08);
+}
+
+.strength-section .strength-muted,
+.strength-model .strength-muted {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+}
+
+.strength-summary {
+  display: flex;
+  align-items: baseline;
+  gap: var(--spacing-md);
+  margin-bottom: 6px;
+}
+
+.strength-score {
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  background-image: linear-gradient(var(--strength-tint), var(--strength-tint));
+  border: 1px solid rgba(0, 255, 136, 0.35);
+  color: var(--accent-green);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.strength-of {
+  font-size: 0.65rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.strength-pwin {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+.strength-pwin strong { color: var(--text-primary); }
+
+.strength-factors {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+.strength-factors li.pos { color: var(--accent-green); }
+.strength-factors li.neg { color: var(--accent-red); }
+
+.strength-impact {
+  display: inline-block;
+  width: 14px;
+  font-weight: 700;
+}
+
+.strength-model-toggle {
+  margin-top: 6px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.65rem;
+  cursor: pointer;
+}
+
+.strength-model-toggle:hover { color: var(--text-primary); }
+
+.strength-model {
+  margin-top: 4px;
+  font-size: 0.68rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.strength-quintiles {
+  margin-top: 4px;
+  border-collapse: collapse;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+}
+
+.strength-quintiles th,
+.strength-quintiles td {
+  padding: 1px 8px 1px 0;
+  text-align: left;
+}
+
+.strength-quintiles th { color: var(--text-muted); font-weight: 600; }
+.strength-quintiles .pos { color: var(--accent-green); }
+.strength-quintiles .neg { color: var(--accent-red); }

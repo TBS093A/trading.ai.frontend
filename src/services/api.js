@@ -267,6 +267,10 @@ const api = {
   getTrackedSetups: () =>
     axiosInstance.get('/harmonics/setups/tracked'),
 
+  // Model behind pattern/setup `strength` (score percentile + p_win)
+  getStrengthModel: () =>
+    axiosInstance.get('/harmonics/strength/model'),
+
   // Tracked assets (nightly pattern sync + hourly setup tracking); writes are admin-only
   getTrackedAssets: () =>
     axiosInstance.get('/harmonics/tracked-assets'),

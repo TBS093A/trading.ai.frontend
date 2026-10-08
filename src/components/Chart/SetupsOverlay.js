@@ -306,6 +306,12 @@ const SetupsOverlay = ({ chartRef, seriesRef }) => {
               <><dt>MFE / MAE</dt><dd>{fmtR(hovered.mfe_r)} / {fmtR(hovered.mae_r)}</dd></>
             )}
             {hovered.targets_source && (<><dt>Targets</dt><dd>{hovered.targets_source}</dd></>)}
+            {hovered.strength?.score != null && (
+              <>
+                <dt>Strength</dt>
+                <dd>{Math.round(hovered.strength.score)}/100 · p(TP1) {Math.round((hovered.strength.p_win || 0) * 100)}%</dd>
+              </>
+            )}
             {hovered.confluences_json?.total_score != null && (
               <><dt>Confluence</dt><dd>{hovered.confluences_json.total_score}</dd></>
             )}
