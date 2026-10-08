@@ -267,6 +267,33 @@ const api = {
   getTrackedSetups: () =>
     axiosInstance.get('/harmonics/setups/tracked'),
 
+  // Tracked assets (nightly pattern sync + hourly setup tracking); writes are admin-only
+  getTrackedAssets: () =>
+    axiosInstance.get('/harmonics/tracked-assets'),
+
+  putTrackedAsset: (assetId, { patternsSync, setupIntervals, backfillCandles }) =>
+    axiosInstance.put(`/harmonics/tracked-assets/${assetId}`, {
+      patterns_sync: patternsSync,
+      setup_intervals: setupIntervals,
+      ...(backfillCandles != null && { backfill_candles: backfillCandles }),
+    }),
+
+  deleteTrackedAsset: (assetId) =>
+    axiosInstance.delete(`/harmonics/tracked-assets/${assetId}`),
+
+  // Setup status alerts for the current user
+  getAlertSettings: () =>
+    axiosInstance.get('/harmonics/alerts/settings'),
+
+  putAlertSettings: (settings) =>
+    axiosInstance.put('/harmonics/alerts/settings', settings),
+
+  getAlertEvents: (params = {}) =>
+    axiosInstance.get('/harmonics/alerts/events', { params }),
+
+  sendTestAlert: () =>
+    axiosInstance.post('/harmonics/alerts/test'),
+
   validateHarmonic: (points, fibTolerance = null) =>
     axiosInstance.post('/harmonics/validate', {
       points,

@@ -9,6 +9,7 @@ import authReducer from './slices/authSlice';
 import savedAnalysisReducer from './slices/savedAnalysisSlice';
 import harmonicsReducer from './slices/harmonicsSlice';
 import setupsReducer from './slices/setupsSlice';
+import alertsReducer from './slices/alertsSlice';
 
 export const store = configureStore({
   reducer: {
@@ -22,6 +23,7 @@ export const store = configureStore({
     savedAnalysis: savedAnalysisReducer,
     harmonics: harmonicsReducer,
     setups: setupsReducer,
+    alerts: alertsReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
