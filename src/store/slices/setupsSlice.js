@@ -85,7 +85,21 @@ export const fetchChartSetups = createAsyncThunk(
   }
 );
 
+// Waiting/open setups for the asset/interval on screen (sidebar "Active setups")
+export const fetchActiveSetups = createAsyncThunk(
+  'setups/fetchActive',
+  async ({ assetId, interval }, { rejectWithValue }) => {
+    try {
+      const { data } = await api.getHarmonicSetups({ asset_id: assetId, interval, active: true });
+      return { setups: data.setups || [], key: `${assetId}:${interval}` };
+    } catch (error) {
+      return rejectWithValue(formatApiError(error, 'Failed to load active setups'));
+    }
+  }
+);
+
 const initialChart = { setups: [], loading: false, error: null, datasetId: null };
+const initialActive = { list: [], loading: false, error: null, key: null, fetchedAt: null };
 
 const setupsSlice = createSlice({
   name: 'setups',
@@ -101,6 +115,11 @@ const setupsSlice = createSlice({
     stats: { data: null, loading: false, error: null },
     tracked: { list: [], loading: false, error: null },
     showOnChart: false,
+    active: initialActive,
+    // Setup pinned on the chart (from the sidebar or an e-mail link): drawn bold with SL/TP
+    highlightedId: null,
+    // From an e-mail link: find the setup by pattern + X/C time once the overlay has loaded
+    highlightQuery: null, // { pattern, x, c }
     // Statuses switched off in the chart legend
     hiddenStatuses: loadHiddenStatuses(),
     chart: initialChart,
@@ -134,9 +153,20 @@ const setupsSlice = createSlice({
       state.hiddenStatuses = alreadySolo ? [] : others;
       persistHiddenStatuses(state.hiddenStatuses);
     },
+    highlightSetup: (state, action) => {
+      state.highlightedId = action.payload;
+      state.highlightQuery = null;
+    },
+    setHighlightQuery: (state, action) => {
+      state.highlightQuery = action.payload;
+      state.highlightedId = null;
+    },
     setShowSetupsOnChart: (state, action) => {
       state.showOnChart = action.payload;
-      if (!action.payload) state.chart = initialChart;
+      if (!action.payload) {
+        state.chart = initialChart;
+        state.highlightedId = null;
+      }
     },
   },
   extraReducers: (builder) => {
@@ -178,9 +208,35 @@ const setupsSlice = createSlice({
         state.chart.loading = false;
         state.chart.error = action.payload;
       })
-      // Overlay belongs to the asset/interval on screen
-      .addCase(fetchKlines.fulfilled, (state) => { state.chart = initialChart; })
-      .addCase(clearChart, (state) => { state.chart = initialChart; });
+      .addCase(fetchActiveSetups.pending, (state, action) => {
+        const key = `${action.meta.arg.assetId}:${action.meta.arg.interval}`;
+        // Keep showing the current list while refreshing the same asset/interval
+        if (state.active.key !== key) state.active = { ...initialActive, key };
+        state.active.loading = true;
+        state.active.error = null;
+      })
+      .addCase(fetchActiveSetups.fulfilled, (state, action) => {
+        if (action.payload.key !== state.active.key) return; // answer for an asset/interval no longer shown
+        state.active.loading = false;
+        state.active.list = action.payload.setups;
+        state.active.fetchedAt = Date.now();
+      })
+      .addCase(fetchActiveSetups.rejected, (state, action) => {
+        const key = `${action.meta.arg.assetId}:${action.meta.arg.interval}`;
+        if (key !== state.active.key) return;
+        state.active.loading = false;
+        state.active.error = action.payload;
+      })
+      // Overlay and pinned setup belong to the asset/interval on screen
+      .addCase(fetchKlines.fulfilled, (state) => {
+        state.chart = initialChart;
+        state.highlightedId = null;
+      })
+      .addCase(clearChart, (state) => {
+        state.chart = initialChart;
+        state.active = initialActive;
+        state.highlightedId = null;
+      });
   },
 });
 
@@ -190,5 +246,7 @@ export const {
   toggleSetupStatus,
   soloSetupStatus,
   setShowSetupsOnChart,
+  highlightSetup,
+  setHighlightQuery,
 } = setupsSlice.actions;
 export default setupsSlice.reducer;

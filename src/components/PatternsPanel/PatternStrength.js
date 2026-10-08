@@ -40,12 +40,13 @@ export const StrengthBadge = ({ strength }) => {
   );
 };
 
-// The model description is the same for every pattern - fetch it once per page load
+// The model description is the same for every pattern - fetch it once per page load.
+// Response: { model, pre_model } (older backends: { model } only)
 let modelPromise = null;
-const loadModel = () => {
+const loadModels = () => {
   if (!modelPromise) {
     modelPromise = api.getStrengthModel()
-      .then(({ data }) => data.model || null)
+      .then(({ data }) => ({ model: data.model || null, preModel: data.pre_model || null }))
       .catch(() => {
         modelPromise = null; // try again next time
         return null;
@@ -54,28 +55,16 @@ const loadModel = () => {
   return modelPromise;
 };
 
-const ModelInfo = () => {
-  const [model, setModel] = useState(undefined); // undefined = loading
-  useEffect(() => {
-    let alive = true;
-    loadModel().then((m) => { if (alive) setModel(m); });
-    return () => { alive = false; };
-  }, []);
-
-  if (model === undefined) return <p className="strength-muted">Ładowanie opisu modelu…</p>;
-  if (model === null) return <p className="strength-muted">Opis modelu jest niedostępny.</p>;
-
+const ModelMetrics = ({ title, model }) => {
+  if (!model) return null;
   const m = model.metrics || {};
   return (
-    <div className="strength-model">
-      <p>
-        Score to percentyl przewidywanej szansy, że cena dojdzie do TP1 przed SL, liczony modelem
-        nauczonym na historii setupów (100 = najsilniejsza, 50 = mediana).
-      </p>
+    <div className="strength-model-block">
+      <p className="strength-model-title">{title}</p>
       <p className="strength-muted">
         Model z {model.trained_at ? new Date(model.trained_at).toLocaleDateString() : '?'}
         {m.samples != null && ` · ${m.samples} próbek`}
-        {m.auc_test != null && ` · AUC (test) ${Number(m.auc_test).toFixed(2)}`}
+        {` · AUC (test) ${m.auc_test != null ? Number(m.auc_test).toFixed(2) : '–'}`}
         {m.base_win_rate_test != null && ` · bazowy win rate ${pct(m.base_win_rate_test)}`}
       </p>
       {Array.isArray(m.quintiles_test) && m.quintiles_test.length > 0 && (
@@ -97,6 +86,33 @@ const ModelInfo = () => {
           </tbody>
         </table>
       )}
+    </div>
+  );
+};
+
+const ModelInfo = () => {
+  const [models, setModels] = useState(undefined); // undefined = loading
+  useEffect(() => {
+    let alive = true;
+    loadModels().then((m) => { if (alive) setModels(m); });
+    return () => { alive = false; };
+  }, []);
+
+  if (models === undefined) return <p className="strength-muted">Ładowanie opisu modelu…</p>;
+  if (!models || (!models.model && !models.preModel)) {
+    return <p className="strength-muted">Opis modelu jest niedostępny.</p>;
+  }
+
+  return (
+    <div className="strength-model">
+      <p>
+        Score to percentyl przewidywanej szansy, że cena dojdzie do TP1 przed SL, liczony modelem
+        nauczonym na historii setupów (100 = najsilniejsza, 50 = mediana).
+        Siła <em>wstępna</em> jest liczona, zanim cena dojdzie do PRZ - tylko z konfluencji poziomowych;
+        siła pełna - od wejścia.
+      </p>
+      <ModelMetrics title="Siła pełna (od wejścia)" model={models.model} />
+      <ModelMetrics title="Siła wstępna (przed PRZ)" model={models.preModel} />
     </div>
   );
 };

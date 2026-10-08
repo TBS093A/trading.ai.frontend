@@ -7,7 +7,11 @@ import SaveAnalysisModal from './SaveAnalysisModal';
 import { fetchKlines, fetchPatternCounts, setInterval } from '../../store/slices/chartSlice';
 import { fetchTechnicalAnalysis, clearAnalysis } from '../../store/slices/analysisSlice';
 import { selectEditingAnalysisId } from '../../store/slices/savedAnalysisSlice';
+import { fetchActiveSetups } from '../../store/slices/setupsSlice';
 import './Dashboard.css';
+
+// Active setups (waiting/open) are re-checked this often; the backend updates them hourly
+const ACTIVE_SETUPS_REFRESH_MS = 3 * 60 * 1000;
 
 const Dashboard = forwardRef((props, ref) => {
   const chartRef = useRef(null);
@@ -56,6 +60,19 @@ const Dashboard = forwardRef((props, ref) => {
         endTimestamp: klines[klines.length - 1].open_time,
       }));
     }
+  }, [dispatch, store, datasetId]);
+
+  // Active setups for the sidebar: on every new dataset and periodically while the tab is visible
+  useEffect(() => {
+    const load = () => {
+      const state = store.getState();
+      const asset = state.assets.selectedAsset;
+      if (!asset || datasetId === 0 || document.hidden) return;
+      dispatch(fetchActiveSetups({ assetId: asset.id, interval: state.chart.interval }));
+    };
+    load();
+    const timer = window.setInterval(load, ACTIVE_SETUPS_REFRESH_MS);
+    return () => window.clearInterval(timer);
   }, [dispatch, store, datasetId]);
 
   const handleIntervalChange = useCallback((newInterval) => {

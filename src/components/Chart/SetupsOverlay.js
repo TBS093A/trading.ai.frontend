@@ -6,6 +6,8 @@ import {
   SETUP_STATUSES,
   toggleSetupStatus,
   soloSetupStatus,
+  highlightSetup,
+  setHighlightQuery,
 } from '../../store/slices/setupsSlice';
 import './SetupsOverlay.css';
 
@@ -70,6 +72,8 @@ const SetupsOverlay = ({ chartRef, seriesRef }) => {
   const store = useStore();
   const showOnChart = useSelector((state) => state.setups.showOnChart);
   const hiddenStatuses = useSelector((state) => state.setups.hiddenStatuses);
+  const highlightedId = useSelector((state) => state.setups.highlightedId);
+  const highlightQuery = useSelector((state) => state.setups.highlightQuery);
   const { setups, loading, error } = useSelector((state) => state.setups.chart);
   const datasetId = useSelector((state) => state.chart.datasetId);
   const firstOpen = useSelector((state) => state.chart.klines[0]?.open_time);
@@ -103,11 +107,27 @@ const SetupsOverlay = ({ chartRef, seriesRef }) => {
     return c;
   }, [inRange]);
 
-  // The status filter applies before the cap, so hiding statuses frees room for the others
-  const drawable = useMemo(() => inRange
-    .filter((s) => !hiddenStatuses.includes(s.status))
-    .sort((a, b) => b.created_time - a.created_time)
-    .slice(0, MAX_CHART_SETUPS), [inRange, hiddenStatuses]);
+  // An e-mail link names its setup by pattern + X/C time; pin it once the overlay has loaded
+  useEffect(() => {
+    if (!highlightQuery || loading || datasetId === 0) return;
+    const { pattern, x, c } = highlightQuery;
+    const found = setups.find((s) => (pattern == null || s.pattern_type === pattern)
+      && (x == null || s.x_time === x)
+      && (c == null || s.c_time === c));
+    if (found) dispatch(highlightSetup(found.id));
+    else if (setups.length > 0) dispatch(setHighlightQuery(null)); // loaded, but it isn't there
+  }, [highlightQuery, setups, loading, datasetId, dispatch]);
+
+  // The status filter applies before the cap, so hiding statuses frees room for the others.
+  // A pinned setup is always drawn.
+  const drawable = useMemo(() => {
+    const list = inRange
+      .filter((s) => !hiddenStatuses.includes(s.status))
+      .sort((a, b) => b.created_time - a.created_time)
+      .slice(0, MAX_CHART_SETUPS);
+    const pinned = highlightedId != null && inRange.find((s) => s.id === highlightedId);
+    return pinned && !list.includes(pinned) ? [...list, pinned] : list;
+  }, [inRange, hiddenStatuses, highlightedId]);
 
   useEffect(() => {
     const chart = chartRef.current;
@@ -130,16 +150,17 @@ const SetupsOverlay = ({ chartRef, seriesRef }) => {
     drawable.forEach((s) => {
       const color = SETUP_STATUS_COLORS[s.status] || '#8b949e';
       const pts = s.points_json || {};
+      const pinned = s.id === highlightedId;
 
       // X-A-B-C legs
       const legs = ['X', 'A', 'B', 'C'].filter((n) => pts[n]).map((n) => ({ time: pts[n].time / 1000, value: pts[n].price }));
-      if (legs.length >= 2) add({ color: withAlpha(color, 0.55), lineWidth: 1 }, legs);
+      if (legs.length >= 2) add({ color: withAlpha(color, pinned ? 1 : 0.55), lineWidth: pinned ? 2 : 1 }, legs);
 
       // PRZ band edges, from when the setup was known until it resolved (or now)
       const end = endTime(s, lastOpen);
       if (s.prz_min != null && s.prz_max != null && end > s.created_time) {
         [s.prz_min, s.prz_max].forEach((price) => add(
-          { color: withAlpha(color, 0.8), lineWidth: 2 },
+          { color: withAlpha(color, pinned ? 1 : 0.8), lineWidth: pinned ? 3 : 2 },
           [{ time: s.created_time / 1000, value: price }, { time: end / 1000, value: price }],
         ));
       }
@@ -169,7 +190,7 @@ const SetupsOverlay = ({ chartRef, seriesRef }) => {
     });
 
     return () => series.forEach((line) => { try { chart.removeSeries(line); } catch (e) {} });
-  }, [drawable, chartRef, lastOpen]);
+  }, [drawable, chartRef, lastOpen, highlightedId]);
 
   // Hit-test the PRZ bands under the cursor; the narrowest (most specific) band wins
   useEffect(() => {
@@ -213,18 +234,22 @@ const SetupsOverlay = ({ chartRef, seriesRef }) => {
   }, [drawable, chartRef, seriesRef, store, lastOpen]);
 
   const hovered = hover ? drawable.find((s) => s.id === hover.id) : null;
+  const pinnedSetup = highlightedId != null ? drawable.find((s) => s.id === highlightedId) : null;
+  // Levels follow the hovered setup, otherwise stay on the pinned one
+  const levelsFor = hovered || pinnedSetup;
 
-  // SL / TP1 / TP2 of the hovered setup, from entry (or creation) until it resolved
+  // SL / TP1 / TP2 of the hovered (or pinned) setup, from entry (or creation) until it resolved
   useEffect(() => {
     const chart = chartRef.current;
-    if (!chart || !hovered) return undefined;
-    const from = (hovered.entry_time || hovered.created_time) / 1000;
-    const to = endTime(hovered, lastOpen) / 1000;
+    const target = levelsFor;
+    if (!chart || !target) return undefined;
+    const from = (target.entry_time || target.created_time) / 1000;
+    const to = endTime(target, lastOpen) / 1000;
     if (to <= from) return undefined;
     const levels = [
-      [hovered.sl, SL_COLOR, 'SL'],
-      [hovered.tp1, TP_COLOR, 'TP1'],
-      [hovered.tp2, withAlpha(TP_COLOR, 0.6), 'TP2'],
+      [target.sl, SL_COLOR, 'SL'],
+      [target.tp1, TP_COLOR, 'TP1'],
+      [target.tp2, withAlpha(TP_COLOR, 0.6), 'TP2'],
     ].filter(([price]) => price != null);
     const series = levels.map(([price, color, title]) => {
       const line = chart.addLineSeries({
@@ -241,7 +266,7 @@ const SetupsOverlay = ({ chartRef, seriesRef }) => {
       return line;
     });
     return () => series.forEach((line) => { try { chart.removeSeries(line); } catch (e) {} });
-  }, [hovered, chartRef, lastOpen]);
+  }, [levelsFor, chartRef, lastOpen]);
 
   if (!showOnChart) return null;
 
