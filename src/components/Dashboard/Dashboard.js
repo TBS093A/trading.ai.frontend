@@ -7,7 +7,7 @@ import SaveAnalysisModal from './SaveAnalysisModal';
 import { fetchKlines, fetchPatternCounts, setInterval } from '../../store/slices/chartSlice';
 import { fetchTechnicalAnalysis, clearAnalysis } from '../../store/slices/analysisSlice';
 import { selectEditingAnalysisId } from '../../store/slices/savedAnalysisSlice';
-import { fetchActiveSetups } from '../../store/slices/setupsSlice';
+import { fetchActiveSetups, fetchSetupSectionCounts } from '../../store/slices/setupsSlice';
 import './Dashboard.css';
 
 // Active setups (waiting/open) are re-checked this often; the backend updates them hourly
@@ -69,6 +69,7 @@ const Dashboard = forwardRef((props, ref) => {
       const asset = state.assets.selectedAsset;
       if (!asset || datasetId === 0 || document.hidden) return;
       dispatch(fetchActiveSetups({ assetId: asset.id, interval: state.chart.interval }));
+      dispatch(fetchSetupSectionCounts({ assetId: asset.id, interval: state.chart.interval }));
     };
     load();
     const timer = window.setInterval(load, ACTIVE_SETUPS_REFRESH_MS);

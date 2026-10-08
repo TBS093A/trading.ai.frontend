@@ -117,12 +117,17 @@ const ModelInfo = () => {
   );
 };
 
-export const StrengthSection = ({ strength }) => {
+export const StrengthSection = ({ strength, title = 'Siła formacji' }) => {
   const [showModel, setShowModel] = useState(false);
 
   return (
     <div className="details-section strength-section">
-      <div className="details-title">Siła formacji</div>
+      <div className="details-title">
+        {title}
+        {strength?.kind === 'pre' && (
+          <span className="strength-kind" title="Liczona przed wejściem, tylko z konfluencji poziomowych"> · wstępna</span>
+        )}
+      </div>
       {!hasScore(strength) ? (
         <p className="strength-muted">
           Brak oceny - model nie jest jeszcze nauczony albo dla tej formacji nie da się policzyć cech.
