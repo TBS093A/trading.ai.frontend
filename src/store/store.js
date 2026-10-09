@@ -11,6 +11,7 @@ import harmonicsReducer from './slices/harmonicsSlice';
 import setupsReducer from './slices/setupsSlice';
 import alertsReducer from './slices/alertsSlice';
 import strengthReducer from './slices/strengthSlice';
+import benchmarksReducer from './slices/benchmarksSlice';
 
 export const store = configureStore({
   reducer: {
@@ -26,6 +27,7 @@ export const store = configureStore({
     setups: setupsReducer,
     alerts: alertsReducer,
     strength: strengthReducer,
+    benchmarks: benchmarksReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

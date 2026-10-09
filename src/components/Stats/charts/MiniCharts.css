@@ -99,3 +99,10 @@
   align-items: center;
   gap: 6px;
 }
+
+/* Dashed line key (reference series such as the baseline) */
+.mc-key.dashed {
+  height: 0;
+  border-top: 2px dashed currentColor;
+  background: none;
+}
