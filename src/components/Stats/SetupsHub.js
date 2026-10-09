@@ -6,49 +6,71 @@ import StrengthModelView from './StrengthModelView';
 import BenchmarksView from './BenchmarksView';
 import './AlertsViews.css';
 
-const TABS = [
-  { key: 'performance', label: 'Performance', Component: StatsView },
-  { key: 'model', label: 'Model siły', Component: StrengthModelView },
-  { key: 'benchmarks', label: 'Benchmarki', Component: BenchmarksView },
-  { key: 'alerts', label: 'Alerts', Component: AlertsView },
-  { key: 'tracked', label: 'Tracked assets', Component: TrackedAssetsView },
-];
-const TAB_KEY = 'stats.tab';
+/**
+ * Dashboard groups opened from the nav rail. Each group has its own tabs and remembers
+ * its last tab; a group with one view shows no tab bar.
+ */
+export const DASHBOARD_GROUPS = {
+  stats: {
+    title: 'Skuteczność formacji',
+    tabs: [{ key: 'performance', label: 'Performance', Component: StatsView }],
+  },
+  model: {
+    title: 'Model siły i benchmarki',
+    tabs: [
+      { key: 'model', label: 'Model siły', Component: StrengthModelView },
+      { key: 'benchmarks', label: 'Benchmarki', Component: BenchmarksView },
+    ],
+  },
+  alerts: {
+    title: 'Alerty i śledzone assety',
+    tabs: [
+      { key: 'alerts', label: 'Alerts', Component: AlertsView },
+      { key: 'tracked', label: 'Tracked assets', Component: TrackedAssetsView },
+    ],
+  },
+};
 
-const loadTab = () => {
+const tabKey = (group) => `dashboards.${group}.tab`;
+
+const loadTab = (group) => {
+  const { tabs } = DASHBOARD_GROUPS[group];
   try {
-    const stored = localStorage.getItem(TAB_KEY);
-    return TABS.some((t) => t.key === stored) ? stored : 'performance';
+    const stored = localStorage.getItem(tabKey(group));
+    return tabs.some((t) => t.key === stored) ? stored : tabs[0].key;
   } catch {
-    return 'performance';
+    return tabs[0].key;
   }
 };
 
-// Harmonic setups area: performance stats, alert settings/history, tracked assets
-const SetupsHub = () => {
-  const [tab, setTab] = useState(loadTab);
+const SetupsHub = ({ group = 'stats' }) => {
+  const { tabs } = DASHBOARD_GROUPS[group] || DASHBOARD_GROUPS.stats;
+  const [tab, setTab] = useState(() => loadTab(group));
 
+  // Switching groups mounts a fresh hub (keyed by group), so this only follows tab clicks
   useEffect(() => {
-    try { localStorage.setItem(TAB_KEY, tab); } catch { /* not remembered */ }
-  }, [tab]);
+    try { localStorage.setItem(tabKey(group), tab); } catch { /* not remembered */ }
+  }, [group, tab]);
 
-  const { Component } = TABS.find((t) => t.key === tab);
+  const { Component } = tabs.find((t) => t.key === tab) || tabs[0];
 
   return (
     <div className="setups-hub">
-      <nav className="hub-tabs" role="tablist">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            role="tab"
-            aria-selected={tab === t.key}
-            className={`hub-tab ${tab === t.key ? 'active' : ''}`}
-            onClick={() => setTab(t.key)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </nav>
+      {tabs.length > 1 && (
+        <nav className="hub-tabs" role="tablist">
+          {tabs.map((t) => (
+            <button
+              key={t.key}
+              role="tab"
+              aria-selected={tab === t.key}
+              className={`hub-tab ${tab === t.key ? 'active' : ''}`}
+              onClick={() => setTab(t.key)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </nav>
+      )}
       <Component />
     </div>
   );

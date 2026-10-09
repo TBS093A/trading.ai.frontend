@@ -9,6 +9,7 @@ import {
   dismissFit,
 } from '../../store/slices/strengthSlice';
 import { LineChart, ColumnChart, DivergingBars, CalibrationChart, Legend } from './charts/MiniCharts';
+import ModelTrainingGuide from './ModelTrainingGuide';
 import './StrengthModelView.css';
 
 // Validated (dataviz checks, dark surface): full model vs pre-entry model
@@ -161,6 +162,12 @@ const StrengthModelView = () => {
       )}
       {fit.status === 'failed' && <div className="stats-error">{fit.error}</div>}
       {anyError && <div className="stats-error">{anyError}</div>}
+
+      <ModelTrainingGuide
+        decided={data.totals && Object.keys(data.totals).length
+          ? ['win', 'loss', 'expired'].reduce((s, k) => s + (Number(data.totals[k]) || 0), 0)
+          : null}
+      />
 
       <div className="sm-models">
         <ModelTiles kind="entry" model={models.entry} />

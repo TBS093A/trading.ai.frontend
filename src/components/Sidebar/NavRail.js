@@ -4,6 +4,13 @@ import { toggleSidebarPanel, setAccountModalOpen, setMainView } from '../../stor
 import { selectUser, selectIsAdmin, selectAvatar } from '../../store/slices/authSlice';
 import './NavRail.css';
 
+// Dashboard groups (clicking the active one goes back to the chart)
+const DASHBOARD_BUTTONS = [
+  { view: 'stats', icon: '◔', label: 'Setup performance' },
+  { view: 'model', icon: '▥', label: 'Strength model & benchmarks' },
+  { view: 'alerts', icon: '✉', label: 'Alerts & tracked assets' },
+];
+
 const RailButton = ({ icon, label, active, onClick, pulse }) => (
   <button
     className={`rail-btn ${active ? 'active' : ''}`}
@@ -59,12 +66,15 @@ const NavRail = () => {
           />
         )}
         <div className="rail-divider" />
-        <RailButton
-          icon="◔"
-          label="Setup performance"
-          active={mainView === 'stats'}
-          onClick={() => dispatch(setMainView(mainView === 'stats' ? 'chart' : 'stats'))}
-        />
+        {DASHBOARD_BUTTONS.map(({ view, icon, label }) => (
+          <RailButton
+            key={view}
+            icon={icon}
+            label={label}
+            active={mainView === view}
+            onClick={() => dispatch(setMainView(mainView === view ? 'chart' : view))}
+          />
+        ))}
       </div>
 
       <button
