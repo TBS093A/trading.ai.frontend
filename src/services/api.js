@@ -285,6 +285,16 @@ const api = {
   fitStrengthModel: () =>
     axiosInstance.post('/harmonics/strength/fit'),
 
+  // Strategy variant benchmarks (one report = all variants over the same pairs and cutoff)
+  getVariantReports: (limit = 20) =>
+    axiosInstance.get('/harmonics/variants/reports', { params: { limit } }),
+
+  getVariantReport: (reportId = null) =>
+    axiosInstance.get('/harmonics/variants/report', { params: reportId != null ? { report_id: reportId } : {} }),
+
+  runVariantBenchmark: (candles = 5000) =>
+    axiosInstance.post('/harmonics/variants/run', null, { params: { candles } }),
+
   // Tracked assets (nightly pattern sync + hourly setup tracking); writes are admin-only
   getTrackedAssets: () =>
     axiosInstance.get('/harmonics/tracked-assets'),

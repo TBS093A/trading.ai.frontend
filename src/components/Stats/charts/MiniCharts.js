@@ -62,7 +62,10 @@ export const Legend = ({ items, kind = 'line' }) => (
   <div className="mc-legend">
     {items.map((it) => (
       <span key={it.label} className="mc-legend-item">
-        <span className={kind === 'line' ? 'mc-key' : 'mc-swatch'} style={{ background: it.color }} />
+        <span
+          className={`${kind === 'line' ? 'mc-key' : 'mc-swatch'} ${it.dashed ? 'dashed' : ''}`}
+          style={it.dashed ? { color: it.color } : { background: it.color }}
+        />
         {it.label}
       </span>
     ))}
@@ -83,7 +86,7 @@ const YAxis = ({ ticks, y, w, format }) => (
 /**
  * Lines over time. series: [{ key, label, color, points: [{ x: ms, y }] }]
  */
-export const LineChart = ({ series, height = 200, yDomain, yFormat = (v) => v, xFormat, refLines = [], empty = 'Brak danych' }) => {
+export const LineChart = ({ series, height = 200, yDomain, yFormat = (v) => v, xFormat, refLines = [], xRefLines = [], empty = 'Brak danych' }) => {
   const [ref, w] = useWidth();
   const [tip, setTip] = useState(null);
   const all = series.flatMap((s) => s.points.filter((p) => p.y != null));
@@ -130,6 +133,12 @@ export const LineChart = ({ series, height = 200, yDomain, yFormat = (v) => v, x
           {xTicks.map((t) => (
             <text key={t} className="mc-tick" x={x(t)} y={height - 8} textAnchor="middle">{fmtX(t)}</text>
           ))}
+          {xRefLines.filter((r) => r.x >= xs[0] && r.x <= xs[xs.length - 1]).map((r) => (
+            <g key={r.label}>
+              <line className="mc-ref" x1={x(r.x)} x2={x(r.x)} y1={M.top} y2={height - M.bottom} />
+              <text className="mc-ref-label" x={x(r.x) + 4} y={M.top + 10}>{r.label}</text>
+            </g>
+          ))}
           {series.map((s) => {
             const pts = s.points.filter((p) => p.y != null).sort((a, b) => a.x - b.x);
             if (!pts.length) return null;
@@ -137,7 +146,8 @@ export const LineChart = ({ series, height = 200, yDomain, yFormat = (v) => v, x
             const last = pts[pts.length - 1];
             return (
               <g key={s.key}>
-                <path d={d} fill="none" stroke={s.color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+                <path d={d} fill="none" stroke={s.color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"
+                  strokeDasharray={s.dashed ? '6 4' : undefined} />
                 <circle cx={x(last.x)} cy={y(last.y)} r="4" fill={s.color} className="mc-dot" />
               </g>
             );

@@ -3,11 +3,13 @@ import StatsView from './StatsView';
 import AlertsView from './AlertsView';
 import TrackedAssetsView from './TrackedAssetsView';
 import StrengthModelView from './StrengthModelView';
+import BenchmarksView from './BenchmarksView';
 import './AlertsViews.css';
 
 const TABS = [
   { key: 'performance', label: 'Performance', Component: StatsView },
   { key: 'model', label: 'Model siły', Component: StrengthModelView },
+  { key: 'benchmarks', label: 'Benchmarki', Component: BenchmarksView },
   { key: 'alerts', label: 'Alerts', Component: AlertsView },
   { key: 'tracked', label: 'Tracked assets', Component: TrackedAssetsView },
 ];
