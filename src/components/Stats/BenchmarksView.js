@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { selectIsAdmin } from '../../store/slices/authSlice';
 import { fetchVariantReports, fetchVariantReport, runVariantBenchmark } from '../../store/slices/benchmarksSlice';
 import { LineChart, Legend } from './charts/MiniCharts';
+import BenchmarksGuide from './BenchmarksGuide';
 import './StrengthModelView.css';
 import './BenchmarksView.css';
 
@@ -100,7 +101,7 @@ const BenchmarksView = () => {
     return () => clearInterval(timer);
   }, [incomplete, reportId, dispatch]);
 
-  // New report or switch: start with the baseline + best "out" variant on the chart
+  // Best "out" avg R among variants with enough out-of-sample trades (marked with ★)
   const variants = useMemo(() => data?.variants || [], [data]);
   const best = useMemo(() => {
     const eligible = variants.filter((v) => (v.out?.trades || 0) >= MIN_TRADES_FOR_BEST && v.out?.avg_r != null);
@@ -112,11 +113,21 @@ const BenchmarksView = () => {
   useEffect(() => {
     if (!data || shownReportRef.current === data.report_id) return;
     shownReportRef.current = data.report_id;
+    // Start with up to 5 colored variants: well-sampled "out" results first, then the rest by avg R
+    const ranked = variants
+      .filter((v) => !isBaseline(v) && (v.equity || []).length > 0)
+      .sort((a, b) => {
+        const wa = (a.out?.trades || 0) >= MIN_TRADES_FOR_BEST ? 1 : 0;
+        const wb = (b.out?.trades || 0) >= MIN_TRADES_FOR_BEST ? 1 : 0;
+        if (wa !== wb) return wb - wa;
+        return (b.out?.avg_r ?? b.all?.avg_r ?? -Infinity) - (a.out?.avg_r ?? a.all?.avg_r ?? -Infinity);
+      })
+      .slice(0, SLOT_COLORS.length);
     const initial = {};
-    if (best && !isBaseline(best)) initial[best.variant] = 0;
+    ranked.forEach((v, i) => { initial[v.variant] = i; });
     setOnChart(initial);
     setSelected(null);
-  }, [data, best]);
+  }, [data, variants]);
 
   const toggleOnChart = (variant) => {
     setOnChart((prev) => {
@@ -188,6 +199,8 @@ const BenchmarksView = () => {
 
       {run.status === 'failed' && <div className="stats-error">{run.error}</div>}
       {(report.error || reports.error) && <div className="stats-error">{report.error || reports.error}</div>}
+
+      <BenchmarksGuide />
 
       {!data && !report.loading && !report.error && (
         <div className="stats-empty sm-card">Nie ma jeszcze żadnego raportu.{isAdmin ? ' Uruchom benchmark przyciskiem powyżej.' : ''}</div>

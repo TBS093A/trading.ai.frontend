@@ -102,7 +102,7 @@ function App() {
         <div className={`main-view ${mainView === 'chart' ? '' : 'hidden'}`}>
           <Dashboard ref={dashboardRef} />
         </div>
-        {mainView === 'stats' && <SetupsHub />}
+        {mainView !== 'chart' && <SetupsHub key={mainView} group={mainView} />}
 
         {/* Toggle button to open patterns panel when closed (and patterns exist) */}
         {mainView === 'chart' && showPatternsPanel && !patternsPanelOpen && (
