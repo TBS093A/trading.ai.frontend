@@ -4,6 +4,7 @@ import AlertsView from './AlertsView';
 import TrackedAssetsView from './TrackedAssetsView';
 import StrengthModelView from './StrengthModelView';
 import BenchmarksView from './BenchmarksView';
+import TradingView from '../Trading/TradingView';
 import './AlertsViews.css';
 
 /**
@@ -21,6 +22,10 @@ export const DASHBOARD_GROUPS = {
       { key: 'model', label: 'Model siły', Component: StrengthModelView },
       { key: 'benchmarks', label: 'Benchmarki', Component: BenchmarksView },
     ],
+  },
+  trading: {
+    title: 'Trading',
+    tabs: [{ key: 'accounts', label: 'Konta', Component: TradingView }],
   },
   alerts: {
     title: 'Alerty i śledzone assety',

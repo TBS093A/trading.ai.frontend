@@ -12,6 +12,7 @@ import setupsReducer from './slices/setupsSlice';
 import alertsReducer from './slices/alertsSlice';
 import strengthReducer from './slices/strengthSlice';
 import benchmarksReducer from './slices/benchmarksSlice';
+import tradingReducer from './slices/tradingSlice';
 
 export const store = configureStore({
   reducer: {
@@ -28,6 +29,7 @@ export const store = configureStore({
     alerts: alertsReducer,
     strength: strengthReducer,
     benchmarks: benchmarksReducer,
+    trading: tradingReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

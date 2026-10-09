@@ -329,6 +329,51 @@ const api = {
     }),
 
   // ==================
+  // PAPER TRADING (accounts trading on setup signals; writes are admin-only)
+  // ==================
+  getRiskFields: () =>
+    axiosInstance.get('/trading/risk/fields'),
+
+  previewRisk: (body) =>
+    axiosInstance.post('/trading/risk/preview', body),
+
+  getTradingAccounts: () =>
+    axiosInstance.get('/trading/accounts'),
+
+  getTradingAccount: (accountId) =>
+    axiosInstance.get(`/trading/accounts/${accountId}`),
+
+  createTradingAccount: (body) =>
+    axiosInstance.post('/trading/accounts', body),
+
+  updateTradingAccount: (accountId, body) =>
+    axiosInstance.patch(`/trading/accounts/${accountId}`, body),
+
+  setKillSwitch: (accountId, on, reason = null) =>
+    axiosInstance.post(`/trading/accounts/${accountId}/kill-switch`, { on, ...(reason ? { reason } : {}) }),
+
+  getAccountEquity: (accountId, limit = 2000) =>
+    axiosInstance.get(`/trading/accounts/${accountId}/equity`, { params: { limit } }),
+
+  getAccountSignals: (accountId, params = {}) =>
+    axiosInstance.get(`/trading/accounts/${accountId}/signals`, { params }),
+
+  getAccountPositions: (accountId, status) =>
+    axiosInstance.get(`/trading/accounts/${accountId}/positions`, { params: status ? { status } : {} }),
+
+  getAccountOrders: (accountId, params = {}) =>
+    axiosInstance.get(`/trading/accounts/${accountId}/orders`, { params }),
+
+  getAccountEvents: (accountId, limit = 200) =>
+    axiosInstance.get(`/trading/accounts/${accountId}/events`, { params: { limit } }),
+
+  getAccountCompare: (accountId) =>
+    axiosInstance.get(`/trading/accounts/${accountId}/compare`),
+
+  getSignalTrace: (signalId) =>
+    axiosInstance.get(`/trading/signals/${signalId}/trace`),
+
+  // ==================
   // TECHNICAL ANALYSIS
   // ==================
   getTechnicalAnalysis: (assetId, interval, startTimestamp = null, endTimestamp = null, limit = 100) =>
