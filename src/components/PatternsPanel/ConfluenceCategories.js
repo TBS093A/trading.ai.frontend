@@ -1,6 +1,6 @@
 import React from 'react';
 
-// Confluence checklist grouped in the five categories used for patterns and setups.
+// Confluence checklist grouped in the categories used for patterns and setups.
 // `confluences` is a confluences_json object: { total_score, confluences: [{type, confidence, ...}] }
 export const CONFLUENCE_CATEGORIES = [
   {
@@ -65,7 +65,25 @@ export const CONFLUENCE_CATEGORIES = [
       { label: 'OBV Bearish Divergence', types: ['obv_bearish_divergence'], direction: 'bearish' },
     ],
   },
+  {
+    title: '6. Trend wyższego TF',
+    items: [
+      { label: 'Higher TF Uptrend', types: ['higher_tf_uptrend'], direction: 'bullish' },
+      { label: 'Higher TF Downtrend', types: ['higher_tf_downtrend'], direction: 'bearish' },
+    ],
+  },
 ];
+
+// Extra context for the hover text, e.g. the trend: "1d · EMA 200 · close 64000 · slope +0.42%"
+const confluenceDetails = (c) => {
+  const d = c.details || {};
+  const parts = [];
+  if (d.source_interval) parts.push(d.source_interval);
+  if (d.ema != null) parts.push(`EMA ${Number(d.ema).toPrecision(6)}`);
+  if (d.close != null) parts.push(`close ${Number(d.close).toPrecision(6)}`);
+  if (d.slope_pct != null) parts.push(`slope ${d.slope_pct > 0 ? '+' : ''}${Number(d.slope_pct).toFixed(2)}%`);
+  return parts.join(' · ');
+};
 
 const ConfluenceCategories = ({ confluences, isBullish, collapsed = {}, onToggle, title = 'Confluences', note = null }) => {
   const cList = confluences?.confluences || [];
@@ -123,7 +141,7 @@ const ConfluenceCategories = ({ confluences, isBullish, collapsed = {}, onToggle
                       <div
                         key={item.label}
                         className={`confluence-item ${active ? 'active' : 'inactive'}`}
-                        title={active ? `Confidence: ${(match.confidence * 100).toFixed(0)}%` : 'Not detected'}
+                        title={active ? [`Confidence: ${(match.confidence * 100).toFixed(0)}%`, confluenceDetails(match)].filter(Boolean).join('\n') : 'Not detected'}
                       >
                         <span className={`confluence-dot ${active ? 'hit' : 'miss'}`}>
                           {active ? '●' : '○'}

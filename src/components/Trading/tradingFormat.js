@@ -23,6 +23,13 @@ export const plural = (n, one, few, many) => {
   return `${n} ${d >= 2 && d <= 4 && (dd < 12 || dd > 14) ? few : many}`;
 };
 
+// Higher-timeframe trend of a signal event (data_json.htf_trend): with / against the trade, or unknown
+export const HTF_TREND = {
+  with: { label: 'z trendem HTF', title: 'Kierunek transakcji zgodny z trendem wyższego interwału' },
+  against: { label: 'pod trend HTF', title: 'Kierunek transakcji przeciwny do trendu wyższego interwału' },
+};
+export const htfTrendOf = (e) => (e?.data_json?.htf_trend ?? e?.data?.htf_trend ?? e?.htf_trend) || null;
+
 export const EVENT_LABELS = {
   account_created: 'Konto utworzone', account_updated: 'Zmiana ustawień', signal_armed: 'Sygnał uzbrojony',
   signal_rejected: 'Sygnał odrzucony', entry_filled: 'Wejście wypełnione', entry_cancelled: 'Wejście anulowane',

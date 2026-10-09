@@ -9,6 +9,7 @@ import { setShowSetupsOnChart, highlightSetup } from '../../store/slices/setupsS
 import { setMainView } from '../../store/slices/uiSlice';
 import SetupMiniChart from './SetupMiniChart';
 import { price, rFmt, signedMoney, dateTime, tone, dash, EVENT_LABELS } from './tradingFormat';
+import HtfTrendBadge from './HtfTrendBadge';
 
 const toMs = (v) => (v == null ? null : typeof v === 'number' ? v : Date.parse(v));
 
@@ -23,7 +24,7 @@ const buildTimeline = ({ signal, setup, orders, position, events }) => {
   });
   if (position?.opened_time) items.push({ t: position.opened_time, kind: 'position', title: 'Pozycja otwarta', text: `${position.direction} ${Number(position.qty).toPrecision(4)} @ ${price(position.entry_price)}` });
   if (position?.closed_time) items.push({ t: position.closed_time, kind: `close ${position.r_multiple > 0 ? 'win' : 'loss'}`, title: `Pozycja zamknięta (${position.exit_reason})`, text: `@ ${price(position.exit_price)} · ${rFmt(position.r_multiple)}` });
-  (events || []).forEach((e) => items.push({ t: e.market_time || toMs(e.created_at), kind: `event ${e.kind}`, title: EVENT_LABELS[e.kind] || e.kind, text: e.message }));
+  (events || []).forEach((e) => items.push({ t: e.market_time || toMs(e.created_at), kind: `event ${e.kind}`, title: EVENT_LABELS[e.kind] || e.kind, text: e.message, event: e }));
   return items.filter((i) => i.t).sort((a, b) => a.t - b.t);
 };
 
@@ -91,7 +92,7 @@ const SignalTrace = ({ signalId, currency = 'USDT', onClose }) => {
                 {timeline.map((i, idx) => (
                   <li key={`${i.t}-${idx}`} className={i.kind}>
                     <span className="trace-time">{dateTime(i.t)}</span>
-                    <span className="trace-title">{i.title}</span>
+                    <span className="trace-title">{i.title}{i.event && <HtfTrendBadge event={i.event} />}</span>
                     <span className="trace-text">{i.text}</span>
                   </li>
                 ))}

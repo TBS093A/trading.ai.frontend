@@ -10,6 +10,7 @@ import RiskFields from './RiskFields';
 import RiskPreview from './RiskPreview';
 import SignalTrace from './SignalTrace';
 import { money, signedMoney, pctSigned, pct, rFmt, price, dateTime, tone, dash, EVENT_LABELS } from './tradingFormat';
+import HtfTrendBadge from './HtfTrendBadge';
 
 const REFRESH_MS = 60000;
 const SIGNAL_FILTERS = [
@@ -417,7 +418,7 @@ const AccountView = ({ accountId, onBack }) => {
             {events.map((e, i) => (
               <li key={`${e.created_at}-${i}`} className={`event ${e.kind}`}>
                 <span className="event-time">{dateTime(e.market_time || Date.parse(e.created_at))}</span>
-                <span className="event-kind">{EVENT_LABELS[e.kind] || e.kind}</span>
+                <span className="event-kind">{EVENT_LABELS[e.kind] || e.kind}<HtfTrendBadge event={e} /></span>
                 <span className="event-msg">{e.message}</span>
                 {e.signal_id && <button className="link-btn" onClick={() => setTraceId(e.signal_id)}>ścieżka</button>}
               </li>

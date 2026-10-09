@@ -14,6 +14,7 @@ const presetSummary = (s) => [
   `do ${s.max_open_positions} pozycji`,
   s.min_strength == null ? 'bez filtra siły' : `siła ≥ ${s.min_strength}`,
   `wyłącznik przy −${s.max_drawdown_stop_pct}%`,
+  ...(s.trend_filter && s.trend_filter !== 'off' ? [s.trend_filter === 'with' ? 'tylko z trendem HTF' : 'nie pod trend HTF'] : []),
 ];
 
 
