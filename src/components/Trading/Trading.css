@@ -405,3 +405,76 @@
   .wizard-split > .risk-preview { position: static; }
   .event-log .event, .trace-timeline li { grid-template-columns: 1fr; }
 }
+
+/* Account filters (wizard + account settings) */
+.account-filters { display: flex; flex-direction: column; gap: var(--spacing-md); }
+.af-group { border: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.af-group:disabled { opacity: 0.7; }
+
+.af-assets {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 6px;
+}
+
+.af-asset {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0 8px;
+  align-items: center;
+  padding: 6px 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.af-asset.active { border-color: var(--accent-cyan); background: rgba(0, 240, 255, 0.06); }
+.af-asset input { grid-row: span 2; }
+.af-asset-symbol { color: var(--text-primary); font-weight: 600; font-size: 0.78rem; }
+.af-asset-ivs { color: var(--text-muted); font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; }
+
+.af-checks { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+
+.af-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  cursor: pointer;
+  text-transform: capitalize;
+}
+
+.af-direction { max-width: 360px; }
+
+.af-modes { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px; }
+
+.af-mode {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.af-mode.active { border-color: var(--accent-cyan); }
+.af-mode-text { display: flex; flex-direction: column; gap: 3px; font-size: 0.72rem; color: var(--text-secondary); line-height: 1.45; }
+.af-mode-text strong { color: var(--text-primary); font-size: 0.8rem; }
+
+.hint-block {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-md);
+  border: 1px solid rgba(57, 135, 229, 0.5);
+  background: rgba(57, 135, 229, 0.08);
+  color: var(--text-secondary);
+}
+
+.hint-block strong { color: var(--text-primary); }
+
+.notice.warn-inline { background: rgba(255, 153, 51, 0.12); color: var(--accent-orange); }

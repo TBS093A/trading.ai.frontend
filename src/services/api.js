@@ -334,6 +334,10 @@ const api = {
   getRiskFields: () =>
     axiosInstance.get('/trading/risk/fields'),
 
+  // Tracked assets (with their intervals), intervals, patterns and directions an account can trade
+  getTradingFilterOptions: () =>
+    axiosInstance.get('/trading/filter-options'),
+
   previewRisk: (body) =>
     axiosInstance.post('/trading/risk/preview', body),
 
