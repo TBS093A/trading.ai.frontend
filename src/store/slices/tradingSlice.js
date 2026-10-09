@@ -14,6 +14,18 @@ export const fetchRiskFields = createAsyncThunk(
   }
 );
 
+export const fetchFilterOptions = createAsyncThunk(
+  'trading/fetchFilterOptions',
+  async (_, { rejectWithValue }) => {
+    try {
+      const { data } = await api.getTradingFilterOptions();
+      return data;
+    } catch (error) {
+      return rejectWithValue(formatApiError(error, 'Nie udało się wczytać opcji filtrów'));
+    }
+  }
+);
+
 export const fetchTradingAccounts = createAsyncThunk(
   'trading/fetchAccounts',
   async (_, { rejectWithValue }) => {
@@ -70,7 +82,8 @@ const upsert = (list, account) => {
 const tradingSlice = createSlice({
   name: 'trading',
   initialState: {
-    meta: { fields: [], presets: [], defaults: {}, exchanges: ['paper'], entryModes: ['touch'], loading: false, error: null },
+    meta: { fields: [], presets: [], defaults: {}, exchanges: ['paper'], entryModes: ['touch'], entryModeOptions: [], loading: false, error: null },
+    filterOptions: { assets: [], intervals: [], patterns: [], directions: ['long', 'short'], loading: false, error: null },
     accounts: { list: [], loading: false, error: null },
     save: { status: 'idle', error: null }, // create / update / kill switch
   },
@@ -93,6 +106,8 @@ const tradingSlice = createSlice({
           defaults: d.defaults || {},
           exchanges: d.exchanges || ['paper'],
           entryModes: d.entry_modes || ['touch'],
+          // [{key, description}]; older backends only send the keys
+          entryModeOptions: d.entry_mode_options || (d.entry_modes || ['touch']).map((key) => ({ key, description: '' })),
           loading: false,
           error: null,
         };
@@ -100,6 +115,25 @@ const tradingSlice = createSlice({
       .addCase(fetchRiskFields.rejected, (state, action) => {
         state.meta.loading = false;
         state.meta.error = action.payload;
+      })
+      .addCase(fetchFilterOptions.pending, (state) => {
+        state.filterOptions.loading = true;
+        state.filterOptions.error = null;
+      })
+      .addCase(fetchFilterOptions.fulfilled, (state, action) => {
+        const d = action.payload;
+        state.filterOptions = {
+          assets: d.assets || [],
+          intervals: d.intervals || [],
+          patterns: d.patterns || [],
+          directions: d.directions || ['long', 'short'],
+          loading: false,
+          error: null,
+        };
+      })
+      .addCase(fetchFilterOptions.rejected, (state, action) => {
+        state.filterOptions.loading = false;
+        state.filterOptions.error = action.payload;
       })
       .addCase(fetchTradingAccounts.pending, (state) => {
         state.accounts.loading = true;

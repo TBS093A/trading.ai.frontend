@@ -1,13 +1,13 @@
 import { configureStore } from '@reduxjs/toolkit';
 import api from '../../services/api';
 import tradingReducer, {
-  fetchRiskFields, fetchTradingAccounts, createTradingAccount, setAccountKillSwitch, updateTradingAccount,
+  fetchRiskFields, fetchTradingAccounts, createTradingAccount, setAccountKillSwitch, updateTradingAccount, fetchFilterOptions,
 } from './tradingSlice';
 
 jest.mock('../../services/api', () => ({
   __esModule: true,
   default: {
-    getRiskFields: jest.fn(), getTradingAccounts: jest.fn(), createTradingAccount: jest.fn(),
+    getRiskFields: jest.fn(), getTradingAccounts: jest.fn(), createTradingAccount: jest.fn(), getTradingFilterOptions: jest.fn(),
     updateTradingAccount: jest.fn(), setKillSwitch: jest.fn(),
   },
 }));
@@ -64,4 +64,22 @@ test('Polish plurals used in the wizard', () => {
   expect(plural(5, 'zmiana', 'zmiany', 'zmian')).toBe('5 zmian');
   expect(plural(12, 'zmiana', 'zmiany', 'zmian')).toBe('12 zmian');
   expect(plural(22, 'zmiana', 'zmiany', 'zmian')).toBe('22 zmiany');
+});
+
+test('filter options and entry mode descriptions (older backends: keys only)', async () => {
+  const store = makeStore();
+  api.getTradingFilterOptions.mockResolvedValueOnce({ data: {
+    assets: [{ asset_id: 1, symbol: 'BTC/USDT', intervals: ['1h', '4h'] }], intervals: ['1h', '4h'], patterns: ['bat'], directions: ['long', 'short'],
+  } });
+  await store.dispatch(fetchFilterOptions());
+  expect(store.getState().trading.filterOptions.assets[0].symbol).toBe('BTC/USDT');
+
+  api.getRiskFields.mockResolvedValueOnce({ data: { fields: [], presets: [], entry_modes: ['touch', 'confirm'],
+    entry_mode_options: [{ key: 'touch', description: 'a' }, { key: 'confirm', description: 'b' }] } });
+  await store.dispatch(fetchRiskFields());
+  expect(store.getState().trading.meta.entryModeOptions.map((m) => m.key)).toEqual(['touch', 'confirm']);
+
+  api.getRiskFields.mockResolvedValueOnce({ data: { fields: [], presets: [], entry_modes: ['touch'] } });
+  await store.dispatch(fetchRiskFields());
+  expect(store.getState().trading.meta.entryModeOptions).toEqual([{ key: 'touch', description: '' }]);
 });

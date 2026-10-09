@@ -9,8 +9,9 @@ import { money, pctSigned, pct, prob, dateTime, tone, dash } from './tradingForm
 
 const DEBOUNCE_MS = 500;
 const CUSTOM_COLOR = '#3987e5';
-// Same validated slots as the benchmark curves; presets keep a fixed color each
-const PRESET_COLORS = ['#199e70', '#c98500', '#d95926'];
+// Validated categorical slots (dark surface) next to the blue "your settings" line; one per preset,
+// in the backend's preset order, never cycled - extra presets fall back to the legend + table
+const PRESET_COLORS = ['#199e70', '#c98500', '#d55181'];
 
 // Open the benchmarks tab of the model group
 const goToBenchmarks = (dispatch) => {
@@ -91,10 +92,10 @@ const RiskPreview = ({ settings, startEquity, presets, currency = 'USDT' }) => {
     if (d?.equity_curve?.length) {
       out.push({ key: 'custom', label: 'Twoje ustawienia', color: CUSTOM_COLOR, points: d.equity_curve.map(([t, e]) => ({ x: t, y: e })) });
     }
-    (presets || []).forEach((p, i) => {
+    (presets || []).slice(0, PRESET_COLORS.length).forEach((p, i) => {
       const c = compare[p.key];
       if (c?.equity_curve?.length) {
-        out.push({ key: p.key, label: p.label, color: PRESET_COLORS[i % PRESET_COLORS.length], dashed: true, points: c.equity_curve.map(([t, e]) => ({ x: t, y: e })) });
+        out.push({ key: p.key, label: p.label, color: PRESET_COLORS[i], dashed: true, points: c.equity_curve.map(([t, e]) => ({ x: t, y: e })) });
       }
     });
     return out;
@@ -113,7 +114,7 @@ const RiskPreview = ({ settings, startEquity, presets, currency = 'USDT' }) => {
 
   const rows = [
     { key: 'custom', label: 'Twoje ustawienia', color: CUSTOM_COLOR, data: d },
-    ...(presets || []).map((p, i) => ({ key: p.key, label: p.label, color: PRESET_COLORS[i % PRESET_COLORS.length], data: compare[p.key], dashed: true })),
+    ...(presets || []).map((p, i) => ({ key: p.key, label: p.label, color: PRESET_COLORS[i] || 'var(--text-muted)', data: compare[p.key], dashed: true })),
   ];
 
   return (

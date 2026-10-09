@@ -1,15 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { createTradingAccount, resetTradingSave } from '../../store/slices/tradingSlice';
-import { fetchTrackedAssets } from '../../store/slices/alertsSlice';
+import { createTradingAccount, resetTradingSave, fetchFilterOptions } from '../../store/slices/tradingSlice';
+import AccountFilters, { EMPTY_FILTERS, formToFilters } from './AccountFilters';
+import ConfirmPresetHint from './ConfirmPresetHint';
 import RiskFields from './RiskFields';
 import RiskPreview from './RiskPreview';
 import { money, plural } from './tradingFormat';
 
-const STEPS = ['Wariant ryzyka', 'Dopracuj ustawienia', 'Filtry sygnałów', 'Podsumowanie'];
-const INTERVALS = ['15m', '30m', '1h', '4h', '1d', '1w'];
-const PATTERNS = ['gartley', 'bat', 'alt_bat', 'butterfly', 'crab', 'deep_crab', 'shark', 'cypher', 'abcd'];
-
+const STEPS = ['Wariant ryzyka', 'Dopracuj ustawienia', 'Co handluje konto', 'Podsumowanie'];
 // Short summary of the key settings of a preset card
 const presetSummary = (s) => [
   `${s.risk_per_trade_pct}% na transakcję`,
@@ -18,7 +16,6 @@ const presetSummary = (s) => [
   `wyłącznik przy −${s.max_drawdown_stop_pct}%`,
 ];
 
-const toggle = (list, v) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
 
 /**
  * New paper account: pick a risk preset -> fine-tune the fields (with a live preview of the
@@ -26,19 +23,19 @@ const toggle = (list, v) => (list.includes(v) ? list.filter((x) => x !== v) : [.
  */
 const AccountWizard = ({ onCancel, onCreated }) => {
   const dispatch = useDispatch();
-  const { meta, save, accounts } = useSelector((state) => state.trading);
-  const tracked = useSelector((state) => state.alerts.tracked.list);
+  const { meta, save, accounts, filterOptions } = useSelector((state) => state.trading);
 
   const [step, setStep] = useState(0);
   const [presetKey, setPresetKey] = useState('balanced');
   const preset = meta.presets.find((p) => p.key === presetKey) || meta.presets[0];
   const [risk, setRisk] = useState(null);
   const [startEquity, setStartEquity] = useState(10000);
-  const [filters, setFilters] = useState({ asset_ids: [], intervals: [], patterns: [], direction: '' });
+  const [filters, setFilters] = useState(EMPTY_FILTERS);
+  const [entryMode, setEntryMode] = useState(null);
   const [name, setName] = useState('');
 
   useEffect(() => {
-    dispatch(fetchTrackedAssets());
+    dispatch(fetchFilterOptions());
     dispatch(resetTradingSave());
   }, [dispatch]);
 
@@ -55,15 +52,10 @@ const AccountWizard = ({ onCancel, onCreated }) => {
       name: name.trim(),
       exchange: meta.exchanges[0] || 'paper',
       starting_equity: Number(startEquity),
-      entry_mode: meta.entryModes[0] || 'touch',
+      entry_mode: entryMode || meta.entryModes[0] || 'touch',
       preset: null,
       risk,
-      filters: Object.fromEntries(Object.entries({
-        asset_ids: filters.asset_ids.length ? filters.asset_ids : null,
-        intervals: filters.intervals.length ? filters.intervals : null,
-        patterns: filters.patterns.length ? filters.patterns : null,
-        direction: filters.direction || null,
-      }).filter(([, v]) => v != null)),
+      filters: formToFilters(filters),
     };
     const res = await dispatch(createTradingAccount(body));
     if (createTradingAccount.fulfilled.match(res)) onCreated(res.payload.id);
@@ -133,47 +125,25 @@ const AccountWizard = ({ onCancel, onCreated }) => {
       {step === 2 && (
         <div className="wizard-filters">
           <p className="sm-card-sub">
-            Konto handluje tylko na sygnałach setupów <strong>śledzonych assetów</strong>. Puste pole = bez ograniczenia.
+            Konto handluje tylko na sygnałach setupów <strong>śledzonych assetów</strong>. Nic nie zaznaczone = bez ograniczenia.
           </p>
-          <div className="add-field">
-            <span className="stats-label">Assety ({filters.asset_ids.length ? filters.asset_ids.length : 'wszystkie śledzone'})</span>
-            <div className="chip-group">
-              {tracked.map((t) => (
-                <button key={t.asset_id} type="button" className={`chip ${filters.asset_ids.includes(t.asset_id) ? 'active' : ''}`}
-                  onClick={() => setFilters({ ...filters, asset_ids: toggle(filters.asset_ids, t.asset_id) })}>
-                  {t.asset}/{t.quote}
-                </button>
-              ))}
-              {tracked.length === 0 && <span className="stats-muted">Brak śledzonych assetów - dodaj je w „Alerty i śledzone assety”.</span>}
-            </div>
-          </div>
-          <div className="add-field">
-            <span className="stats-label">Interwały ({filters.intervals.length ? filters.intervals.join(', ') : 'wszystkie'})</span>
-            <div className="chip-group">
-              {INTERVALS.map((iv) => (
-                <button key={iv} type="button" className={`chip ${filters.intervals.includes(iv) ? 'active' : ''}`}
-                  onClick={() => setFilters({ ...filters, intervals: toggle(filters.intervals, iv) })}>{iv}</button>
-              ))}
-            </div>
-          </div>
-          <div className="add-field">
-            <span className="stats-label">Formacje ({filters.patterns.length ? filters.patterns.length : 'wszystkie'})</span>
-            <div className="chip-group">
-              {PATTERNS.map((pt) => (
-                <button key={pt} type="button" className={`chip ${filters.patterns.includes(pt) ? 'active' : ''}`}
-                  onClick={() => setFilters({ ...filters, patterns: toggle(filters.patterns, pt) })}>{pt}</button>
-              ))}
-            </div>
-          </div>
-          <div className="add-field">
-            <span className="stats-label">Kierunek</span>
-            <div className="chip-group">
-              {[['', 'Oba'], ['long', 'Tylko long'], ['short', 'Tylko short']].map(([v, l]) => (
-                <button key={l} type="button" className={`chip ${filters.direction === v ? 'active' : ''}`}
-                  onClick={() => setFilters({ ...filters, direction: v })}>{l}</button>
-              ))}
-            </div>
-          </div>
+          {filterOptions.error && <div className="stats-error">{filterOptions.error}</div>}
+          <AccountFilters
+            value={filters}
+            onChange={setFilters}
+            options={filterOptions}
+            entryMode={entryMode || meta.entryModes[0]}
+            onEntryModeChange={setEntryMode}
+            entryModeOptions={meta.entryModeOptions}
+            suggestion={(
+              <ConfirmPresetHint
+                entryMode={entryMode}
+                presets={meta.presets}
+                risk={risk}
+                onApply={(p) => setPresetKey(p.key)}
+              />
+            )}
+          />
         </div>
       )}
 
@@ -187,12 +157,14 @@ const AccountWizard = ({ onCancel, onCreated }) => {
           </label>
           <dl className="setup-section-grid wizard-recap">
             <dt>Giełda</dt><dd>{meta.exchanges[0] || 'paper'} (symulacja na prawdziwych świecach)</dd>
-            <dt>Wejście</dt><dd>{meta.entryModes[0] === 'touch' ? 'zlecenie limit na bliższej krawędzi PRZ' : meta.entryModes[0]}</dd>
+            <dt>Wejście</dt><dd>{(entryMode || meta.entryModes[0]) === 'confirm' ? 'po świecy potwierdzenia w PRZ' : 'zlecenie limit na bliższej krawędzi PRZ'}</dd>
             <dt>Kapitał</dt><dd>{money(startEquity, 'USDT', 0)}</dd>
             <dt>Ryzyko</dt><dd>{preset?.label}{changedCount ? ` + ${plural(changedCount, 'zmiana', 'zmiany', 'zmian')}` : ''}: {presetSummary(risk).join(' · ')}</dd>
             <dt>Filtry</dt>
             <dd>
-              {[filters.asset_ids.length ? plural(filters.asset_ids.length, 'asset', 'assety', 'assetów') : 'wszystkie assety',
+              {[filters.asset_ids.length
+                ? filterOptions.assets.filter((a) => filters.asset_ids.includes(a.asset_id)).map((a) => a.symbol).join(', ')
+                : 'wszystkie śledzone assety',
                 filters.intervals.length ? filters.intervals.join('/') : 'wszystkie interwały',
                 filters.patterns.length ? plural(filters.patterns.length, 'formacja', 'formacje', 'formacji') : 'wszystkie formacje',
                 filters.direction || 'oba kierunki'].join(' · ')}

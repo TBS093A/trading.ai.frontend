@@ -2,7 +2,9 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import api from '../../services/api';
 import { selectIsAdmin } from '../../store/slices/authSlice';
-import { updateTradingAccount, setAccountKillSwitch, resetTradingSave } from '../../store/slices/tradingSlice';
+import { updateTradingAccount, setAccountKillSwitch, resetTradingSave, fetchFilterOptions } from '../../store/slices/tradingSlice';
+import AccountFilters, { filtersToForm, formToFilters } from './AccountFilters';
+import ConfirmPresetHint from './ConfirmPresetHint';
 import { LineChart } from '../Stats/charts/MiniCharts';
 import RiskFields from './RiskFields';
 import RiskPreview from './RiskPreview';
@@ -104,7 +106,7 @@ const KillSwitchDialog = ({ on, onConfirm, onCancel, busy }) => {
 const AccountView = ({ accountId, onBack }) => {
   const dispatch = useDispatch();
   const isAdmin = useSelector(selectIsAdmin);
-  const { meta, save } = useSelector((state) => state.trading);
+  const { meta, save, filterOptions } = useSelector((state) => state.trading);
   const [signalStatus, setSignalStatus] = useState('');
   const [{ loading, error, account, equity, open, closed, signals, orders, events, compare }, reload] = useAccountData(accountId, signalStatus);
   const [tab, setTab] = useState('signals');
@@ -112,8 +114,14 @@ const AccountView = ({ accountId, onBack }) => {
   const [ksDialog, setKsDialog] = useState(null); // true = turn on, false = turn off
   const [editing, setEditing] = useState(false);
   const [risk, setRisk] = useState(null);
+  const [filtersForm, setFiltersForm] = useState(null);
+  const [entryMode, setEntryMode] = useState(null);
+  const [saved, setSaved] = useState(null); // 'risk' | 'filters' - which part was saved last
 
-  useEffect(() => { dispatch(resetTradingSave()); }, [dispatch]);
+  useEffect(() => {
+    dispatch(resetTradingSave());
+    dispatch(fetchFilterOptions());
+  }, [dispatch]);
 
   if (loading && !account) return <div className="stats-empty">Ładowanie konta…</div>;
   if (!account) return <div className="stats-error">{error}</div>;
@@ -130,11 +138,28 @@ const AccountView = ({ accountId, onBack }) => {
     if (setAccountKillSwitch.fulfilled.match(res)) setKsDialog(null);
     reload();
   };
+  const openSettings = () => {
+    setRisk({ ...meta.defaults, ...account.risk_json });
+    setFiltersForm(filtersToForm(account.filters_json));
+    setEntryMode(account.entry_mode);
+    setSaved(null);
+    setEditing(!editing);
+  };
   const saveRisk = async () => {
     const res = await dispatch(updateTradingAccount({ accountId, body: { risk } }));
-    if (updateTradingAccount.fulfilled.match(res)) setEditing(false);
+    if (updateTradingAccount.fulfilled.match(res)) setSaved('risk');
     reload();
   };
+  const saveFilters = async () => {
+    const res = await dispatch(updateTradingAccount({ accountId, body: { filters: formToFilters(filtersForm), entry_mode: entryMode } }));
+    if (updateTradingAccount.fulfilled.match(res)) setSaved('filters');
+    reload();
+  };
+  const filtersChanged = filtersForm && (
+    JSON.stringify(formToFilters(filtersForm)) !== JSON.stringify(formToFilters(filtersToForm(account.filters_json)))
+    || entryMode !== account.entry_mode
+  );
+  const riskChanged = risk && JSON.stringify(risk) !== JSON.stringify({ ...meta.defaults, ...account.risk_json });
 
   return (
     <div className="account-view">
@@ -143,7 +168,7 @@ const AccountView = ({ accountId, onBack }) => {
           <button className="link-btn" onClick={onBack}>← Wszystkie konta</button>
           <h2 className="stats-title">{account.name}</h2>
           <p className="stats-subtitle">
-            {account.exchange} · wejście: {account.entry_mode === 'touch' ? 'limit na bliższej krawędzi PRZ' : account.entry_mode}
+            {account.exchange} · wejście: {account.entry_mode === 'touch' ? 'limit na bliższej krawędzi PRZ' : account.entry_mode === 'confirm' ? 'po świecy potwierdzenia w PRZ' : account.entry_mode}
             {' '}· utworzone {dateTime(Date.parse(account.created_at))}
           </p>
         </div>
@@ -152,8 +177,8 @@ const AccountView = ({ accountId, onBack }) => {
             <button className="btn-small" onClick={toggleEnabled} disabled={save.status === 'saving'}>
               {account.enabled ? 'Wyłącz konto' : 'Włącz konto'}
             </button>
-            <button className="btn-small" onClick={() => { setRisk({ ...meta.defaults, ...account.risk_json }); setEditing(!editing); }}>
-              {editing ? 'Zamknij ustawienia' : 'Ustawienia ryzyka'}
+            <button className="btn-small" onClick={openSettings}>
+              {editing ? 'Zamknij ustawienia' : 'Ustawienia'}
             </button>
             <button className={`ks-button ${account.kill_switch ? 'off' : ''}`} onClick={() => setKsDialog(!account.kill_switch)}>
               {account.kill_switch ? 'Wyłącz kill switch' : 'KILL SWITCH'}
@@ -171,21 +196,64 @@ const AccountView = ({ accountId, onBack }) => {
       {save.status === 'failed' && <div className="stats-error">{save.error}</div>}
       {error && <div className="stats-error">{error}</div>}
 
-      {editing && risk && (
-        <section className="sm-card">
-          <h3 className="sm-card-title">Ustawienia ryzyka</h3>
-          <p className="sm-card-sub">Zmiany działają od następnego sygnału; otwarte pozycje zostają bez zmian.</p>
-          <div className="wizard-split">
-            <div>
-              <RiskFields fields={meta.fields} values={risk} onChange={setRisk} baseline={account.risk_json} disabled={!isAdmin} />
-              <div className="form-actions">
-                <button className="btn-small primary" onClick={saveRisk} disabled={save.status === 'saving'}>Zapisz ustawienia</button>
-                <button className="btn-small" onClick={() => setEditing(false)}>Anuluj</button>
-              </div>
+      {editing && risk && filtersForm && (
+        <>
+          <section className="sm-card">
+            <div className="bm-table-head">
+              <h3 className="sm-card-title">Co handluje to konto</h3>
+              {saved === 'filters' && !filtersChanged && <span className="notice ok">Zapisane</span>}
             </div>
-            <RiskPreview settings={risk} startEquity={account.starting_equity} presets={meta.presets} currency={cur} />
-          </div>
-        </section>
+            <AccountFilters
+              value={filtersForm}
+              onChange={setFiltersForm}
+              options={filterOptions}
+              entryMode={entryMode}
+              onEntryModeChange={setEntryMode}
+              entryModeOptions={meta.entryModeOptions}
+              disabled={!isAdmin}
+              suggestion={(
+                <ConfirmPresetHint
+                  entryMode={entryMode}
+                  presets={meta.presets}
+                  risk={risk}
+                  onApply={(p) => { setRisk({ ...meta.defaults, ...p.settings }); setSaved(null); }}
+                />
+              )}
+            />
+            {filterOptions.error && <div className="stats-error">{filterOptions.error}</div>}
+            <p className="sm-card-sub">
+              Zmiany działają od następnego godzinnego przebiegu. Otwarte sygnały i pozycje są prowadzone dalej na starych zasadach.
+            </p>
+            {isAdmin && (
+              <div className="form-actions">
+                <button className="btn-small primary" onClick={saveFilters} disabled={!filtersChanged || save.status === 'saving'}>Zapisz</button>
+                <button className="btn-small" disabled={!filtersChanged}
+                  onClick={() => { setFiltersForm(filtersToForm(account.filters_json)); setEntryMode(account.entry_mode); }}>Cofnij zmiany</button>
+              </div>
+            )}
+          </section>
+
+          <section className="sm-card">
+            <div className="bm-table-head">
+              <h3 className="sm-card-title">Ryzyko</h3>
+              {saved === 'risk' && !riskChanged && <span className="notice ok">Zapisane</span>}
+              {riskChanged && <span className="notice warn-inline">niezapisane zmiany</span>}
+            </div>
+            <p className="sm-card-sub">Zmiany działają od następnego sygnału; otwarte pozycje zostają bez zmian.</p>
+            <div className="wizard-split">
+              <div>
+                <RiskFields fields={meta.fields} values={risk} onChange={setRisk} baseline={account.risk_json} disabled={!isAdmin} />
+                {isAdmin && (
+                  <div className="form-actions">
+                    <button className="btn-small primary" onClick={saveRisk} disabled={!riskChanged || save.status === 'saving'}>Zapisz</button>
+                    <button className="btn-small" disabled={!riskChanged} onClick={() => setRisk({ ...meta.defaults, ...account.risk_json })}>Cofnij zmiany</button>
+                  </div>
+                )}
+              </div>
+              <RiskPreview settings={risk} startEquity={account.starting_equity} presets={meta.presets} currency={cur} />
+            </div>
+          </section>
+        </>
       )}
 
       <div className="sm-tiles account-tiles-row">
