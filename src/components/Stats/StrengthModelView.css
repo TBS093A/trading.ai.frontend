@@ -1,0 +1,128 @@
+/* Strength model dashboard */
+.sm-view.loading .sm-card { opacity: 0.6; }
+
+.sm-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+}
+
+.sm-actions { display: flex; gap: var(--spacing-sm); flex-shrink: 0; }
+
+.ok-block {
+  border: 1px solid rgba(0, 255, 136, 0.35);
+  background: rgba(0, 255, 136, 0.06);
+  color: var(--text-primary);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sm-models {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: var(--spacing-md);
+}
+
+.sm-model-card,
+.sm-card {
+  padding: var(--spacing-md);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  min-width: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.sm-model-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: var(--spacing-sm);
+  font-size: 0.75rem;
+}
+
+.sm-model-title { color: var(--text-primary); font-weight: 600; }
+
+.sm-tiles {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--spacing-sm);
+}
+
+.sm-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sm-tile-label {
+  color: var(--text-muted);
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.sm-tile-value {
+  color: var(--text-primary);
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.sm-tile-sub { color: var(--text-muted); font-size: 0.62rem; }
+
+.sm-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--spacing-md);
+}
+
+.sm-grid .wide { grid-column: 1 / -1; }
+
+.sm-card-title {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+}
+
+.sm-card-sub {
+  margin: 2px 0 var(--spacing-sm);
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  line-height: 1.4;
+}
+
+.sm-mini-title {
+  margin-top: var(--spacing-sm);
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+}
+
+.sm-kind-switch {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sm-kind-switch .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sm-totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: var(--spacing-sm);
+  color: var(--text-secondary);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+}
+
+.sm-active-run td { background: rgba(35, 153, 168, 0.08); }
+
+@media (max-width: 900px) {
+  .sm-grid { grid-template-columns: minmax(0, 1fr); }
+  .sm-tiles { grid-template-columns: repeat(2, 1fr); }
+}

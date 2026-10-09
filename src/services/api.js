@@ -275,6 +275,16 @@ const api = {
   getStrengthModel: () =>
     axiosInstance.get('/harmonics/strength/model'),
 
+  // Strength model training history / training data / manual fit (admin)
+  getStrengthHistory: (kind = 'entry', limit = 50) =>
+    axiosInstance.get('/harmonics/strength/history', { params: { kind, limit } }),
+
+  getStrengthData: () =>
+    axiosInstance.get('/harmonics/strength/data'),
+
+  fitStrengthModel: () =>
+    axiosInstance.post('/harmonics/strength/fit'),
+
   // Tracked assets (nightly pattern sync + hourly setup tracking); writes are admin-only
   getTrackedAssets: () =>
     axiosInstance.get('/harmonics/tracked-assets'),
