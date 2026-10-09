@@ -26,7 +26,7 @@ const uiSlice = createSlice({
   initialState: {
     sidebarPanel: loadSidebarPanel(), // 'markets' | 'saved' | 'sync' | null (collapsed)
     accountModalOpen: false,
-    mainView: 'chart', // 'chart' | 'stats' | 'model' | 'alerts' (dashboard groups)
+    mainView: 'chart', // 'chart' | 'stats' | 'model' | 'trading' | 'alerts' (dashboard groups)
     patternsPanelOpen: true, // Patterns list panel (always visible when patterns exist)
     theme: 'dark',
     tooltipPosition: null,

@@ -8,6 +8,7 @@ import './NavRail.css';
 const DASHBOARD_BUTTONS = [
   { view: 'stats', icon: '◔', label: 'Setup performance' },
   { view: 'model', icon: '▥', label: 'Strength model & benchmarks' },
+  { view: 'trading', icon: '⇅', label: 'Paper trading' },
   { view: 'alerts', icon: '✉', label: 'Alerts & tracked assets' },
 ];
 
